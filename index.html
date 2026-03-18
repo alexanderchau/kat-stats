@@ -273,8 +273,33 @@
     .addr-tiny { font-size: 0.6rem; color: var(--text-dim); white-space: nowrap; }
     .addr-tiny b { color: var(--text-mid); }
 
-    th[title] { cursor: help; }
-    th[title]::after { content: ' ⓘ'; font-size: 0.65em; opacity: 0.4; }
+    th[data-tip] { cursor: help; position: relative; }
+    th[data-tip]::after {
+      content: ' ⓘ';
+      font-size: 0.65em;
+      opacity: 0.45;
+      vertical-align: super;
+    }
+    th[data-tip]:hover::before {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b;
+      color: #e2e8f0;
+      font-size: 0.72rem;
+      font-weight: 400;
+      line-height: 1.4;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      white-space: normal;
+      width: 220px;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
 
     .ext-links { display: flex; gap: 4px; }
     .ext-link {
@@ -388,14 +413,14 @@
       <tr>
         <th data-col="rank">#<span class="sort-arrow"></span></th>
         <th data-col="address">Address<span class="sort-arrow"></span></th>
-        <th data-col="total" class="num sorted" title="Total KAT allocated via Merkl rewards (claimed + unclaimed)">KAT Allocated<span class="sort-arrow">↓</span></th>
-        <th data-col="claimed" class="num" title="KAT already withdrawn from Merkl into wallet">KAT Claimed<span class="sort-arrow"></span></th>
-        <th data-col="balance" class="num" title="Current KAT token balance in wallet (real KAT, 0x7f1f…)">KAT Balance<span class="sort-arrow"></span></th>
-        <th data-col="avkat" class="num" title="KAT deposited into avKAT staking vault (0x7231…)">KAT Staked<span class="sort-arrow"></span></th>
-        <th data-col="moved" class="num" title="KAT swapped on Sushi or bridged out via Agglayer — confirmed by on-chain event logs">KAT Sold<span class="sort-arrow"></span></th>
-        <th data-col="transferred" class="num" title="KAT sent directly to another wallet (not a swap, not a bridge)">KAT Sent<span class="sort-arrow"></span></th>
-        <th data-col="dumpPct" class="num" title="KAT Sold ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
-        <th data-col="status" title="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · UNCLAIMED never claimed · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
+        <th data-col="total" class="num sorted" data-tip="Total KAT allocated via Merkl rewards (claimed + unclaimed)">KAT Allocated<span class="sort-arrow">↓</span></th>
+        <th data-col="claimed" class="num" data-tip="KAT already withdrawn from Merkl into wallet">KAT Claimed<span class="sort-arrow"></span></th>
+        <th data-col="balance" class="num" data-tip="Current KAT token balance in wallet (real KAT, 0x7f1f…)">KAT Balance<span class="sort-arrow"></span></th>
+        <th data-col="avkat" class="num" data-tip="KAT deposited into avKAT staking vault (0x7231…)">KAT Staked<span class="sort-arrow"></span></th>
+        <th data-col="moved" class="num" data-tip="KAT swapped on Sushi or bridged out via Agglayer — confirmed by on-chain event logs">KAT Sold<span class="sort-arrow"></span></th>
+        <th data-col="transferred" class="num" data-tip="KAT sent directly to another wallet (not a swap, not a bridge)">KAT Sent<span class="sort-arrow"></span></th>
+        <th data-col="dumpPct" class="num" data-tip="KAT Sold ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
+        <th data-col="status" data-tip="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · UNCLAIMED never claimed · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
     </thead>
