@@ -320,7 +320,7 @@
   <span class="skull">☠</span>
   <h1>KAT <em>//</em> DUMPERS</h1>
   <div class="subtitle">
-    Merkl reward claimers on <b>Katana Network</b> — sorted by how much they dumped
+    Merkl reward claimers on <b>Katana Network</b>
   </div>
 </header>
 
@@ -410,7 +410,7 @@
 const KATANA_RPC  = 'https://rpc.katana.network/';
 const MERKL_BASE  = 'https://api.merkl.xyz/v4';
 const CHAIN_ID    = 747474;
-const KAT_ADDR    = '0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d';
+const KAT_ADDR    = '0x6E9C1F88a960fE63387eb4b71BC525a9313d8461'; // Merkl-distributed KAT on Katana
 const AVKAT_ADDR  = '0x7231dbaCdFc968E07656D12389AB20De82FbfCeB';
 const KAT_DECIMALS = 18;
 
@@ -508,24 +508,18 @@ async function fetchMerkl(address) {
         const data = await res.json();
         let claimed = 0, claimable = 0;
 
-        // Handle array format
-        const arr = Array.isArray(data) ? data : Object.values(data);
-        for (const item of arr) {
-          const tokenAddr = (
-            item?.token?.address ||
-            item?.tokenAddress ||
-            item?.address ||
-            ''
-          ).toLowerCase();
-
-          if (tokenAddr === KAT_ADDR) {
-            // amount = total ever accumulated, claimed = withdrawn
-            const total  = fromWei(item.amount   || item.accumulated || '0x0');
-            const pulled = fromWei(item.claimed   || item.withdrawn   || '0x0');
-            claimed   = pulled;
-            claimable = Math.max(0, total - pulled);
-            break;
+        // Response format: [{chain: {...}, rewards: [{token, amount, claimed, ...}]}]
+        for (const chainEntry of (Array.isArray(data) ? data : [data])) {
+          for (const reward of (chainEntry.rewards || [])) {
+            if (reward.token?.symbol === 'KAT') {
+              const total  = fromWei(reward.amount  || '0');
+              const pulled = fromWei(reward.claimed || '0');
+              claimed   = pulled;
+              claimable = Math.max(0, total - pulled);
+              break;
+            }
           }
+          if (claimed > 0 || claimable > 0) break;
         }
         return { claimed, claimable };
       } catch (e) {
@@ -539,9 +533,9 @@ async function fetchMerkl(address) {
 
 // ── CLASSIFICATION ────────────────────────────────────────────────────────────
 function classify(d) {
+  if (d.claimed === 0 && d.claimable === 0) return 'inactive'; // No Merkl rewards at all
+  if (d.claimed === 0 && d.claimable > 0) return 'unclaimed'; // Has rewards but never claimed
   const held = d.balance + d.avkat;
-  if (d.claimed === 0 && d.claimable === 0 && d.balance === 0 && d.avkat === 0) return 'inactive';
-  if (d.claimed === 0) return 'unclaimed'; // has claimable but never pulled
   const dumpRatio = Math.max(0, (d.claimed - held) / d.claimed);
   if (dumpRatio > 0.5)  return 'dumper';
   if (dumpRatio > 0.05) return 'partial';
