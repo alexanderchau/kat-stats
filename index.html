@@ -615,7 +615,7 @@
         <th data-col="moved" class="num" data-tip="KAT swapped on Sushi V2/V3 — detected via Swap event in tx receipt">KAT Sold<span class="sort-arrow"></span></th>
         <th data-col="balance" class="num" data-tip="Current KAT token balance in wallet (real KAT, 0x7f1f…)">KAT Balance<span class="sort-arrow"></span></th>
         <th data-col="avkat" class="num" data-tip="KAT deposited into avKAT staking vault (0x7231…). vKAT support coming once contract deploys.">avKAT<span class="sort-arrow"></span></th>
-        <th data-col="dumpPct" class="num" data-tip="(KAT Sold + KAT Sent) ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
+        <th data-col="dumpPct" class="num" data-tip="(KAT Sold + KAT Sent to non-holders) ÷ KAT Claimed, capped at 100%. Transfers to wallets still holding ≥95% (KAT+avKAT) are excluded.">Dump %<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
     </thead>
@@ -818,10 +818,14 @@ async function fetchDumped(address) {
       }
     }
 
-    // Check whether each destination is still holding the KAT
+    // Check whether each destination is still holding the KAT (raw or staked as avKAT)
     const destBalances = {};
     await Promise.all(Object.keys(destAmounts).map(async dest => {
-      destBalances[dest] = await balanceOf(REAL_KAT_ADDR, dest);
+      const [kat, avkat] = await Promise.all([
+        balanceOf(REAL_KAT_ADDR, dest),
+        balanceOf(AVKAT_ADDR, dest),
+      ]);
+      destBalances[dest] = kat + avkat;
     }));
 
     let sold = 0, transferred = 0, sentHeld = 0;
