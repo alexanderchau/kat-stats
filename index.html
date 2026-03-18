@@ -283,7 +283,7 @@
     th[data-tip]:hover::before {
       content: attr(data-tip);
       position: absolute;
-      bottom: calc(100% + 6px);
+      top: calc(100% + 6px);
       left: 50%;
       transform: translateX(-50%);
       background: #1e293b;
@@ -417,8 +417,8 @@
         <th data-col="claimed" class="num" data-tip="KAT already withdrawn from Merkl into wallet">KAT Claimed<span class="sort-arrow"></span></th>
         <th data-col="balance" class="num" data-tip="Current KAT token balance in wallet (real KAT, 0x7f1f…)">KAT Balance<span class="sort-arrow"></span></th>
         <th data-col="avkat" class="num" data-tip="KAT deposited into avKAT staking vault (0x7231…)">KAT Staked<span class="sort-arrow"></span></th>
-        <th data-col="moved" class="num" data-tip="KAT swapped on Sushi or bridged out via Agglayer — confirmed by on-chain event logs">KAT Sold<span class="sort-arrow"></span></th>
-        <th data-col="transferred" class="num" data-tip="KAT sent directly to another wallet (not a swap, not a bridge)">KAT Sent<span class="sort-arrow"></span></th>
+        <th data-col="moved" class="num" data-tip="KAT swapped on Sushi V2/V3 — detected via Swap event in tx receipt">KAT Sold<span class="sort-arrow"></span></th>
+        <th data-col="transferred" class="num" data-tip="KAT sent to any other address (wallets, bridges, contracts) — no Sushi swap in the tx">KAT Sent<span class="sort-arrow"></span></th>
         <th data-col="dumpPct" class="num" data-tip="(KAT Sold + KAT Sent) ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
         <th data-col="status" data-tip="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · UNCLAIMED never claimed · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
         <th>Links</th>
@@ -435,7 +435,7 @@
 <footer>
   Data: <a href="https://api.merkl.xyz" target="_blank">Merkl API</a> + <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> ·
   KAT token: <a href="https://katanascan.com/token/0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d" target="_blank">0x7f1f…c2d</a> ·
-  "KAT Sold" = swapped on Sushi or bridged out · "KAT Sent" = sent to another wallet · Dump % = (Sold + Sent) ÷ Claimed.
+  "KAT Sold" = swapped on Sushi (Swap event in tx) · "KAT Sent" = all other outgoing transfers (wallets, bridges) · Dump % = (Sold + Sent) ÷ Claimed.
 </footer>
 
 <script>
@@ -570,18 +570,17 @@ async function fetchDumped(address) {
     }]);
     if (!logs.length) return { sold: 0, transferred: 0, transferredTo: [] };
 
-    // Group by txHash; flag bridge transfers immediately; store `to` with each log entry
+    // Group by txHash; store `to` with each log entry
     const byTx = {};
     for (const log of logs) {
       if (!log.topics || log.topics.length < 3) continue;
       const to = '0x' + log.topics[2].slice(26).toLowerCase();
       if (!byTx[log.transactionHash]) byTx[log.transactionHash] = { entries: [], hasDump: false };
-      if (BRIDGE_DESTS.has(to)) byTx[log.transactionHash].hasDump = true;
       byTx[log.transactionHash].entries.push({ log, to });
     }
 
-    // For unflagged txs, fetch receipt and check for Sushi Swap event
-    const needsCheck = Object.entries(byTx).filter(([, v]) => !v.hasDump);
+    // Fetch receipt for every tx and check for Sushi Swap event
+    const needsCheck = Object.entries(byTx);
     await Promise.all(needsCheck.map(async ([txHash, v]) => {
       const rec = await ethGetReceipt(txHash);
       if (rec && rec.logs.some(l => l.topics[0] === SWAP_V3_TOPIC || l.topics[0] === SWAP_V2_TOPIC)) {
