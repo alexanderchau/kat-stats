@@ -363,21 +363,10 @@
     .addr-short { color: var(--label); }
     .addr-short b { color: var(--text); font-weight: 600; }
 
-    .copy-btn {
-      background: none;
-      border: none;
-      color: var(--dim);
-      cursor: pointer;
-      padding: 0 0.2rem;
-      font-size: 0.62rem;
-      opacity: 0;
-      transition: opacity 0.1s, color 0.1s;
-      vertical-align: middle;
-      font-family: var(--ui);
-    }
-    tr:hover .copy-btn { opacity: 1; }
-    .copy-btn:hover { color: var(--text); }
-    .copy-btn.copied { color: var(--green); opacity: 1; }
+    .addr-cell { cursor: pointer; }
+    .addr-cell:active { opacity: 0.7; }
+    .addr-cell.copied .addr-short { color: var(--green) !important; }
+    .addr-cell.copied .addr-short b { color: var(--green) !important; }
 
     /* ── BADGES ── */
     .badge {
@@ -1018,9 +1007,8 @@ function renderTable() {
 
     return `<tr class="${rowCls}">
       <td>${i + 1}</td>
-      <td class="addr-cell">
-        <span class="addr-short" title="${d.address}">${shortAddr(d.address)}</span>
-        <button class="copy-btn" onclick="copyAddr(this,'${d.address}')" title="Copy address">⎘</button>${errIcon}${anomalyFlag}
+      <td class="addr-cell" onclick="copyAddr(this,'${d.address}')" title="Click to copy">
+        <span class="addr-short">${shortAddr(d.address)}</span>${errIcon}${anomalyFlag}
       </td>
       <td>${d._loading ? '' : badge(d.status)}</td>
       <td class="num">${d._loading ? pending : (d.total > 0 ? `<span class="num-blue">${fmtNum(d.total)}</span>` : '—')}</td>
@@ -1092,11 +1080,10 @@ function updateProgress() {
 }
 
 // ── COPY ──────────────────────────────────────────────────────────────────────
-function copyAddr(btn, addr) {
+function copyAddr(cell, addr) {
   navigator.clipboard.writeText(addr).then(() => {
-    btn.classList.add('copied');
-    btn.textContent = '✓';
-    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '⎘'; }, 1500);
+    cell.classList.add('copied');
+    setTimeout(() => cell.classList.remove('copied'), 1200);
   });
 }
 
