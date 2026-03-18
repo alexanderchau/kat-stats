@@ -3,328 +3,489 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>☠ KAT Dumpers</title>
+  <title>KAT Dumpers</title>
+  <meta name="description" content="Track 573 Katana Network wallets for KAT reward dump behavior — sold, sent, staked, and dump %.">
+  <meta property="og:title" content="KAT Dumpers">
+  <meta property="og:description" content="Live tracker: who claimed and dumped their KAT rewards on Katana Network.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #080808;
-      --card: #0f0f0f;
-      --card2: #141414;
-      --border: #1e1e1e;
-      --border2: #2a2a2a;
-      --red: #ff2222;
-      --red-dim: #991111;
-      --green: #22cc55;
-      --yellow: #ffaa00;
-      --blue: #4488ff;
-      --purple: #aa44ff;
-      --text: #d0d0d0;
-      --text-dim: #555;
-      --text-mid: #888;
-      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      /* Typography */
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --ui:   'Syne', system-ui, sans-serif;
+
+      /* Sticky layout */
+      --rank-w: 40px;
+      --addr-w: 160px;
+
+      /* Palette */
+      --cream:   #FFFCF0;
+      --cream2:  #F5F0E8;
+      --black:   #000000;
+      --text:    #000000;
+      --label:   #333333;
+      --dim:     #666666;
+
+      /* Signal */
+      --red:    #CC0000;
+      --green:  #006633;
+      --amber:  #AA6600;
+      --blue:   #003399;
+      --violet: #6600CC;
+      --orange: #994400;
+
+      /* Card colors */
+      --card-claimed:   #FFE566;
+      --card-unclaimed: #B8D9FF;
+      --card-claimable: #C8F5A4;
+      --card-dumpers:   #FFB3B3;
+      --card-hodlers:   #B3F5D4;
+      --card-staked:    #E5B3FF;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      font-size: 13px;
+      background: var(--cream);
+      color: var(--black);
+      font-family: var(--ui);
+      font-size: 17px;
       min-height: 100vh;
     }
 
     /* ── HEADER ── */
     header {
-      padding: 2.5rem 2rem 2rem;
-      border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, #110000 0%, var(--bg) 100%);
-      text-align: center;
+      padding: 1.75rem 2.5rem;
+      border-bottom: 2px solid var(--black);
+      background: var(--cream);
+      display: flex;
+      align-items: center;
+      gap: 2.5rem;
     }
-    .skull { font-size: 2rem; display: block; margin-bottom: 0.5rem; filter: drop-shadow(0 0 12px #ff2222aa); }
-    h1 {
-      font-size: clamp(1.8rem, 5vw, 3rem);
-      font-weight: 900;
-      letter-spacing: 0.12em;
-      color: var(--red);
-      font-family: var(--mono);
+    .header-left {
+      border-left: 4px solid var(--black);
+      padding-left: 1rem;
+      flex: 1;
+    }
+    .header-count {
+      margin-left: auto;
+      text-align: right;
+    }
+    .header-count-label {
+      font-family: var(--ui);
+      font-size: 0.7rem;
       text-transform: uppercase;
-      text-shadow: 0 0 30px rgba(255,34,34,0.4);
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      margin-bottom: 0.2rem;
+      font-weight: 700;
     }
-    h1 em { color: #3a1010; font-style: normal; }
+    .header-count-value {
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--black);
+      font-feature-settings: "tnum" 1;
+    }
+    h1 {
+      font-family: var(--ui);
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: 0;
+      color: var(--black);
+      text-transform: uppercase;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
     .subtitle {
-      color: var(--text-dim);
-      margin-top: 0.6rem;
-      font-size: 0.8rem;
-      letter-spacing: 0.04em;
+      color: var(--label);
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: var(--ui);
     }
-    .subtitle b { color: var(--text-mid); }
+    .subtitle b { color: var(--black); font-weight: 800; }
 
     /* ── STATS ── */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 1px;
-      background: var(--border);
-      border-bottom: 1px solid var(--border);
+      grid-template-columns: repeat(6, 1fr);
+      border-bottom: 2px solid var(--black);
+    }
+    @media (max-width: 960px) {
+      .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
     .stat-card {
-      background: var(--card);
+      background: var(--cream);
       padding: 1.2rem 1.5rem;
-      transition: background 0.15s;
+      border-right: 2px solid var(--black);
+      border-top: none;
+      transition: transform 0.08s, box-shadow 0.08s;
+      position: relative;
+      box-shadow: none;
     }
-    .stat-card:hover { background: var(--card2); }
+    .stat-card:last-child { border-right: none; }
+    .stat-card[data-filter] { cursor: pointer; }
+
+    /* Per-card background colors */
+    .stat-card:has(#stat-claimed)       { background: var(--card-claimed); }
+    .stat-card:has(#stat-never-claimed) { background: var(--card-unclaimed); }
+    .stat-card:has(#stat-claimable)     { background: var(--card-claimable); }
+    .stat-card:has(#stat-dumpers)       { background: var(--card-dumpers); }
+    .stat-card:has(#stat-hodlers)       { background: var(--card-hodlers); }
+    .stat-card:has(#stat-staked)        { background: var(--card-staked); }
+
+    .stat-card[data-filter]:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--black);
+      z-index: 1;
+    }
+
+    /* Active filter card — inverted */
+    .stat-card.active {
+      background: var(--black) !important;
+      color: #fff;
+    }
+    .stat-card.active .stat-label { color: rgba(255,255,255,0.65); }
+    .stat-card.active .stat-value { color: #fff; }
+    .stat-card.active .stat-sub   { color: rgba(255,255,255,0.55); }
+
     .stat-label {
-      font-size: 0.65rem;
+      font-family: var(--ui);
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      margin-bottom: 0.4rem;
+      letter-spacing: 0.1em;
+      color: var(--label);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
     }
     .stat-value {
       font-family: var(--mono);
-      font-size: 1.4rem;
+      font-size: 1.6rem;
       font-weight: 700;
-      color: var(--text);
+      color: var(--black);
+      font-feature-settings: "tnum" 1;
+      letter-spacing: -0.02em;
+      line-height: 1;
     }
-    .stat-value.red { color: var(--red); }
-    .stat-value.green { color: var(--green); }
-    .stat-value.yellow { color: var(--yellow); }
-    .stat-value.blue { color: var(--blue); }
+    .stat-value.red    { color: var(--red); }
+    .stat-value.green  { color: var(--green); }
+    .stat-value.yellow { color: var(--amber); }
+    .stat-value.blue   { color: var(--blue); }
+    .stat-sub {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: var(--label);
+      margin-top: 0.5rem;
+      font-feature-settings: "tnum" 1;
+    }
 
     /* ── PROGRESS ── */
     #progress-section {
-      padding: 0.75rem 2rem;
-      border-bottom: 1px solid var(--border);
-      background: var(--card);
+      padding: 0.75rem 2.5rem;
+      border-bottom: 2px solid var(--black);
+      background: var(--cream2);
     }
     .progress-track {
-      background: var(--border2);
-      border-radius: 3px;
-      height: 4px;
+      background: rgba(0,0,0,0.15);
+      border-radius: 0;
+      height: 3px;
       overflow: hidden;
+      border: 1px solid var(--black);
     }
     .progress-fill {
-      background: linear-gradient(90deg, var(--red-dim), var(--red));
+      background: var(--black);
       height: 100%;
-      transition: width 0.4s ease;
       width: 0%;
-      box-shadow: 0 0 8px rgba(255,34,34,0.5);
+      transition: width 0.3s ease;
     }
     .progress-label {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin-top: 0.35rem;
       font-family: var(--mono);
+      font-size: 0.88rem;
+      color: var(--label);
+      margin-top: 0.3rem;
+      font-feature-settings: "tnum" 1;
     }
-    .progress-label b { color: var(--text-mid); }
+    .progress-label b { color: var(--black); font-weight: 700; }
 
     /* ── CONTROLS ── */
     .controls {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.6rem;
+      gap: 0.45rem;
       align-items: center;
-      padding: 0.75rem 2rem;
-      border-bottom: 1px solid var(--border);
-      background: var(--card);
+      padding: 0.85rem 2.5rem;
+      border-bottom: 2px solid var(--black);
+      background: var(--cream2);
     }
     .filter-input {
-      background: var(--bg);
-      border: 1px solid var(--border2);
-      color: var(--text);
-      padding: 0.45rem 0.75rem;
-      border-radius: 5px;
-      font-size: 0.8rem;
+      background: var(--cream);
+      border: 2px solid var(--black);
+      color: var(--black);
+      padding: 0.5rem 0.7rem;
+      border-radius: 0;
+      font-size: 0.94rem;
       font-family: var(--mono);
-      width: 260px;
+      width: 210px;
       outline: none;
-      transition: border-color 0.15s;
+      box-shadow: 4px 4px 0 var(--black);
+      transition: box-shadow 0.08s, transform 0.08s;
     }
-    .filter-input:focus { border-color: var(--red-dim); }
-    .filter-input::placeholder { color: var(--text-dim); }
+    .filter-input:focus {
+      box-shadow: 2px 2px 0 var(--black);
+      transform: translate(2px, 2px);
+    }
+    .filter-input::placeholder { color: var(--dim); }
     select.btn, button.btn {
-      background: var(--bg);
-      border: 1px solid var(--border2);
-      color: var(--text-mid);
-      padding: 0.45rem 0.8rem;
-      border-radius: 5px;
+      background: var(--cream);
+      border: 2px solid var(--black);
+      color: var(--black);
+      padding: 0.5rem 0.7rem;
+      border-radius: 0;
       cursor: pointer;
-      font-size: 0.8rem;
-      transition: all 0.15s;
+      font-size: 0.94rem;
+      font-family: var(--ui);
+      font-weight: 700;
+      box-shadow: 4px 4px 0 var(--black);
+      transition: box-shadow 0.08s, transform 0.08s;
       outline: none;
     }
     select.btn:hover, button.btn:hover {
-      border-color: var(--red-dim);
-      color: var(--text);
+      box-shadow: 2px 2px 0 var(--black);
+      transform: translate(2px, 2px);
     }
-    select.btn option { background: #111; }
+    button.btn.active {
+      background: var(--black);
+      color: #fff;
+      box-shadow: none;
+      transform: translate(4px, 4px);
+    }
+    select.btn option { background: var(--cream); color: var(--black); }
     .controls-right {
       margin-left: auto;
-      color: var(--text-dim);
-      font-size: 0.7rem;
+      color: var(--label);
+      font-size: 0.88rem;
       font-family: var(--mono);
+      font-feature-settings: "tnum" 1;
+      font-weight: 600;
+    }
+    .controls-sep {
+      color: var(--dim);
+      font-size: 0.75rem;
+      user-select: none;
     }
 
     /* ── TABLE ── */
     .table-wrap {
       overflow-x: auto;
-      padding: 0 2rem 3rem;
+      padding: 0 0 4rem;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 0.75rem;
+      margin-top: 0;
     }
     thead { position: sticky; top: 0; z-index: 10; }
     th {
       text-align: left;
-      padding: 0.6rem 0.75rem;
-      font-size: 0.65rem;
+      padding: 0.7rem 1rem;
+      font-family: var(--ui);
+      font-size: 0.76rem;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.07em;
-      color: var(--text-dim);
-      border-bottom: 1px solid var(--border2);
+      letter-spacing: 0.08em;
+      color: #fff;
+      border-bottom: 2px solid var(--black);
+      border-right: 1px solid rgba(255,255,255,0.15);
       cursor: pointer;
       user-select: none;
       white-space: nowrap;
-      background: var(--card);
-      transition: color 0.12s;
+      background: var(--black);
+      transition: background 0.1s;
     }
-    th:hover { color: var(--text-mid); }
-    th.sorted { color: var(--red); }
-    th .sort-arrow { margin-left: 3px; opacity: 0.5; }
-    th.sorted .sort-arrow { opacity: 1; }
+    th:last-child { border-right: none; }
+    th:hover { background: #222; }
+    th.sorted { background: #111; }
+    th .sort-arrow { margin-left: 3px; opacity: 0.5; font-size: 0.76rem; }
+    th.sorted .sort-arrow { opacity: 1; color: var(--card-claimed); }
+
+    /* Row color via inherited CSS custom property — works for sticky cells too */
+    tr { --row-base: var(--cream); }
+    tr:nth-child(even)       { --row-base: var(--cream2); }
+    tr:hover                 { --row-base: #FFE566; }
+    tr.row-dumper            { --row-base: #FFF0F0; }
+    tr.row-dumper:nth-child(even) { --row-base: #FFE8E8; }
+    tr.row-dumper:hover      { --row-base: #FFE566; }
+    tr.row-hodler            { --row-base: #F0FFF8; }
+    tr.row-hodler:nth-child(even) { --row-base: #E8FFF4; }
+    tr.row-hodler:hover      { --row-base: #FFE566; }
+
     td {
-      padding: 0.6rem 0.75rem;
-      border-bottom: 1px solid var(--border);
+      padding: 0.78rem 1rem;
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      border-right: 1px solid rgba(0,0,0,0.06);
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 1rem;
       vertical-align: middle;
       white-space: nowrap;
+      background: var(--row-base);
+      color: var(--black);
     }
-    tr:hover td { background: rgba(255,255,255,0.015); }
-    tr.row-dumper td { background: rgba(255,34,34,0.04); }
-    tr.row-dumper:hover td { background: rgba(255,34,34,0.07); }
-    tr.row-hodler td { background: rgba(34,204,85,0.025); }
-    tr.row-hodler:hover td { background: rgba(34,204,85,0.05); }
+    td:last-child { border-right: none; }
 
-    .num { text-align: right; }
-    .addr-cell { min-width: 140px; }
-    .addr-full {
-      display: none;
-      font-size: 0.65rem;
-      color: var(--text-dim);
+    tr.row-inactive td  { opacity: 0.36; }
+    tr.row-unclaimed td { opacity: 0.6; }
+    tr.row-inactive:hover td,
+    tr.row-unclaimed:hover td { opacity: 1; }
+
+    /* ── STICKY COLUMNS ── */
+    th:nth-child(1), td:nth-child(1) {
+      position: sticky; left: 0; z-index: 2;
+      min-width: var(--rank-w);
     }
-    .addr-short { color: var(--text-mid); }
-    .addr-short b { color: var(--text); }
+    th:nth-child(2), td:nth-child(2) {
+      position: sticky; left: var(--rank-w); z-index: 2;
+      min-width: var(--addr-w);
+    }
+    thead th:nth-child(1),
+    thead th:nth-child(2) { z-index: 12; }
+
+    .num {
+      text-align: right;
+      font-feature-settings: "tnum" 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .addr-cell { min-width: 140px; }
+    .addr-short { color: var(--label); }
+    .addr-short b { color: var(--black); font-weight: 600; }
 
     .copy-btn {
       background: none;
       border: none;
-      color: var(--text-dim);
+      color: var(--dim);
       cursor: pointer;
       padding: 0 0.2rem;
-      font-size: 0.7rem;
+      font-size: 0.62rem;
       opacity: 0;
-      transition: opacity 0.12s, color 0.12s;
+      transition: opacity 0.1s, color 0.1s;
       vertical-align: middle;
+      font-family: var(--ui);
     }
     tr:hover .copy-btn { opacity: 1; }
-    .copy-btn:hover { color: var(--text); }
+    .copy-btn:hover { color: var(--black); }
     .copy-btn.copied { color: var(--green); opacity: 1; }
 
+    /* ── BADGES ── */
     .badge {
       display: inline-block;
-      padding: 0.12rem 0.45rem;
-      border-radius: 3px;
-      font-size: 0.6rem;
+      padding: 0.22rem 0.5rem;
+      border-radius: 0;
+      border: 2px solid var(--black);
+      font-family: var(--ui);
+      font-size: 0.72rem;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    .badge-dumper  { background: rgba(255,34,34,0.15);  color: #ff5555; border: 1px solid rgba(255,34,34,0.25); }
-    .badge-partial { background: rgba(255,170,0,0.15);  color: #ffbb33; border: 1px solid rgba(255,170,0,0.25); }
-    .badge-hodler  { background: rgba(34,204,85,0.15);  color: #33dd66; border: 1px solid rgba(34,204,85,0.25); }
-    .badge-unclaimed { background: rgba(68,136,255,0.12); color: #5599ff; border: 1px solid rgba(68,136,255,0.2); }
-    .badge-inactive  { background: rgba(40,40,40,0.8);   color: #444;    border: 1px solid #222; }
+    .badge-dumper   { background: #FFB3B3; color: var(--black); }
+    .badge-partial  { background: #FFE566; color: var(--black); }
+    .badge-hodler   { background: #B3F5D4; color: var(--black); }
+    .badge-unclaimed{ background: #B8D9FF; color: var(--black); }
+    .badge-inactive { background: #E0E0E0; color: var(--dim); border-color: #999; }
 
-    .dump-track {
-      display: inline-block;
-      background: var(--border2);
-      border-radius: 2px;
-      height: 3px;
-      width: 60px;
-      vertical-align: middle;
-      margin-right: 5px;
-    }
-    .dump-fill {
-      height: 100%;
-      border-radius: 2px;
-    }
-    .fill-red    { background: var(--red); }
-    .fill-yellow { background: var(--yellow); }
-    .fill-green  { background: var(--green); }
-
+    /* ── NUMBER COLORS ── */
     .num-red    { color: var(--red); }
     .num-green  { color: var(--green); }
-    .num-yellow { color: var(--yellow); }
+    .num-yellow { color: var(--amber); }
     .num-blue   { color: var(--blue); }
-    .num-orange { color: #f97316; }
+    .num-orange { color: var(--orange); }
+    .num-dim    { color: var(--dim); }
 
-    .addr-tiny { font-size: 0.6rem; color: var(--text-dim); white-space: nowrap; }
-    .addr-tiny b { color: var(--text-mid); }
+    /* ── KAT SENT CHIPS ── */
+    .addr-tiny {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--dim);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .addr-tiny:hover { color: var(--black); }
+    .addr-tiny b { color: var(--label); }
+    .addr-ellipsis { color: #aaa; }
+    .addr-more { font-size: 0.8rem; color: var(--dim); font-style: italic; }
+    .cell-pending { color: #bbb; letter-spacing: 0.15em; }
+    th:last-child { cursor: default; }
 
+    .anomaly-flag {
+      color: var(--violet);
+      font-size: 0.6rem;
+      vertical-align: middle;
+      cursor: help;
+      opacity: 0.8;
+    }
+
+    /* ── TOOLTIPS ── */
     th[data-tip] { cursor: help; position: relative; }
     th[data-tip]::after {
       content: ' ⓘ';
-      font-size: 0.65em;
-      opacity: 0.45;
+      font-size: 0.6em;
+      opacity: 0.5;
       vertical-align: super;
     }
     th[data-tip]:hover::before {
       content: attr(data-tip);
       position: absolute;
-      top: calc(100% + 6px);
+      top: calc(100% + 4px);
       left: 50%;
       transform: translateX(-50%);
-      background: #1e293b;
-      color: #e2e8f0;
-      font-size: 0.72rem;
+      background: var(--black);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 0.7rem;
       font-weight: 400;
-      line-height: 1.4;
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: 1px solid #334155;
+      line-height: 1.45;
+      padding: 8px 12px;
+      border-radius: 0;
+      border: 2px solid var(--black);
       white-space: normal;
       width: 220px;
       z-index: 100;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
       pointer-events: none;
     }
 
-    .ext-links { display: flex; gap: 4px; }
+    /* ── EXT LINKS ── */
+    .ext-links { display: flex; gap: 3px; }
     .ext-link {
-      color: var(--text-dim);
+      color: var(--label);
       text-decoration: none;
-      font-size: 0.6rem;
-      padding: 0.1rem 0.35rem;
-      border: 1px solid var(--border2);
-      border-radius: 3px;
-      transition: all 0.12s;
+      font-family: var(--ui);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.12rem 0.35rem;
+      border: 1.5px solid var(--black);
+      border-radius: 0;
+      transition: background 0.08s, color 0.08s;
     }
-    .ext-link:hover { color: var(--text); border-color: var(--text-dim); }
+    .ext-link:hover { background: var(--black); color: #fff; }
 
+    /* ── LOADING ── */
     .loading-row td {
       text-align: center;
-      color: var(--text-dim);
+      color: var(--label);
       padding: 4rem;
-      font-family: inherit;
-      font-size: 0.85rem;
+      font-family: var(--ui);
+      font-size: 0.82rem;
+      font-weight: 700;
+      background: var(--cream);
     }
     .spinner {
       display: inline-block;
-      width: 14px; height: 14px;
-      border: 2px solid var(--border2);
-      border-top-color: var(--red);
+      width: 12px; height: 12px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: var(--black);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       vertical-align: middle;
@@ -332,54 +493,73 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error-msg { color: var(--red); font-size: 0.75rem; padding: 0.5rem 2rem; display: none; }
+    .error-msg { color: var(--red); font-size: 0.75rem; font-weight: 700; padding: 0.5rem 2.5rem; display: none; }
 
     /* ── FOOTER ── */
     footer {
-      padding: 1rem 2rem;
-      border-top: 1px solid var(--border);
-      color: var(--text-dim);
-      font-size: 0.7rem;
+      padding: 1.25rem 2.5rem;
+      border-top: 2px solid var(--black);
+      color: var(--label);
+      font-size: 0.88rem;
       text-align: center;
+      background: var(--cream2);
     }
-    footer a { color: var(--text-mid); text-decoration: none; }
-    footer a:hover { color: var(--text); }
+    footer a { color: var(--black); text-decoration: underline; font-weight: 700; }
+    footer a:hover { background: var(--black); color: #fff; text-decoration: none; }
+    .footer-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.2rem 1.5rem;
+      margin-bottom: 0.35rem;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+    .footer-legend b { color: var(--black); font-weight: 700; }
+    .footer-sources { color: var(--dim); }
   </style>
 </head>
 <body>
 
 <header>
-  <span class="skull">☠</span>
-  <h1>KAT <em>//</em> DUMPERS</h1>
-  <div class="subtitle">
-    Merkl reward claimers on <b>Katana Network</b>
+  <div class="header-left">
+    <h1>KAT DUMPERS</h1>
+    <div class="subtitle">Who claimed their KAT rewards on <b>Katana Network</b> — and who sold them</div>
+  </div>
+  <div class="header-count">
+    <div class="header-count-label">Addresses Scanned</div>
+    <div class="header-count-value" id="stat-total">—</div>
   </div>
 </header>
 
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-label">Addresses Scanned</div>
-    <div class="stat-value" id="stat-total">—</div>
-  </div>
-  <div class="stat-card">
     <div class="stat-label">Total KAT Claimed</div>
     <div class="stat-value yellow" id="stat-claimed">—</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" data-filter="unclaimed">
+    <div class="stat-label">KAT Unclaimed</div>
+    <div class="stat-value blue" id="stat-never-claimed">—</div>
+  </div>
+  <div class="stat-card" data-filter="partial">
     <div class="stat-label">Still Claimable</div>
     <div class="stat-value blue" id="stat-claimable">—</div>
+    <div class="stat-sub" id="stat-claimable-sub"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" data-filter="dumper">
     <div class="stat-label">Confirmed Dumpers</div>
     <div class="stat-value red" id="stat-dumpers">—</div>
+    <div class="stat-sub" id="stat-dumpers-sub"></div>
   </div>
-  <div class="stat-card">
-    <div class="stat-label">Est. KAT Dumped</div>
-    <div class="stat-value red" id="stat-dumped">—</div>
-  </div>
-  <div class="stat-card">
+  <div class="stat-card" data-filter="hodler">
     <div class="stat-label">Hodlers</div>
     <div class="stat-value green" id="stat-hodlers">—</div>
+    <div class="stat-sub" id="stat-hodlers-sub"></div>
+  </div>
+  <div class="stat-card" data-filter="staked">
+    <div class="stat-label">avKAT Staked</div>
+    <div class="stat-value" style="color:var(--violet)" id="stat-staked">—</div>
+    <div class="stat-sub" id="stat-staked-sub"></div>
   </div>
 </div>
 
@@ -393,15 +573,28 @@
 <div id="error-msg" class="error-msg"></div>
 
 <div class="controls">
-  <input class="filter-input" id="filter-input" type="text" placeholder="Filter by address…">
+  <input class="filter-input" id="filter-input" type="text" placeholder="Address… (/ to focus)">
   <select class="btn" id="status-filter">
     <option value="">All statuses</option>
-    <option value="dumper">🔴 Dumpers</option>
-    <option value="partial">🟡 Partial dumpers</option>
-    <option value="hodler">🟢 Hodlers</option>
-    <option value="unclaimed">🔵 Unclaimed</option>
-    <option value="inactive">⬛ Inactive</option>
+    <option value="dumper">Dumpers (&gt;50%)</option>
+    <option value="partial">Partial (5–50%)</option>
+    <option value="hodler">Hodlers (&lt;5%)</option>
+    <option value="unclaimed">Unclaimed</option>
+    <option value="inactive">Inactive</option>
+    <option value="staked">avKAT Staked</option>
   </select>
+  <select class="btn" id="min-filter">
+    <option value="0">All sizes</option>
+    <option value="1000">1K+ KAT</option>
+    <option value="10000">10K+ KAT</option>
+    <option value="100000">100K+ KAT</option>
+    <option value="1000000">1M+ KAT</option>
+  </select>
+  <span class="controls-sep">|</span>
+  <button class="btn top-btn" data-n="10">Top 10</button>
+  <button class="btn top-btn" data-n="25">Top 25</button>
+  <button class="btn top-btn" data-n="50">Top 50</button>
+  <span class="controls-sep">|</span>
   <button class="btn" id="export-btn">↓ Export CSV</button>
   <button class="btn" id="reload-btn">↺ Reload</button>
   <div class="controls-right" id="table-count"></div>
@@ -413,29 +606,35 @@
       <tr>
         <th data-col="rank">#<span class="sort-arrow"></span></th>
         <th data-col="address">Address<span class="sort-arrow"></span></th>
+        <th data-col="status" data-tip="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · UNCLAIMED never claimed · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
         <th data-col="total" class="num sorted" data-tip="Total KAT allocated via Merkl rewards (claimed + unclaimed)">KAT Allocated<span class="sort-arrow">↓</span></th>
         <th data-col="claimed" class="num" data-tip="KAT already withdrawn from Merkl into wallet">KAT Claimed<span class="sort-arrow"></span></th>
-        <th data-col="balance" class="num" data-tip="Current KAT token balance in wallet (real KAT, 0x7f1f…)">KAT Balance<span class="sort-arrow"></span></th>
-        <th data-col="avkat" class="num" data-tip="KAT deposited into avKAT staking vault (0x7231…)">KAT Staked<span class="sort-arrow"></span></th>
+        <th data-col="transferred" class="num" data-tip="KAT sent to addresses that no longer hold it (likely dumped). Transfers where the recipient still holds the KAT are shown separately in green and excluded from Dump %.">KAT Sent<span class="sort-arrow"></span></th>
         <th data-col="moved" class="num" data-tip="KAT swapped on Sushi V2/V3 — detected via Swap event in tx receipt">KAT Sold<span class="sort-arrow"></span></th>
-        <th data-col="transferred" class="num" data-tip="KAT sent to any other address (wallets, bridges, contracts) — no Sushi swap in the tx">KAT Sent<span class="sort-arrow"></span></th>
+        <th data-col="balance" class="num" data-tip="Current KAT token balance in wallet (real KAT, 0x7f1f…)">KAT Balance<span class="sort-arrow"></span></th>
+        <th data-col="avkat" class="num" data-tip="KAT deposited into avKAT staking vault (0x7231…). vKAT support coming once contract deploys.">avKAT<span class="sort-arrow"></span></th>
         <th data-col="dumpPct" class="num" data-tip="(KAT Sold + KAT Sent) ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
-        <th data-col="status" data-tip="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · UNCLAIMED never claimed · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
     </thead>
     <tbody id="table-body">
       <tr class="loading-row">
-        <td colspan="10"><span class="spinner"></span> Loading data…</td>
+        <td colspan="11"><span class="spinner"></span> Loading data…</td>
       </tr>
     </tbody>
   </table>
 </div>
 
 <footer>
-  Data: <a href="https://api.merkl.xyz" target="_blank">Merkl API</a> + <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> ·
-  KAT token: <a href="https://katanascan.com/token/0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d" target="_blank">0x7f1f…c2d</a> ·
-  "KAT Sold" = swapped on Sushi (Swap event in tx) · "KAT Sent" = all other outgoing transfers (wallets, bridges) · Dump % = (Sold + Sent) ÷ Claimed.
+  <div class="footer-legend">
+    <span><b>KAT Sold</b> — swapped on Sushi V2/V3 (Swap event detected in tx receipt)</span>
+    <span><b>KAT Sent</b> — transfers to addresses that no longer hold the KAT (orange) · transfers to holders (green, excluded from Dump %)</span>
+    <span><b>Dump %</b> — (KAT Sold + KAT Sent to non-holders) ÷ KAT Claimed, capped at 100%</span>
+  </div>
+  <div class="footer-sources">
+    Data: <a href="https://api.merkl.xyz" target="_blank">Merkl API</a> + <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> ·
+    KAT token: <a href="https://katanascan.com/token/0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d" target="_blank">0x7f1f…c2d</a>
+  </div>
 </footer>
 
 <script>
@@ -469,8 +668,35 @@ let sortCol = 'total';
 let sortDir = -1;
 let filterText = '';
 let filterStatus = '';
+let minAmount = 0;
+let topN = 0;
 let completed = 0;
 let renderPending = false;
+let loadStart = 0;
+let errorCount = 0;
+
+// ── URL STATE ─────────────────────────────────────────────────────────────────
+(function initFromURL() {
+  const sp = new URLSearchParams(location.search);
+  if (sp.get('status')) filterStatus = sp.get('status');
+  if (sp.get('q'))      filterText   = sp.get('q');
+  if (sp.get('sort'))   sortCol      = sp.get('sort');
+  if (sp.get('dir'))    sortDir      = 1;
+  if (sp.get('min'))    minAmount    = +sp.get('min') || 0;
+  if (sp.get('top'))    topN         = +sp.get('top') || 0;
+})();
+
+function pushState() {
+  const p = new URLSearchParams();
+  if (filterStatus)   p.set('status', filterStatus);
+  if (filterText)     p.set('q', filterText);
+  if (sortCol !== 'total') p.set('sort', sortCol);
+  if (sortDir !== -1) p.set('dir', '1');
+  if (minAmount > 0)  p.set('min', String(minAmount));
+  if (topN > 0)       p.set('top', String(topN));
+  const qs = p.toString();
+  history.replaceState(null, '', qs ? '?' + qs : location.pathname);
+}
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
 function fromWei(hex) {
@@ -537,12 +763,6 @@ async function balanceOf(token, wallet) {
 }
 
 // ── DUMP DETECTION ───────────────────────────────────────────────────────────
-// Strategy:
-//   - Query REAL KAT (0x7f1f...) Transfer events FROM wallet (not Merkl's 0x6E9C...)
-//   - Bridge transfers: token goes directly to bridge contract → detect via topics[2]
-//   - Sushi swaps: token goes to pool (not router) → detect via Swap event in tx receipt
-// Helpers use individual rpcLimit slots to avoid nesting inside outer rate-limiter.
-
 async function ethGetLogs(params) {
   return rpcLimit(async () => {
     const body = JSON.stringify({ jsonrpc: '2.0', id: rpcSeq++, method: 'eth_getLogs', params });
@@ -570,7 +790,6 @@ async function fetchDumped(address) {
     }]);
     if (!logs.length) return { sold: 0, transferred: 0, transferredTo: [] };
 
-    // Group by txHash; store `to` with each log entry
     const byTx = {};
     for (const log of logs) {
       if (!log.topics || log.topics.length < 3) continue;
@@ -579,7 +798,6 @@ async function fetchDumped(address) {
       byTx[log.transactionHash].entries.push({ log, to });
     }
 
-    // Fetch receipt for every tx and check for Sushi Swap event
     const needsCheck = Object.entries(byTx);
     await Promise.all(needsCheck.map(async ([txHash, v]) => {
       const rec = await ethGetReceipt(txHash);
@@ -588,20 +806,44 @@ async function fetchDumped(address) {
       }
     }));
 
-    let sold = 0, transferred = 0;
+    // Collect total KAT sent to each non-swap destination
+    const destAmounts = {};
+    for (const { entries, hasDump } of Object.values(byTx)) {
+      if (!hasDump) {
+        for (const { log, to } of entries) {
+          destAmounts[to] = (destAmounts[to] || 0) + fromWei(log.data);
+        }
+      }
+    }
+
+    // Check whether each destination is still holding the KAT
+    const destBalances = {};
+    await Promise.all(Object.keys(destAmounts).map(async dest => {
+      destBalances[dest] = await balanceOf(REAL_KAT_ADDR, dest);
+    }));
+
+    let sold = 0, transferred = 0, sentHeld = 0;
     const transferredToSet = new Set();
+    const sentHeldToSet = new Set();
     for (const { entries, hasDump } of Object.values(byTx)) {
       if (hasDump) {
         sold += entries.reduce((s, { log }) => s + fromWei(log.data), 0);
       } else {
         for (const { log, to } of entries) {
-          transferred += fromWei(log.data);
-          transferredToSet.add(to);
+          const amount = fromWei(log.data);
+          // Destination still holds ≥95% of what was sent → not a dump
+          if ((destBalances[to] || 0) >= destAmounts[to] * 0.95) {
+            sentHeld += amount;
+            sentHeldToSet.add(to);
+          } else {
+            transferred += amount;
+            transferredToSet.add(to);
+          }
         }
       }
     }
-    return { sold, transferred, transferredTo: [...transferredToSet] };
-  } catch { return { sold: 0, transferred: 0, transferredTo: [] }; }
+    return { sold, transferred, transferredTo: [...transferredToSet], sentHeld, sentHeldTo: [...sentHeldToSet] };
+  } catch { return { sold: 0, transferred: 0, transferredTo: [], sentHeld: 0, sentHeldTo: [] }; }
 }
 
 // ── MERKL ─────────────────────────────────────────────────────────────────────
@@ -612,14 +854,12 @@ async function fetchMerkl(address) {
         if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
         const url = `${MERKL_BASE}/users/${address}/rewards?chainId=${CHAIN_ID}`;
         const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (res.status === 429) continue; // retry
+        if (res.status === 429) continue;
         if (!res.ok) return { claimed: 0, claimable: 0, total: 0 };
 
         const data = await res.json();
         let claimed = 0, claimable = 0;
 
-        // Response format: [{chain: {...}, rewards: [{token, amount, claimed, ...}]}]
-        // Multiple KAT entries possible (different campaigns) — accumulate ALL, no break.
         for (const chainEntry of (Array.isArray(data) ? data : [data])) {
           for (const reward of (chainEntry.rewards || [])) {
             if (reward.token?.symbol === 'KAT') {
@@ -642,7 +882,7 @@ async function fetchMerkl(address) {
 
 // ── CLASSIFICATION ────────────────────────────────────────────────────────────
 function disposed(d) {
-  return (d.moved || 0) + (d.transferred || 0); // KAT Sold + KAT Sent
+  return (d.moved || 0) + (d.transferred || 0);
 }
 
 function classify(d) {
@@ -659,6 +899,28 @@ function dumpPct(d) {
   return Math.min(100, (disposed(d) / d.claimed) * 100);
 }
 
+// ── FILTER / SORT ─────────────────────────────────────────────────────────────
+function getFilteredRows() {
+  let rows = Object.values(results).filter(d => !d._loading);
+  if (filterText)   rows = rows.filter(d => d.address.includes(filterText.toLowerCase()));
+  if (filterStatus === 'staked') rows = rows.filter(d => d.avkat > 0);
+  else if (filterStatus) rows = rows.filter(d => d.status === filterStatus);
+  if (minAmount > 0) rows = rows.filter(d => (d.total || 0) >= minAmount);
+
+  rows.sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'dumpPct')       { av = dumpPct(a); bv = dumpPct(b); }
+    else if (sortCol === 'rank')     { av = dumpPct(a); bv = dumpPct(b); return bv - av; }
+    else if (sortCol === 'status')   { av = a.status; bv = b.status; return sortDir * av.localeCompare(bv); }
+    else if (sortCol === 'address')  { av = a.address; bv = b.address; return sortDir * av.localeCompare(bv); }
+    else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
+    return sortDir * (av - bv);
+  });
+
+  if (topN > 0) rows = rows.slice(0, topN);
+  return rows;
+}
+
 // ── RENDER ─────────────────────────────────────────────────────────────────────
 function badge(status) {
   const map = {
@@ -672,76 +934,96 @@ function badge(status) {
   return `<span class="badge ${cls}">${label}</span>`;
 }
 
-function dumpBar(pct, status) {
-  const w = Math.min(100, pct);
-  const cls = status === 'hodler' ? 'fill-green' : status === 'partial' ? 'fill-yellow' : 'fill-red';
-  return `<span class="dump-track"><span class="dump-fill ${cls}" style="width:${w}%"></span></span>`;
-}
-
 function shortAddr(a) {
-  return `<b>${a.slice(0, 6)}</b>…${a.slice(-4)}`;
+  return `<b>${a.slice(0, 6)}</b><span class="addr-ellipsis">…</span>${a.slice(-4)}`;
 }
 
 function renderTable() {
   renderPending = false;
-  const rows = Object.values(results);
+  const allRows = Object.values(results);
+  const filtered = getFilteredRows();
 
-  let filtered = rows.filter(d => {
-    if (filterText && !d.address.includes(filterText.toLowerCase())) return false;
-    if (filterStatus && d.status !== filterStatus) return false;
-    return true;
-  });
-
-  // sort
-  filtered.sort((a, b) => {
-    let av, bv;
-    if (sortCol === 'dumpPct')  { av = dumpPct(a); bv = dumpPct(b); }
-    else if (sortCol === 'rank')     { av = dumpPct(a); bv = dumpPct(b); return bv - av; }
-    else if (sortCol === 'status')   { av = a.status; bv = b.status; return sortDir * av.localeCompare(bv); }
-    else if (sortCol === 'address')  { av = a.address; bv = b.address; return sortDir * av.localeCompare(bv); }
-    else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
-    return sortDir * (av - bv);
-  });
-
-  document.getElementById('table-count').textContent =
-    `${filtered.length.toLocaleString()} / ${rows.length.toLocaleString()} addresses`;
+  const countText = filterText || filterStatus || minAmount > 0 || topN > 0
+    ? `${filtered.length.toLocaleString()} / ${allRows.length.toLocaleString()}`
+    : `${allRows.length.toLocaleString()} addresses`;
+  document.getElementById('table-count').textContent = countText;
 
   const tbody = document.getElementById('table-body');
 
-  if (filtered.length === 0 && rows.length > 0) {
+  if (filtered.length === 0 && allRows.length > 0) {
     tbody.innerHTML = '<tr class="loading-row"><td colspan="11">No matching addresses</td></tr>';
     return;
   }
-  if (rows.length === 0) return;
+  if (allRows.length === 0) return;
 
   tbody.innerHTML = filtered.map((d, i) => {
     const pct  = dumpPct(d);
     const moved = d.moved || 0;
     const transferred = d.transferred || 0;
     const transferredTo = d.transferredTo || [];
-    const rowCls = d.status === 'dumper' ? 'row-dumper' : d.status === 'hodler' ? 'row-hodler' : '';
+    const rowCls = d.status === 'dumper'    ? 'row-dumper'
+                 : d.status === 'hodler'    ? 'row-hodler'
+                 : d.status === 'inactive'  ? 'row-inactive'
+                 : d.status === 'unclaimed' ? 'row-unclaimed'
+                 : '';
+
     const pctCell = d.claimed > 0
-      ? `${dumpBar(pct, d.status)} <span class="${pct > 50 ? 'num-red' : pct > 5 ? 'num-yellow' : 'num-green'}">${pct.toFixed(1)}%</span>`
+      ? `<span class="${pct > 50 ? 'num-red' : pct > 5 ? 'num-yellow' : pct > 0 ? 'num-green' : 'num-dim'}">${pct.toFixed(1)}%</span>`
       : '—';
-    const sentAddrs = transferredTo.slice(0, 3).map(a => `<span class="addr-tiny" title="${a}">${shortAddr(a)}</span>`).join(' ');
-    const sentCell = transferred > 0.01
-      ? `<span class="num-orange">${fmtNum(transferred)}</span>${sentAddrs ? '<br>' + sentAddrs : ''}`
-      : '—';
+
+    const sentHeld = d.sentHeld || 0;
+    const sentHeldTo = d.sentHeldTo || [];
+    const visibleAddrs = transferredTo.slice(0, 3);
+    const extraAddrs   = transferredTo.slice(3);
+    const sentChips = visibleAddrs.map(a =>
+      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a}">${shortAddr(a)}</a>`
+    ).join(' ');
+    const moreChip  = extraAddrs.length ? ` <span class="addr-more" title="${extraAddrs.join('\n')}">+${extraAddrs.length} more</span>` : '';
+
+    const heldChips = sentHeldTo.slice(0, 2).map(a =>
+      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a} (still holding)">${shortAddr(a)}</a>`
+    ).join(' ');
+    const heldMore = sentHeldTo.length > 2 ? ` <span class="addr-more">+${sentHeldTo.length - 2} more</span>` : '';
+
+    const sentCell = d._loading
+      ? '<span class="cell-pending">…</span>'
+      : (() => {
+          const hasDumped = d.claimed > 0 && transferred > 0.01;
+          const hasHeld   = d.claimed > 0 && sentHeld > 0.01;
+          if (!hasDumped && !hasHeld) return '—';
+          let html = '';
+          if (hasDumped) {
+            html += `<span class="num-orange">${fmtNum(transferred)}</span>`;
+            if (sentChips) html += `<br>${sentChips}${moreChip}`;
+          }
+          if (hasHeld) {
+            if (hasDumped) html += ' ';
+            html += `<span class="num-green" title="Sent to wallets still holding the KAT — excluded from Dump %">${fmtNum(sentHeld)} held</span>`;
+            if (heldChips) html += `<br>${heldChips}${heldMore}`;
+          }
+          return html;
+        })();
+
+    const pending = d._loading ? '<span class="cell-pending">…</span>' : '—';
+    const errIcon = d._error ? ' <span title="RPC fetch failed for this address" style="color:var(--yellow);font-size:0.65rem">⚠</span>' : '';
+    const anomalyFlag = (!d._loading && d.claimed > 0 && disposed(d) > d.claimed * 2)
+      ? ` <span class="anomaly-flag" title="Disposed exceeds claimed — may include non-Merkl KAT">◈</span>`
+      : '';
 
     return `<tr class="${rowCls}">
       <td>${i + 1}</td>
       <td class="addr-cell">
         <span class="addr-short" title="${d.address}">${shortAddr(d.address)}</span>
-        <button class="copy-btn" onclick="copyAddr(this,'${d.address}')" title="Copy address">⎘</button>
+        <button class="copy-btn" onclick="copyAddr(this,'${d.address}')" title="Copy address">⎘</button>${errIcon}${anomalyFlag}
       </td>
-      <td class="num">${d.total > 0 ? `<span class="num-blue">${fmtNum(d.total)}</span>` : '—'}</td>
-      <td class="num">${d.claimed > 0 ? `<span class="num-yellow">${fmtNum(d.claimed)}</span>` : '—'}</td>
-      <td class="num">${d.balance > 0.01  ? fmtNum(d.balance) : '—'}</td>
-      <td class="num">${d.avkat > 0.01    ? `<span class="num-blue">${fmtNum(d.avkat)}</span>` : '—'}</td>
-      <td class="num">${moved > 0.01      ? `<span class="num-red">${fmtNum(moved)}</span>` : '—'}</td>
+      <td>${d._loading ? '' : badge(d.status)}</td>
+      <td class="num">${d._loading ? pending : (d.total > 0 ? `<span class="num-blue">${fmtNum(d.total)}</span>` : '—')}</td>
+      <td class="num">${d._loading ? pending : (d.claimed > 0 ? `<span class="num-yellow">${fmtNum(d.claimed)}</span>` : '—')}</td>
       <td class="num">${sentCell}</td>
-      <td class="num">${pctCell}</td>
-      <td>${badge(d.status)}</td>
+      <td class="num">${d._loading ? pending : (moved > 0.01 ? `<span class="num-red">${fmtNum(moved)}</span>` : '—')}</td>
+      <td class="num">${d._loading ? pending : (d.balance > 0.01 ? `<span class="num-green">${fmtNum(d.balance)}</span>` : '—')}</td>
+      <td class="num">${d._loading ? pending : (d.avkat > 0.01 ? `<span class="num-blue">${fmtNum(d.avkat)}</span>` : '—')}</td>
+      <td class="num">${d._loading ? pending : pctCell}</td>
       <td>
         <div class="ext-links">
           <a class="ext-link" href="https://katanascan.com/address/${d.address}" target="_blank" rel="noopener">scan</a>
@@ -760,30 +1042,46 @@ function scheduleRender() {
 }
 
 function updateStats() {
-  const all = Object.values(results);
+  const all            = Object.values(results).filter(d => !d._loading);
+  const n              = ADDRESSES.length;
   const totalClaimed   = all.reduce((s, d) => s + d.claimed, 0);
-  const totalClaimable = all.reduce((s, d) => s + d.claimable, 0);
+  const totalClaimable = all.filter(d => d.status === 'partial').reduce((s, d) => s + d.claimable, 0);
+  const neverClaimed   = all.filter(d => d.status === 'unclaimed').reduce((s, d) => s + d.claimable, 0);
   const dumpers        = all.filter(d => d.status === 'dumper').length;
   const hodlers        = all.filter(d => d.status === 'hodler').length;
-  const totalMoved     = all.reduce((s, d) => s + (d.moved || 0), 0);
+  const partials       = all.filter(d => d.status === 'partial').length;
 
-  document.getElementById('stat-total').textContent     = `${all.length.toLocaleString()} / ${ADDRESSES.length}`;
-  document.getElementById('stat-claimed').textContent   = fmtNum(totalClaimed, 0);
-  document.getElementById('stat-claimable').textContent = fmtNum(totalClaimable, 0);
-  document.getElementById('stat-dumpers').textContent   = dumpers.toLocaleString();
-  document.getElementById('stat-hodlers').textContent   = hodlers.toLocaleString();
-  document.getElementById('stat-dumped').textContent    = fmtNum(totalMoved, 0);
+  document.getElementById('stat-total').textContent        = `${(Object.keys(results).length).toLocaleString()} / ${n}`;
+  document.getElementById('stat-claimed').textContent      = fmtNum(totalClaimed, 0);
+  document.getElementById('stat-never-claimed').textContent = fmtNum(neverClaimed, 0);
+  document.getElementById('stat-claimable').textContent    = fmtNum(totalClaimable, 0);
+  document.getElementById('stat-claimable-sub').textContent = partials > 0 ? `${partials} partial holders` : '';
+  document.getElementById('stat-dumpers').textContent      = dumpers.toLocaleString();
+  document.getElementById('stat-dumpers-sub').textContent  = n > 0 ? `${((dumpers / n) * 100).toFixed(1)}% of ${n}` : '';
+  document.getElementById('stat-hodlers').textContent      = hodlers.toLocaleString();
+  document.getElementById('stat-hodlers-sub').textContent  = n > 0 ? `${((hodlers / n) * 100).toFixed(1)}% of ${n}` : '';
+  const stakerCount  = all.filter(d => d.avkat > 0).length;
+  const totalStaked  = all.reduce((s, d) => s + (d.avkat || 0), 0);
+  document.getElementById('stat-staked').textContent      = fmtNum(totalStaked, 0);
+  document.getElementById('stat-staked-sub').textContent  = stakerCount > 0 ? `${stakerCount} stakers` : '';
 }
 
 function updateProgress() {
   const pct = ADDRESSES.length ? (completed / ADDRESSES.length) * 100 : 0;
   document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-label').innerHTML =
-    `<b>${completed.toLocaleString()}</b> / ${ADDRESSES.length.toLocaleString()} addresses loaded (${pct.toFixed(1)}%)`;
+  const elapsed = (Date.now() - loadStart) / 1000;
+  const rateStr = (completed > 10 && elapsed > 1)
+    ? ` · ~${Math.round(completed / elapsed)} addr/s` : '';
   if (completed >= ADDRESSES.length) {
+    const loadedAt = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC';
+    document.getElementById('progress-label').innerHTML =
+      `All <b>${ADDRESSES.length.toLocaleString()}</b> addresses loaded · Data fetched at ${loadedAt}`;
     setTimeout(() => {
       document.getElementById('progress-section').style.display = 'none';
-    }, 800);
+    }, 2000);
+  } else {
+    document.getElementById('progress-label').innerHTML =
+      `<b>${completed.toLocaleString()}</b> / ${ADDRESSES.length.toLocaleString()} addresses loaded (${pct.toFixed(1)}%)${rateStr}`;
   }
 }
 
@@ -798,7 +1096,7 @@ function copyAddr(btn, addr) {
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 function exportCSV() {
-  const rows = Object.values(results);
+  const rows = getFilteredRows();
   const header = ['Address','KAT Allocated','KAT Claimed','KAT Balance','KAT Staked','KAT Sold','KAT Sent','Sent To','Dump %','Status'];
   const lines  = rows.map(d => [
     d.address,
@@ -812,26 +1110,109 @@ function exportCSV() {
     dumpPct(d).toFixed(2),
     d.status
   ].join(','));
-  const csv  = [header.join(','), ...lines].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url  = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), { href: url, download: 'kat-dumpers.csv' }).click();
+  const csv      = [header.join(','), ...lines].join('\n');
+  const blob     = new Blob([csv], { type: 'text/csv' });
+  const url      = URL.createObjectURL(blob);
+  const filename = `kat-dumpers${filterStatus ? '-' + filterStatus : ''}.csv`;
+  Object.assign(document.createElement('a'), { href: url, download: filename }).click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
+  // Restore UI from URL state
+  const filterInput  = document.getElementById('filter-input');
+  const statusSelect = document.getElementById('status-filter');
+  const minSelect    = document.getElementById('min-filter');
+
+  if (filterText)   filterInput.value  = filterText;
+  if (filterStatus) statusSelect.value = filterStatus;
+  if (minAmount)    minSelect.value    = String(minAmount);
+
+  // Restore top-N active state
+  if (topN > 0) {
+    document.querySelectorAll('.top-btn').forEach(b => {
+      if (+b.dataset.n === topN) b.classList.add('active');
+    });
+  }
+
+  // Restore active stat card
+  if (filterStatus) {
+    document.querySelectorAll('.stat-card[data-filter]').forEach(c => {
+      if (c.dataset.filter === filterStatus) c.classList.add('active');
+    });
+  }
+
   // Event listeners
-  document.getElementById('filter-input').addEventListener('input', e => {
+  filterInput.addEventListener('input', e => {
     filterText = e.target.value.trim();
     scheduleRender();
+    pushState();
   });
-  document.getElementById('status-filter').addEventListener('change', e => {
+
+  statusSelect.addEventListener('change', e => {
     filterStatus = e.target.value;
+    document.querySelectorAll('.stat-card[data-filter]').forEach(c => c.classList.remove('active'));
+    if (filterStatus) {
+      const card = document.querySelector(`.stat-card[data-filter="${filterStatus}"]`);
+      if (card) card.classList.add('active');
+    }
     scheduleRender();
+    pushState();
   });
+
+  minSelect.addEventListener('change', e => {
+    minAmount = +e.target.value || 0;
+    scheduleRender();
+    pushState();
+  });
+
+  // Stat card click filters
+  document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
+    card.addEventListener('click', () => {
+      const f = card.dataset.filter;
+      filterStatus = (filterStatus === f) ? '' : f;
+      statusSelect.value = filterStatus;
+      document.querySelectorAll('.stat-card[data-filter]').forEach(c => c.classList.remove('active'));
+      if (filterStatus) card.classList.add('active');
+      scheduleRender();
+      pushState();
+    });
+  });
+
+  // Top-N buttons
+  document.querySelectorAll('.top-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const n = +btn.dataset.n;
+      if (topN === n) {
+        topN = 0;
+        btn.classList.remove('active');
+      } else {
+        topN = n;
+        document.querySelectorAll('.top-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+      scheduleRender();
+      pushState();
+    });
+  });
+
   document.getElementById('export-btn').addEventListener('click', exportCSV);
-  document.getElementById('reload-btn').addEventListener('click', () => location.reload());
+  document.getElementById('reload-btn').addEventListener('click', e => {
+    e.target.disabled = true;
+    e.target.textContent = '↺ Loading…';
+    location.reload();
+  });
+
+  filterInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { filterInput.value = ''; filterText = ''; filterInput.blur(); scheduleRender(); pushState(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== filterInput && document.activeElement.tagName !== 'INPUT') {
+      e.preventDefault();
+      filterInput.focus();
+    }
+  });
 
   document.querySelectorAll('th[data-col]').forEach(th => {
     th.addEventListener('click', () => {
@@ -845,33 +1226,61 @@ async function main() {
       th.classList.add('sorted');
       th.querySelector('.sort-arrow').textContent = sortDir === -1 ? '↓' : '↑';
       scheduleRender();
+      pushState();
     });
   });
+
+  // Restore sort arrow from URL state
+  if (sortCol) {
+    const th = document.querySelector(`th[data-col="${sortCol}"]`);
+    if (th) {
+      document.querySelectorAll('th[data-col]').forEach(t => {
+        t.classList.remove('sorted');
+        t.querySelector('.sort-arrow').textContent = '';
+      });
+      th.classList.add('sorted');
+      th.querySelector('.sort-arrow').textContent = sortDir === -1 ? '↓' : '↑';
+    }
+  }
 
   document.getElementById('progress-label').innerHTML =
     `Fetching data for <b>${ADDRESSES.length}</b> addresses…`;
 
+  // Seed all addresses as loading stubs so rows appear immediately
+  loadStart = Date.now();
+  for (const addr of ADDRESSES) {
+    results[addr] = { address: addr, _loading: true, claimed: 0, claimable: 0, total: 0, balance: 0, avkat: 0, moved: 0, transferred: 0, transferredTo: [], sentHeld: 0, sentHeldTo: [] };
+  }
+  scheduleRender();
+
   // Process all addresses concurrently (rate-limited)
   let lastStatUpdate = 0;
   await Promise.all(ADDRESSES.map(async (addr) => {
-    const [merkl, kat, avkat, dumpData] = await Promise.all([
-      fetchMerkl(addr),
-      balanceOf(KAT_ADDR, addr),
-      balanceOf(AVKAT_ADDR, addr),
-      fetchDumped(addr),
-    ]);
-
-    const d = {
-      address: addr,
-      claimed:      merkl.claimed,
-      claimable:    merkl.claimable,
-      total:        merkl.total,
-      balance:      kat,
-      avkat:        avkat,
-      moved:        dumpData.sold,        // KAT sold: swapped on Sushi or bridged out
-      transferred:  dumpData.transferred, // KAT sent to other wallets
-      transferredTo: dumpData.transferredTo,
-    };
+    let d;
+    try {
+      const [merkl, kat, avkat, dumpData] = await Promise.all([
+        fetchMerkl(addr),
+        balanceOf(KAT_ADDR, addr),
+        balanceOf(AVKAT_ADDR, addr),
+        fetchDumped(addr),
+      ]);
+      d = {
+        address: addr,
+        claimed:       merkl.claimed,
+        claimable:     merkl.claimable,
+        total:         merkl.total,
+        balance:       kat,
+        avkat:         avkat,
+        moved:         dumpData.sold,
+        transferred:   dumpData.transferred,
+        transferredTo: dumpData.transferredTo,
+        sentHeld:      dumpData.sentHeld,
+        sentHeldTo:    dumpData.sentHeldTo,
+      };
+    } catch {
+      errorCount++;
+      d = { address: addr, _error: true, claimed: 0, claimable: 0, total: 0, balance: 0, avkat: 0, moved: 0, transferred: 0, transferredTo: [], sentHeld: 0, sentHeldTo: [] };
+    }
     d.status = classify(d);
     results[addr] = d;
 
