@@ -21,24 +21,23 @@
       --rank-w: 40px;
       --addr-w: 160px;
 
-      /* Palette — dark neobrutalist */
-      --cream:   #0E0E0E;
-      --cream2:  #181818;
-      --ink:     #FFFFFF;
+      /* Palette */
+      --cream:   #FFFCF0;
+      --cream2:  #F5F0E8;
       --black:   #000000;
-      --text:    #F0EDE5;
-      --label:   #888880;
-      --dim:     #555555;
+      --text:    #000000;
+      --label:   #333333;
+      --dim:     #666666;
 
-      /* Signal — brightened for dark bg */
-      --red:    #FF5555;
-      --green:  #00CC66;
-      --amber:  #DDAA00;
-      --blue:   #4488FF;
-      --violet: #AA55FF;
-      --orange: #FF8800;
+      /* Signal */
+      --red:    #CC0000;
+      --green:  #006633;
+      --amber:  #AA6600;
+      --blue:   #003399;
+      --violet: #6600CC;
+      --orange: #994400;
 
-      /* Card colors — unchanged, they pop on dark */
+      /* Card colors */
       --card-claimed:   #FFE566;
       --card-unclaimed: #B8D9FF;
       --card-claimable: #C8F5A4;
@@ -60,14 +59,14 @@
     /* ── HEADER ── */
     header {
       padding: 1.75rem 2.5rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--black);
       background: var(--cream);
       display: flex;
       align-items: center;
       gap: 2.5rem;
     }
     .header-left {
-      border-left: 4px solid var(--ink);
+      border-left: 4px solid var(--black);
       padding-left: 1rem;
       flex: 1;
     }
@@ -113,7 +112,7 @@
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--black);
     }
     @media (max-width: 960px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
@@ -121,7 +120,7 @@
     .stat-card {
       background: var(--cream2);
       padding: 1.2rem 1.5rem;
-      border-right: 2px solid var(--ink);
+      border-right: 2px solid var(--black);
       border-top: none;
       transition: transform 0.08s, box-shadow 0.08s;
       position: relative;
@@ -141,18 +140,18 @@
 
     .stat-card[data-filter]:hover {
       transform: translate(-2px, -2px);
-      box-shadow: 6px 6px 0 var(--ink);
+      box-shadow: 6px 6px 0 var(--black);
       z-index: 1;
     }
 
-    /* Active filter card — inverted (white bg, black text) */
+    /* Active filter card — inverted */
     .stat-card.active {
-      background: var(--ink) !important;
-      color: #000 !important;
+      background: var(--black) !important;
+      color: #fff !important;
     }
-    .stat-card.active .stat-label { color: rgba(0,0,0,0.6); }
-    .stat-card.active .stat-value { color: #000; }
-    .stat-card.active .stat-sub   { color: rgba(0,0,0,0.5); }
+    .stat-card.active .stat-label { color: rgba(255,255,255,0.65); }
+    .stat-card.active .stat-value { color: #fff; }
+    .stat-card.active .stat-sub   { color: rgba(255,255,255,0.55); }
 
     .stat-label {
       font-family: var(--ui);
@@ -187,18 +186,18 @@
     /* ── PROGRESS ── */
     #progress-section {
       padding: 0.75rem 2.5rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--black);
       background: var(--cream2);
     }
     .progress-track {
-      background: rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.15);
       border-radius: 0;
       height: 3px;
       overflow: hidden;
-      border: 1px solid var(--ink);
+      border: 1px solid var(--black);
     }
     .progress-fill {
-      background: var(--ink);
+      background: var(--black);
       height: 100%;
       width: 0%;
       transition: width 0.3s ease;
@@ -219,12 +218,12 @@
       gap: 0.45rem;
       align-items: center;
       padding: 0.85rem 2.5rem;
-      border-bottom: 2px solid var(--ink);
+      border-bottom: 2px solid var(--black);
       background: var(--cream2);
     }
     .filter-input {
       background: var(--cream);
-      border: 2px solid var(--ink);
+      border: 2px solid var(--black);
       color: var(--text);
       padding: 0.5rem 0.7rem;
       border-radius: 0;
@@ -232,17 +231,17 @@
       font-family: var(--mono);
       width: 210px;
       outline: none;
-      box-shadow: 4px 4px 0 var(--ink);
+      box-shadow: 4px 4px 0 var(--black);
       transition: box-shadow 0.08s, transform 0.08s;
     }
     .filter-input:focus {
-      box-shadow: 2px 2px 0 var(--ink);
+      box-shadow: 2px 2px 0 var(--black);
       transform: translate(2px, 2px);
     }
     .filter-input::placeholder { color: var(--dim); }
     select.btn, button.btn {
       background: var(--cream);
-      border: 2px solid var(--ink);
+      border: 2px solid var(--black);
       color: var(--text);
       padding: 0.5rem 0.7rem;
       border-radius: 0;
@@ -250,21 +249,21 @@
       font-size: 0.94rem;
       font-family: var(--ui);
       font-weight: 700;
-      box-shadow: 4px 4px 0 var(--ink);
+      box-shadow: 4px 4px 0 var(--black);
       transition: box-shadow 0.08s, transform 0.08s;
       outline: none;
     }
     select.btn:hover, button.btn:hover {
-      box-shadow: 2px 2px 0 var(--ink);
+      box-shadow: 2px 2px 0 var(--black);
       transform: translate(2px, 2px);
     }
     button.btn.active {
-      background: var(--ink);
+      background: var(--black);
       color: var(--black);
       box-shadow: none;
       transform: translate(4px, 4px);
     }
-    select.btn option { background: #1a1a1a; color: var(--text); }
+    select.btn option { background: var(--cream); color: var(--black); }
     .controls-right {
       margin-left: auto;
       color: var(--label);
@@ -298,36 +297,36 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--black);
-      border-bottom: 2px solid var(--ink);
-      border-right: 1px solid rgba(0,0,0,0.15);
+      color: #fff;
+      border-bottom: 2px solid var(--black);
+      border-right: 1px solid rgba(255,255,255,0.15);
       cursor: pointer;
       user-select: none;
       white-space: nowrap;
-      background: var(--ink);
+      background: var(--black);
       transition: background 0.1s;
     }
     th:last-child { border-right: none; }
-    th:hover { background: #DDDDDD; }
-    th.sorted { background: #CCCCCC; }
+    th:hover { background: #222; }
+    th.sorted { background: #111; }
     th .sort-arrow { margin-left: 3px; opacity: 0.5; font-size: 0.76rem; }
-    th.sorted .sort-arrow { opacity: 1; color: #AA5500; }
+    th.sorted .sort-arrow { opacity: 1; color: var(--card-claimed); }
 
     /* Row color via inherited CSS custom property — works for sticky cells too */
     tr { --row-base: var(--cream); }
     tr:nth-child(even)            { --row-base: var(--cream2); }
-    tr:hover                      { --row-base: #2C2500; }
-    tr.row-dumper                 { --row-base: #1A0808; }
-    tr.row-dumper:nth-child(even) { --row-base: #210A0A; }
-    tr.row-dumper:hover           { --row-base: #2C2500; }
-    tr.row-hodler                 { --row-base: #081A0F; }
-    tr.row-hodler:nth-child(even) { --row-base: #0A2113; }
-    tr.row-hodler:hover           { --row-base: #2C2500; }
+    tr:hover                      { --row-base: #FFE566; }
+    tr.row-dumper                 { --row-base: #FFF0F0; }
+    tr.row-dumper:nth-child(even) { --row-base: #FFE8E8; }
+    tr.row-dumper:hover           { --row-base: #FFE566; }
+    tr.row-hodler                 { --row-base: #F0FFF8; }
+    tr.row-hodler:nth-child(even) { --row-base: #E8FFF4; }
+    tr.row-hodler:hover           { --row-base: #FFE566; }
 
     td {
       padding: 0.78rem 1rem;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      border-right: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      border-right: 1px solid rgba(0,0,0,0.06);
       font-family: var(--mono);
       font-size: 1rem;
       vertical-align: middle;
@@ -373,7 +372,7 @@
       display: inline-block;
       padding: 0.22rem 0.5rem;
       border-radius: 0;
-      border: 2px solid var(--ink);
+      border: 2px solid var(--black);
       font-family: var(--ui);
       font-size: 0.72rem;
       font-weight: 700;
@@ -384,7 +383,7 @@
     .badge-partial  { background: #FFE566; color: #000; }
     .badge-hodler   { background: #B3F5D4; color: #000; }
     .badge-unclaimed{ background: #B8D9FF; color: #000; }
-    .badge-inactive { background: #2A2A2A; color: #888; border-color: #555; }
+    .badge-inactive { background: #E0E0E0; color: var(--dim); border-color: #999; }
 
     /* ── NUMBER COLORS ── */
     .num-red    { color: var(--red); }
@@ -404,9 +403,9 @@
     }
     .addr-tiny:hover { color: var(--text); }
     .addr-tiny b { color: var(--label); }
-    .addr-ellipsis { color: #555; }
+    .addr-ellipsis { color: #aaa; }
     .addr-more { font-size: 0.8rem; color: var(--dim); font-style: italic; }
-    .cell-pending { color: #444; letter-spacing: 0.15em; }
+    .cell-pending { color: #bbb; letter-spacing: 0.15em; }
     th:last-child { cursor: default; }
 
     .anomaly-flag {
@@ -431,7 +430,7 @@
       top: calc(100% + 4px);
       left: 50%;
       transform: translateX(-50%);
-      background: var(--ink);
+      background: var(--black);
       color: var(--black);
       font-family: var(--mono);
       font-size: 0.7rem;
@@ -443,7 +442,7 @@
       white-space: normal;
       width: 220px;
       z-index: 100;
-      box-shadow: 4px 4px 0 rgba(255,255,255,0.2);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
       pointer-events: none;
     }
 
@@ -456,11 +455,11 @@
       font-size: 0.75rem;
       font-weight: 700;
       padding: 0.12rem 0.35rem;
-      border: 1.5px solid var(--ink);
+      border: 1.5px solid var(--black);
       border-radius: 0;
       transition: background 0.08s, color 0.08s;
     }
-    .ext-link:hover { background: var(--ink); color: var(--black); }
+    .ext-link:hover { background: var(--black); color: var(--black); }
 
     /* ── LOADING ── */
     .loading-row td {
@@ -475,8 +474,8 @@
     .spinner {
       display: inline-block;
       width: 12px; height: 12px;
-      border: 2px solid rgba(255,255,255,0.15);
-      border-top-color: var(--ink);
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: var(--black);
       border-radius: 50%;
       animation: spin 0.7s linear infinite;
       vertical-align: middle;
@@ -489,14 +488,14 @@
     /* ── FOOTER ── */
     footer {
       padding: 1.25rem 2.5rem;
-      border-top: 2px solid var(--ink);
+      border-top: 2px solid var(--black);
       color: var(--label);
       font-size: 0.88rem;
       text-align: center;
       background: var(--cream2);
     }
     footer a { color: var(--text); text-decoration: underline; font-weight: 700; }
-    footer a:hover { background: var(--ink); color: var(--black); text-decoration: none; }
+    footer a:hover { background: var(--black); color: var(--black); text-decoration: none; }
     .footer-legend {
       display: flex;
       flex-wrap: wrap;
