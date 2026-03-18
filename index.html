@@ -419,7 +419,7 @@
         <th data-col="avkat" class="num" data-tip="KAT deposited into avKAT staking vault (0x7231…)">KAT Staked<span class="sort-arrow"></span></th>
         <th data-col="moved" class="num" data-tip="KAT swapped on Sushi or bridged out via Agglayer — confirmed by on-chain event logs">KAT Sold<span class="sort-arrow"></span></th>
         <th data-col="transferred" class="num" data-tip="KAT sent directly to another wallet (not a swap, not a bridge)">KAT Sent<span class="sort-arrow"></span></th>
-        <th data-col="dumpPct" class="num" data-tip="KAT Sold ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
+        <th data-col="dumpPct" class="num" data-tip="(KAT Sold + KAT Sent) ÷ KAT Claimed, capped at 100%">Dump %<span class="sort-arrow"></span></th>
         <th data-col="status" data-tip="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · UNCLAIMED never claimed · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
@@ -435,7 +435,7 @@
 <footer>
   Data: <a href="https://api.merkl.xyz" target="_blank">Merkl API</a> + <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> ·
   KAT token: <a href="https://katanascan.com/token/0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d" target="_blank">0x7f1f…c2d</a> ·
-  "KAT Sold" = transferred to Sushi swap or Agglayer bridge · "KAT Sent" = sent directly to another wallet (on-chain logs).
+  "KAT Sold" = swapped on Sushi or bridged out · "KAT Sent" = sent to another wallet · Dump % = (Sold + Sent) ÷ Claimed.
 </footer>
 
 <script>
@@ -642,10 +642,14 @@ async function fetchMerkl(address) {
 }
 
 // ── CLASSIFICATION ────────────────────────────────────────────────────────────
+function disposed(d) {
+  return (d.moved || 0) + (d.transferred || 0); // KAT Sold + KAT Sent
+}
+
 function classify(d) {
-  if (d.claimed === 0 && d.claimable === 0) return 'inactive'; // No Merkl rewards at all
-  if (d.claimed === 0 && d.claimable > 0) return 'unclaimed'; // Has rewards but never claimed
-  const dumpRatio = d.claimed > 0 ? Math.min(1, d.moved / d.claimed) : 0;
+  if (d.claimed === 0 && d.claimable === 0) return 'inactive';
+  if (d.claimed === 0 && d.claimable > 0) return 'unclaimed';
+  const dumpRatio = d.claimed > 0 ? Math.min(1, disposed(d) / d.claimed) : 0;
   if (dumpRatio > 0.5)  return 'dumper';
   if (dumpRatio > 0.05) return 'partial';
   return 'hodler';
@@ -653,7 +657,7 @@ function classify(d) {
 
 function dumpPct(d) {
   if (d.claimed === 0) return 0;
-  return Math.min(100, (d.moved / d.claimed) * 100); // cap at 100% — KAT Sold may exceed claimed if they bought more
+  return Math.min(100, (disposed(d) / d.claimed) * 100);
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────────
