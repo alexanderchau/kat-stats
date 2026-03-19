@@ -1129,7 +1129,7 @@ function fetchCrossChainDump(address, bridgedAmount) {
 // Bulk eth_getLogs for all Claimed events on the Merkl Distributor filtered by
 // KAT token. Results cached in localStorage keyed by last block scanned, so
 // repeat loads only fetch new blocks since the previous visit.
-const CACHE_KEY = 'kat_claimed_v1';
+const CACHE_KEY = 'kat_claimed_v2';  // v2: removed PADDED_KAT_TOPIC filter, now all-token
 let claimedByAddr = {};
 
 async function buildClaimedMap() {
@@ -1169,7 +1169,7 @@ async function buildClaimedMap() {
         fromBlock: '0x' + from.toString(16),
         toBlock:   '0x' + to.toString(16),
         address: DISTRIBUTOR_ADDR,
-        topics: [CLAIMED_TOPIC, null, PADDED_KAT_TOPIC],
+        topics: [CLAIMED_TOPIC],  // no token filter — Distributor now distributes multiple tokens
       }])
     ));
 
@@ -1177,6 +1177,7 @@ async function buildClaimedMap() {
       for (const log of (logs || [])) {
         if (!log.topics || log.topics.length < 2) continue;
         const user = '0x' + log.topics[1].slice(26).toLowerCase();
+        if (!ADDR_SET.has(user)) continue;  // only track our addresses
         claimedByAddr[user] = (claimedByAddr[user] || 0) + fromWei(log.data);
       }
     }
