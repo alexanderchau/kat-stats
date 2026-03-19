@@ -259,11 +259,50 @@
     }
     button.btn.active {
       background: var(--black);
-      color: var(--black);
+      color: #fff;
       box-shadow: none;
       transform: translate(4px, 4px);
     }
     select.btn option { background: var(--cream); color: var(--black); }
+
+    /* ── CUSTOM SELECT DROPDOWNS ── */
+    .custom-select-wrap { position: relative; display: inline-block; }
+    .custom-select-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .custom-select-label { flex: 1; }
+    .custom-select-caret { font-size: 0.65em; display: inline-block; transition: transform 0.12s; }
+    .custom-select-wrap.open .custom-select-caret { transform: rotate(180deg); }
+    .custom-select-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 3px);
+      left: 0;
+      z-index: 200;
+      background: var(--cream);
+      border: 2px solid var(--black);
+      box-shadow: 4px 4px 0 var(--black);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      min-width: 100%;
+    }
+    .custom-select-wrap.open .custom-select-menu { display: block; }
+    .custom-select-menu li {
+      padding: 7px 14px;
+      cursor: pointer;
+      font-family: var(--ui);
+      font-size: 0.88rem;
+      font-weight: 700;
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      white-space: nowrap;
+      color: var(--text);
+    }
+    .custom-select-menu li:last-child { border-bottom: none; }
+    .custom-select-menu li:hover { background: var(--card-claimed); }
+    .custom-select-menu li.selected { background: var(--black); color: #fff; }
     .controls-right {
       margin-left: auto;
       color: var(--label);
@@ -431,7 +470,7 @@
       left: 50%;
       transform: translateX(-50%);
       background: var(--black);
-      color: var(--black);
+      color: #fff;
       font-family: var(--mono);
       font-size: 0.7rem;
       font-weight: 400;
@@ -564,22 +603,50 @@
 
 <div class="controls">
   <input class="filter-input" id="filter-input" type="text" placeholder="Address… (/ to focus)">
-  <select class="btn" id="status-filter">
-    <option value="">All statuses</option>
-    <option value="dumper">Dumpers (&gt;50%)</option>
-    <option value="partial">Partial (5–50%)</option>
-    <option value="hodler">Hodlers (&lt;5%)</option>
-    <option value="unclaimed">Unclaimed</option>
-    <option value="inactive">Inactive</option>
-    <option value="staked">avKAT Staked</option>
-  </select>
-  <select class="btn" id="min-filter">
-    <option value="0">All sizes</option>
-    <option value="1000">1K+ KAT</option>
-    <option value="10000">10K+ KAT</option>
-    <option value="100000">100K+ KAT</option>
-    <option value="1000000">1M+ KAT</option>
-  </select>
+  <div class="custom-select-wrap" id="status-filter-wrap">
+    <button class="btn custom-select-btn" type="button" id="status-filter-btn">
+      <span class="custom-select-label">All statuses</span>
+      <span class="custom-select-caret">▾</span>
+    </button>
+    <ul class="custom-select-menu" id="status-filter-menu">
+      <li data-value="">All statuses</li>
+      <li data-value="dumper">Dumpers (&gt;50%)</li>
+      <li data-value="partial">Partial (5–50%)</li>
+      <li data-value="hodler">Hodlers (&lt;5%)</li>
+      <li data-value="unclaimed">Unclaimed</li>
+      <li data-value="inactive">Inactive</li>
+      <li data-value="staked">avKAT Staked</li>
+    </ul>
+    <select id="status-filter" style="display:none">
+      <option value="">All statuses</option>
+      <option value="dumper">Dumpers (&gt;50%)</option>
+      <option value="partial">Partial (5–50%)</option>
+      <option value="hodler">Hodlers (&lt;5%)</option>
+      <option value="unclaimed">Unclaimed</option>
+      <option value="inactive">Inactive</option>
+      <option value="staked">avKAT Staked</option>
+    </select>
+  </div>
+  <div class="custom-select-wrap" id="min-filter-wrap">
+    <button class="btn custom-select-btn" type="button" id="min-filter-btn">
+      <span class="custom-select-label">All sizes</span>
+      <span class="custom-select-caret">▾</span>
+    </button>
+    <ul class="custom-select-menu" id="min-filter-menu">
+      <li data-value="0">All sizes</li>
+      <li data-value="1000">1K+ KAT</li>
+      <li data-value="10000">10K+ KAT</li>
+      <li data-value="100000">100K+ KAT</li>
+      <li data-value="1000000">1M+ KAT</li>
+    </ul>
+    <select id="min-filter" style="display:none">
+      <option value="0">All sizes</option>
+      <option value="1000">1K+ KAT</option>
+      <option value="10000">10K+ KAT</option>
+      <option value="100000">100K+ KAT</option>
+      <option value="1000000">1M+ KAT</option>
+    </select>
+  </div>
   <span class="controls-sep">|</span>
   <button class="btn top-btn" data-n="10">Top 10</button>
   <button class="btn top-btn" data-n="25">Top 25</button>
@@ -622,7 +689,7 @@
     <span><b>Dump %</b> — (KAT Sold + KAT Sent to non-holders) ÷ KAT Claimed, capped at 100%</span>
   </div>
   <div class="footer-sources">
-    Data: <a href="https://api.merkl.xyz" target="_blank">Merkl API</a> + <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> ·
+    Data: <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> (on-chain claimed amounts via Merkl Distributor · pending/claimable unavailable while Merkl API is down) ·
     KAT token: <a href="https://katanascan.com/token/0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d" target="_blank">0x7f1f…c2d</a>
   </div>
 </footer>
@@ -630,8 +697,15 @@
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const KATANA_RPC  = 'https://rpc.katana.network/';
-const MERKL_BASE  = 'https://api.merkl.xyz/v4';
 const CHAIN_ID    = 747474;
+
+// Merkl on-chain fallback (api.merkl.xyz is NXDOMAIN as of 2026-03-19)
+// Distributor proxy: verified from Katana docs + AngleProtocol/merkl-contracts repo
+const DISTRIBUTOR_ADDR = '0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae';
+const CLAIMED_TOPIC    = '0xf7a40077ff7a04c7e61f6f26fb13774259ddf1b6bce9ecf26a8276cdd3992683'; // Claimed(address indexed user, address indexed token, uint256)
+const PADDED_KAT_TOPIC = '0x0000000000000000000000006e9c1f88a960fe63387eb4b71bc525a9313d8461';
+const DEPLOY_BLOCK     = 2_808_000; // Distributor first appeared at block ~2807xxx (binary-searched)
+const LOG_CHUNK        = 29_999;    // Katana RPC max getLogs range (inclusive); 30000 fails
 const KAT_ADDR    = '0x6E9C1F88a960fE63387eb4b71BC525a9313d8461'; // Merkl-distributed KAT on Katana
 const AVKAT_ADDR  = '0x7231dbaCdFc968E07656D12389AB20De82FbfCeB';
 const KAT_DECIMALS = 18;
@@ -840,38 +914,53 @@ async function fetchDumped(address) {
   } catch { return { sold: 0, transferred: 0, transferredTo: [], sentHeld: 0, sentHeldTo: [] }; }
 }
 
-// ── MERKL ─────────────────────────────────────────────────────────────────────
-async function fetchMerkl(address) {
-  return merklLimit(async () => {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        if (attempt > 0) await new Promise(r => setTimeout(r, 2000));
-        const url = `${MERKL_BASE}/users/${address}/rewards?chainId=${CHAIN_ID}`;
-        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (res.status === 429) continue;
-        if (!res.ok) return { claimed: 0, claimable: 0, total: 0 };
+// ── CLAIMED MAP (on-chain fallback — api.merkl.xyz is down) ──────────────────
+// One bulk eth_getLogs for all Claimed events on the Merkl Distributor filtered
+// by KAT token. Pending/claimable amounts are unavailable without the API.
+let claimedByAddr = {};
 
-        const data = await res.json();
-        let claimed = 0, claimable = 0;
+async function buildClaimedMap() {
+  // Paginate in LOG_CHUNK-block windows starting from known deployment block.
+  // Katana RPC max range = 29999 blocks (inclusive). All chunks fired concurrently;
+  // rpcLimit(40) throttles in-flight requests automatically.
+  try {
+    const latestHex = await rpcLimit(async () => {
+      const r = await fetch(KATANA_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: rpcSeq++, method: 'eth_blockNumber', params: [] }) });
+      return (await r.json()).result || '0x0';
+    });
+    const latest = parseInt(latestHex, 16);
 
-        for (const chainEntry of (Array.isArray(data) ? data : [data])) {
-          for (const reward of (chainEntry.rewards || [])) {
-            if (reward.token?.symbol === 'KAT') {
-              const entryAmount  = fromWei(reward.amount  || '0');
-              const entryClaimed = fromWei(reward.claimed || '0');
-              claimed   += entryClaimed;
-              claimable += Math.max(0, entryAmount - entryClaimed);
-            }
-          }
-        }
-        return { claimed, claimable, total: claimed + claimable };
-      } catch (e) {
-        if (attempt === 0) continue;
-        return { claimed: 0, claimable: 0, total: 0 };
+    const chunks = [];
+    for (let from = DEPLOY_BLOCK; from <= latest; from += LOG_CHUNK) {
+      chunks.push([from, Math.min(from + LOG_CHUNK - 1, latest)]);
+    }
+
+    const allLogs = await Promise.all(chunks.map(([from, to]) =>
+      ethGetLogs([{
+        fromBlock: '0x' + from.toString(16),
+        toBlock:   '0x' + to.toString(16),
+        address: DISTRIBUTOR_ADDR,
+        topics: [CLAIMED_TOPIC, null, PADDED_KAT_TOPIC],
+      }])
+    ));
+
+    for (const logs of allLogs) {
+      for (const log of (logs || [])) {
+        if (!log.topics || log.topics.length < 2) continue;
+        const user = '0x' + log.topics[1].slice(26).toLowerCase();
+        claimedByAddr[user] = (claimedByAddr[user] || 0) + fromWei(log.data);
       }
     }
-    return { claimed: 0, claimable: 0, total: 0 };
-  });
+    console.log(`buildClaimedMap: ${chunks.length} chunks → ${Object.keys(claimedByAddr).length} unique claimants`);
+  } catch (e) {
+    console.warn('buildClaimedMap failed:', e);
+  }
+}
+
+async function fetchMerkl(address) {
+  const claimed = claimedByAddr[address.toLowerCase()] || 0;
+  return { claimed, claimable: 0, total: claimed };
 }
 
 // ── CLASSIFICATION ────────────────────────────────────────────────────────────
@@ -1110,6 +1199,50 @@ function exportCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
+// ── CUSTOM SELECT HELPERS ─────────────────────────────────────────────────────
+function syncSelectUI(id, value) {
+  const select = document.getElementById(id);
+  const btn    = document.getElementById(id + '-btn');
+  const menu   = document.getElementById(id + '-menu');
+  if (!btn || !menu) return;
+  select.value = String(value);
+  const items = menu.querySelectorAll('li');
+  let activeItem = null;
+  items.forEach(li => {
+    const match = li.dataset.value === String(value);
+    li.classList.toggle('selected', match);
+    if (match) activeItem = li;
+  });
+  if (activeItem) btn.querySelector('.custom-select-label').textContent = activeItem.textContent;
+}
+
+function initCustomSelects() {
+  document.querySelectorAll('.custom-select-wrap').forEach(wrap => {
+    const id  = wrap.id.replace('-wrap', '');
+    const btn = document.getElementById(id + '-btn');
+    const menu = document.getElementById(id + '-menu');
+    const sel  = document.getElementById(id);
+    // Mark first item selected by default
+    const first = menu.querySelector('li');
+    if (first) first.classList.add('selected');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelectorAll('.custom-select-wrap.open').forEach(w => { if (w !== wrap) w.classList.remove('open'); });
+      wrap.classList.toggle('open');
+    });
+    menu.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        syncSelectUI(id, li.dataset.value);
+        sel.dispatchEvent(new Event('change'));
+        wrap.classList.remove('open');
+      });
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select-wrap.open').forEach(w => w.classList.remove('open'));
+  });
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
   // Restore UI from URL state
@@ -1118,8 +1251,8 @@ async function main() {
   const minSelect    = document.getElementById('min-filter');
 
   if (filterText)   filterInput.value  = filterText;
-  if (filterStatus) statusSelect.value = filterStatus;
-  if (minAmount)    minSelect.value    = String(minAmount);
+  if (filterStatus) syncSelectUI('status-filter', filterStatus);
+  if (minAmount)    syncSelectUI('min-filter', String(minAmount));
 
   // Restore top-N active state
   if (topN > 0) {
@@ -1159,12 +1292,14 @@ async function main() {
     pushState();
   });
 
+  initCustomSelects();
+
   // Stat card click filters
   document.querySelectorAll('.stat-card[data-filter]').forEach(card => {
     card.addEventListener('click', () => {
       const f = card.dataset.filter;
       filterStatus = (filterStatus === f) ? '' : f;
-      statusSelect.value = filterStatus;
+      syncSelectUI('status-filter', filterStatus);
       document.querySelectorAll('.stat-card[data-filter]').forEach(c => c.classList.remove('active'));
       if (filterStatus) card.classList.add('active');
       scheduleRender();
@@ -1234,6 +1369,10 @@ async function main() {
       th.querySelector('.sort-arrow').textContent = sortDir === -1 ? '↓' : '↑';
     }
   }
+
+  document.getElementById('progress-label').innerHTML =
+    `Loading claimed data from chain…`;
+  await buildClaimedMap();
 
   document.getElementById('progress-label').innerHTML =
     `Fetching data for <b>${ADDRESSES.length}</b> addresses…`;
