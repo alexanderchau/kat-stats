@@ -1,0 +1,98 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - heading "KAT DUMPERS" [level=1] [ref=e4]
+      - generic [ref=e5]: Who claimed their KAT rewards on Katana Network — and who sold them
+    - generic [ref=e6]:
+      - generic [ref=e7]: Addresses Scanned
+      - generic [ref=e8]: —
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - generic [ref=e11]: Total KAT Claimed
+      - generic [ref=e12]: —
+    - generic [ref=e13] [cursor=pointer]:
+      - generic [ref=e14]: KAT Unclaimed
+      - generic [ref=e15]: —
+    - generic [ref=e16] [cursor=pointer]:
+      - generic [ref=e17]: Still Claimable
+      - generic [ref=e18]: —
+    - generic [ref=e19] [cursor=pointer]:
+      - generic [ref=e20]: Confirmed Dumpers
+      - generic [ref=e21]: —
+    - generic [ref=e22] [cursor=pointer]:
+      - generic [ref=e23]: Hodlers
+      - generic [ref=e24]: —
+    - generic [ref=e25] [cursor=pointer]:
+      - generic [ref=e26]: avKAT Staked
+      - generic [ref=e27]: —
+  - generic [ref=e30]: Fetching data for 573 addresses…
+  - generic [ref=e31]:
+    - textbox "Address… (/ to focus)" [ref=e32]
+    - combobox [ref=e33] [cursor=pointer]:
+      - option "All statuses" [selected]
+      - option "Dumpers (>50%)"
+      - option "Partial (5–50%)"
+      - option "Hodlers (<5%)"
+      - option "Unclaimed"
+      - option "Inactive"
+      - option "avKAT Staked"
+    - combobox [ref=e34] [cursor=pointer]:
+      - option "All sizes" [selected]
+      - option "1K+ KAT"
+      - option "10K+ KAT"
+      - option "100K+ KAT"
+      - option "1M+ KAT"
+    - generic [ref=e35]: "|"
+    - button "Top 10" [ref=e36] [cursor=pointer]
+    - button "Top 25" [ref=e37] [cursor=pointer]
+    - button "Top 50" [ref=e38] [cursor=pointer]
+    - generic [ref=e39]: "|"
+    - button "↓ Export CSV" [ref=e40] [cursor=pointer]
+    - button "↺ Reload" [ref=e41] [cursor=pointer]
+    - generic [ref=e42]: 573 addresses
+  - table [ref=e44]:
+    - rowgroup [ref=e45]:
+      - row "# Address Status ⓘ KAT Allocated↓ ⓘ KAT Claimed ⓘ KAT Sent ⓘ KAT Sold ⓘ KAT Balance ⓘ avKAT ⓘ Dump % ⓘ Links" [ref=e46]:
+        - columnheader "#" [ref=e47] [cursor=pointer]: "#"
+        - columnheader "Address" [ref=e48] [cursor=pointer]: Address
+        - columnheader "Status ⓘ" [ref=e49]:
+          - text: Status
+          - text: ⓘ
+        - columnheader "KAT Allocated↓ ⓘ" [ref=e50]
+        - columnheader "KAT Claimed ⓘ" [ref=e51]:
+          - text: KAT Claimed
+          - text: ⓘ
+        - columnheader "KAT Sent ⓘ" [ref=e52]:
+          - text: KAT Sent
+          - text: ⓘ
+        - columnheader "KAT Sold ⓘ" [ref=e53]:
+          - text: KAT Sold
+          - text: ⓘ
+        - columnheader "KAT Balance ⓘ" [ref=e54]:
+          - text: KAT Balance
+          - text: ⓘ
+        - columnheader "avKAT ⓘ" [ref=e55]:
+          - text: avKAT
+          - text: ⓘ
+        - columnheader "Dump % ⓘ" [ref=e56]:
+          - text: Dump %
+          - text: ⓘ
+        - columnheader "Links" [ref=e57]
+    - rowgroup [ref=e58]:
+      - row "No matching addresses" [ref=e59]:
+        - cell "No matching addresses" [ref=e60]
+  - contentinfo [ref=e61]:
+    - generic [ref=e62]:
+      - generic [ref=e63]: KAT Sold — swapped on Sushi V2/V3 (Swap event detected in tx receipt)
+      - generic [ref=e64]: KAT Sent — transfers to addresses that no longer hold the KAT (orange) · transfers to holders (green, excluded from Dump %)
+      - generic [ref=e65]: Dump % — (KAT Sold + KAT Sent to non-holders) ÷ KAT Claimed, capped at 100%
+    - generic [ref=e66]:
+      - text: "Data:"
+      - link "Merkl API" [ref=e67] [cursor=pointer]:
+        - /url: https://api.merkl.xyz
+      - text: +
+      - link "Katana RPC" [ref=e68] [cursor=pointer]:
+        - /url: https://rpc.katana.network
+      - text: "· KAT token:"
+      - link "0x7f1f…c2d" [ref=e69] [cursor=pointer]:
+        - /url: https://katanascan.com/token/0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d

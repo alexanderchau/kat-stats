@@ -61,6 +61,9 @@ BRIDGE2     = '0x64b20eb25aed030fd510ef93b9125278b152f6a6'
 BRIDGE_DESTS = {BRIDGE, BRIDGE2}
 ZERO_ADDR   = '0x0000000000000000000000000000000000000000'
 
+VOTING_ESCROW = '0x4d6fc15ca6258b168225d283262743c623c13ead'  # vKAT lock
+STAKE_DESTS   = {VOTING_ESCROW, AVKAT_ADDR}                   # vKAT + avKAT vault
+
 KAT_ETH_ADDR  = '0x8f051ca72a3440d83b18e71c3e59676203ab8f91'
 ETH_KAT_START = 21_900_000
 
@@ -150,6 +153,8 @@ def load_state():
         'claimedByAddr': {},
         'dumpRaw':       {},
         'cexByAddr':     {},
+        'buyRaw':        {},
+        'stakeRaw':      {},
     }
 
 def save_state(state):
@@ -203,19 +208,22 @@ def scan_claimed(state, addr_set):
     print(f'  Claimed: {len(claimed):,} claimants total            ')
     return claimed, latest
 
-# ── Scan: Transfer events (dump detection) ─────────────────────────────────────
-def scan_dump(state, addr_set, latest_block):
-    scan_from = state['katanaBlock'] + 1
-    dump_raw  = state['dumpRaw']
+# ── Scan: Transfer events (dump + buyer + staking — single pass) ───────────────
+def scan_transfers(state, addr_set, cex_wallets, latest_block):
+    """One pass over all KAT Transfer events, building dump_raw, buy_raw, stake_raw."""
+    scan_from  = state['katanaBlock'] + 1
+    dump_raw   = state['dumpRaw']
+    buy_raw    = state.get('buyRaw', {})
+    stake_raw  = state.get('stakeRaw', {})
 
     if scan_from > latest_block:
-        print(f'  Dump: cache current at block {latest_block:,}')
-        return dump_raw
+        print(f'  Transfers: cache current at block {latest_block:,}')
+        return dump_raw, buy_raw, stake_raw
 
+    buy_sources = KAT_POOL_ADDRS | set(cex_wallets)
     chunks = [(f, min(f + LOG_CHUNK - 1, latest_block)) for f in range(scan_from, latest_block + 1, LOG_CHUNK)]
-    print(f'  Dump: {len(chunks)} chunks × {len(KAT_TOKENS)} tokens…')
+    print(f'  Transfers: {len(chunks)} chunks × {len(KAT_TOKENS)} tokens ({scan_from:,} → {latest_block:,})…')
 
-    # Collect all Transfer events across all 3 KAT tokens
     all_logs = []
     for i, (frm, to) in enumerate(chunks, 1):
         for token in KAT_TOKENS:
@@ -228,27 +236,49 @@ def scan_dump(state, addr_set, latest_block):
             all_logs.extend(logs)
         if i % 20 == 0 or i == len(chunks):
             print(f'    {i}/{len(chunks)} chunks…', end='\r')
-    print(f'  Dump: {len(all_logs):,} raw Transfer events collected            ')
+    print(f'  Transfers: {len(all_logs):,} raw events collected            ')
 
-    # Group by txHash, filter to our address set as sender
-    tx_map = {}
+    tx_map = {}  # for dump receipt detection
     for log in all_logs:
         topics = log.get('topics', [])
         if len(topics) < 3:
             continue
         sender = '0x' + topics[1][26:].lower()
-        if sender not in addr_set:
-            continue
         dest   = '0x' + topics[2][26:].lower()
         amount = from_wei(log.get('data', '0x0'))
-        tx     = log.get('transactionHash', '')
-        if not tx:
-            continue
-        if tx not in tx_map:
-            tx_map[tx] = {'from': sender, 'entries': [], 'is_swap': False}
-        tx_map[tx]['entries'].append({'to': dest, 'amount': amount})
 
-    # Swap detection: pool-address shortcut first, receipt fallback for unknowns
+        # ── Staking: to = vKAT escrow or avKAT vault ──
+        if dest in STAKE_DESTS:
+            if sender not in stake_raw:
+                stake_raw[sender] = {'stakedVKAT': False, 'stakedAvKAT': False}
+            if dest == VOTING_ESCROW:
+                stake_raw[sender]['stakedVKAT'] = True
+            else:
+                stake_raw[sender]['stakedAvKAT'] = True
+
+        # ── Buyers: from = pool or CEX → to = external wallet ──
+        if (sender in buy_sources
+                and dest != ZERO_ADDR
+                and dest not in BRIDGE_DESTS
+                and dest not in KAT_POOL_ADDRS):
+            source = 'cex' if sender in cex_wallets else 'dex'
+            if dest not in buy_raw:
+                buy_raw[dest] = {'katReceived': 0.0, 'txCount': 0, 'sources': []}
+            buy_raw[dest]['katReceived'] += amount
+            buy_raw[dest]['txCount'] += 1
+            if source not in buy_raw[dest]['sources']:
+                buy_raw[dest]['sources'].append(source)
+
+        # ── Dump: from = airdrop address ──
+        if sender in addr_set:
+            tx = log.get('transactionHash', '')
+            if not tx:
+                continue
+            if tx not in tx_map:
+                tx_map[tx] = {'from': sender, 'entries': [], 'is_swap': False}
+            tx_map[tx]['entries'].append({'to': dest, 'amount': amount})
+
+    # Swap detection for dump data
     receipts_needed = []
     for tx_hash, v in tx_map.items():
         entries = v['entries']
@@ -260,7 +290,7 @@ def scan_dump(state, addr_set, latest_block):
             continue
         receipts_needed.append(tx_hash)
 
-    print(f'  Dump: {len(receipts_needed):,} receipts needed for swap detection…')
+    print(f'  Transfers: {len(receipts_needed):,} receipts needed for swap detection…')
     receipt_results = {}
     with ThreadPoolExecutor(max_workers=8) as ex:
         futs = {ex.submit(eth_get_receipt, h): h for h in receipts_needed}
@@ -281,7 +311,6 @@ def scan_dump(state, addr_set, latest_block):
         if any((l.get('topics') or [''])[0] in (SWAP_V3_TOPIC, SWAP_V2_TOPIC) for l in logs):
             tx_map[tx_hash]['is_swap'] = True
 
-    # Accumulate into dump_raw
     for v in tx_map.values():
         sender = v['from']
         if sender not in dump_raw:
@@ -296,8 +325,8 @@ def scan_dump(state, addr_set, latest_block):
             else:
                 r['dests'][dest] = r['dests'].get(dest, 0.0) + amount
 
-    print(f'  Dump: {len(dump_raw):,} addresses with KAT transfer activity')
-    return dump_raw
+    print(f'  Transfers: {len(dump_raw):,} airdrop addrs · {len(buy_raw):,} buyers · {len(stake_raw):,} stakers')
+    return dump_raw, buy_raw, stake_raw
 
 # ── Scan: ETH mainnet CEX transfers ────────────────────────────────────────────
 def scan_cex(state, addr_set, cex_wallets):
@@ -435,6 +464,33 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
         out.append(d)
     return out
 
+# ── Build buyers output ────────────────────────────────────────────────────────
+def build_buyers_output(buy_raw, stake_raw, addr_set):
+    out = []
+    for addr, b in buy_raw.items():
+        sources = b.get('sources', [])
+        if len(sources) >= 2:
+            buy_source = 'both'
+        elif sources:
+            buy_source = sources[0]
+        else:
+            buy_source = 'dex'
+        s = stake_raw.get(addr, {})
+        staked_vkat  = s.get('stakedVKAT', False)
+        staked_avkat = s.get('stakedAvKAT', False)
+        out.append({
+            'address':     addr,
+            'category':    'airdrop_buyer' if addr in addr_set else 'pure_buyer',
+            'buySource':   buy_source,
+            'katReceived': round(b['katReceived'], 6),
+            'txCount':     b['txCount'],
+            'stakedVKAT':  staked_vkat,
+            'stakedAvKAT': staked_avkat,
+            'staked':      staked_vkat or staked_avkat,
+        })
+    out.sort(key=lambda x: x['katReceived'], reverse=True)
+    return out
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description='KAT Farmer Indexer')
@@ -455,6 +511,8 @@ def main():
         'claimedByAddr': {},
         'dumpRaw':       {},
         'cexByAddr':     {},
+        'buyRaw':        {},
+        'stakeRaw':      {},
     }
     if args.full:
         print('  --full: starting from genesis')
@@ -467,9 +525,11 @@ def main():
     state['claimedByAddr'] = claimed_by_addr
     print()
 
-    print('2/5 Scanning Transfer events (dump detection)…')
-    dump_raw = scan_dump(state, addr_set, latest_katana)
-    state['dumpRaw'] = dump_raw
+    print('2/5 Scanning Transfer events (dump + buyers + staking)…')
+    dump_raw, buy_raw, stake_raw = scan_transfers(state, addr_set, cex_wallets, latest_katana)
+    state['dumpRaw']  = dump_raw
+    state['buyRaw']   = buy_raw
+    state['stakeRaw'] = stake_raw
     print()
 
     print('3/5 Scanning ETH mainnet CEX transfers…')
@@ -489,13 +549,19 @@ def main():
 
     print('5/5 Building data.json…')
     address_data = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances)
+    buyers_data  = build_buyers_output(buy_raw, stake_raw, addr_set)
 
     total    = len(address_data)
     farmers  = sum(1 for d in address_data if d['status'] == 'farmer')
     hodlers  = sum(1 for d in address_data if d['status'] == 'hodler')
     partials = sum(1 for d in address_data if d['status'] == 'partial')
     inactive = sum(1 for d in address_data if d['status'] == 'inactive')
-    print(f'  {total:,} addresses: {farmers} farmers, {hodlers} hodlers, {partials} partial, {inactive} inactive')
+    print(f'  {total:,} airdrop addrs: {farmers} farmers, {hodlers} hodlers, {partials} partial, {inactive} inactive')
+
+    b_total  = len(buyers_data)
+    b_pure   = sum(1 for b in buyers_data if b['category'] == 'pure_buyer')
+    b_staked = sum(1 for b in buyers_data if b['staked'])
+    print(f'  {b_total:,} buyers: {b_pure} pure · {b_total - b_pure} airdrop+ · {b_staked} staked ({100*b_staked/b_total:.1f}%)' if b_total else '  0 buyers found')
 
     output = {
         'meta': {
@@ -503,8 +569,10 @@ def main():
             'katanaBlock':  latest_katana,
             'ethBlock':     latest_eth,
             'addressCount': total,
+            'buyerCount':   b_total,
         },
         'addresses': address_data,
+        'buyers':    buyers_data,
     }
 
     DATA_PATH.write_text(json.dumps(output, separators=(',', ':')))
