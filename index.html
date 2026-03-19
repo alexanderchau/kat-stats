@@ -705,7 +705,7 @@ const CHAIN_ID    = 747474;
 // Distributor proxy: verified from Katana docs + AngleProtocol/merkl-contracts repo
 const DISTRIBUTOR_ADDR = '0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae';
 const CLAIMED_TOPIC    = '0xf7a40077ff7a04c7e61f6f26fb13774259ddf1b6bce9ecf26a8276cdd3992683'; // Claimed(address indexed user, address indexed token, uint256)
-const PADDED_KAT_TOPIC = '0x0000000000000000000000006e9c1f88a960fe63387eb4b71bc525a9313d8461';
+
 const DEPLOY_BLOCK     = 2_808_000; // Distributor first appeared at block ~2807xxx (binary-searched)
 const LOG_CHUNK        = 29_999;    // Katana RPC max getLogs range (inclusive); 30000 fails
 const KAT_ADDR    = '0x6E9C1F88a960fE63387eb4b71BC525a9313d8461'; // Merkl-distributed KAT on Katana
@@ -1126,8 +1126,8 @@ function fetchCrossChainDump(address, bridgedAmount) {
 }
 
 // ── CLAIMED MAP (on-chain fallback — api.merkl.xyz is down) ──────────────────
-// Bulk eth_getLogs for all Claimed events on the Merkl Distributor filtered by
-// KAT token. Results cached in localStorage keyed by last block scanned, so
+// Bulk eth_getLogs for all Claimed events on the Merkl Distributor (all tokens).
+// Results cached in localStorage keyed by last block scanned, so
 // repeat loads only fetch new blocks since the previous visit.
 const CACHE_KEY = 'kat_claimed_v2';  // v2: removed PADDED_KAT_TOPIC filter, now all-token
 let claimedByAddr = {};
@@ -1329,7 +1329,6 @@ function renderTable() {
           if (hasBridged) {
             if (hasDumped || hasHeld) html += '<br>';
             if (cexSent > 0.01) {
-              const cexLabel = cexDests.slice(0, 2).join(', ') || 'CEX';
               html += `<span class="num-red" title="Bridged via LayerZero to ETH mainnet, then sent to CEX (${cexDests.length} CEX address${cexDests.length > 1 ? 'es' : ''})">⛓ ${fmtNum(bridged)} → CEX</span>`;
             } else {
               html += `<span class="num-orange" title="Bridged via LayerZero OFT to Ethereum mainnet (CEX destination not confirmed)">⛓ ${fmtNum(bridged)} bridged</span>`;
