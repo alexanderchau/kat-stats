@@ -915,14 +915,25 @@ async function fetchDumped(address) {
 }
 
 // ── CLAIMED MAP (on-chain fallback — api.merkl.xyz is down) ──────────────────
-// One bulk eth_getLogs for all Claimed events on the Merkl Distributor filtered
-// by KAT token. Pending/claimable amounts are unavailable without the API.
+// Bulk eth_getLogs for all Claimed events on the Merkl Distributor filtered by
+// KAT token. Results cached in localStorage keyed by last block scanned, so
+// repeat loads only fetch new blocks since the previous visit.
+const CACHE_KEY = 'kat_claimed_v1';
 let claimedByAddr = {};
 
 async function buildClaimedMap() {
-  // Paginate in LOG_CHUNK-block windows starting from known deployment block.
-  // Katana RPC max range = 29999 blocks (inclusive). All chunks fired concurrently;
-  // rpcLimit(40) throttles in-flight requests automatically.
+  // ── Load cache ──────────────────────────────────────────────────────────────
+  let scanFrom = DEPLOY_BLOCK;
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (cached && Number.isInteger(cached.blockScanned) && cached.data) {
+      Object.assign(claimedByAddr, cached.data);
+      scanFrom = cached.blockScanned + 1;
+      console.log(`buildClaimedMap: cache hit — ${Object.keys(claimedByAddr).length} claimants up to block ${cached.blockScanned}`);
+    }
+  } catch (e) { /* corrupt cache, start fresh */ }
+
+  // ── Fetch new blocks since last scan ───────────────────────────────────────
   try {
     const latestHex = await rpcLimit(async () => {
       const r = await fetch(KATANA_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -931,11 +942,17 @@ async function buildClaimedMap() {
     });
     const latest = parseInt(latestHex, 16);
 
+    if (scanFrom > latest) {
+      console.log('buildClaimedMap: cache current, no new blocks to scan');
+      return;
+    }
+
     const chunks = [];
-    for (let from = DEPLOY_BLOCK; from <= latest; from += LOG_CHUNK) {
+    for (let from = scanFrom; from <= latest; from += LOG_CHUNK) {
       chunks.push([from, Math.min(from + LOG_CHUNK - 1, latest)]);
     }
 
+    // Fire all chunks concurrently — rpcLimit(40) throttles in-flight requests
     const allLogs = await Promise.all(chunks.map(([from, to]) =>
       ethGetLogs([{
         fromBlock: '0x' + from.toString(16),
@@ -952,7 +969,14 @@ async function buildClaimedMap() {
         claimedByAddr[user] = (claimedByAddr[user] || 0) + fromWei(log.data);
       }
     }
-    console.log(`buildClaimedMap: ${chunks.length} chunks → ${Object.keys(claimedByAddr).length} unique claimants`);
+    console.log(`buildClaimedMap: ${chunks.length} new chunks → ${Object.keys(claimedByAddr).length} total claimants`);
+
+    // ── Persist updated map ─────────────────────────────────────────────────
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ blockScanned: latest, data: claimedByAddr }));
+    } catch (e) {
+      console.warn('buildClaimedMap: localStorage write failed (quota?)', e);
+    }
   } catch (e) {
     console.warn('buildClaimedMap failed:', e);
   }
