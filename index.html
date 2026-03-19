@@ -726,6 +726,8 @@ const ZERO_ADDR       = '0x0000000000000000000000000000000000000000'; // LayerZe
 const ETH_RPC            = 'https://ethereum.publicnode.com';
 const KAT_ETH_ADDR       = '0x8f051ca72a3440d83b18e71c3e59676203ab8f91'; // KAT OFTUpgradeable on ETH mainnet
 const ETH_KAT_START_BLOCK = 21_900_000; // safely before KAT OFT deployment (~2026-03-11)
+const ETH_LOG_CHUNK      = 100_000;     // ETH blocks ~12s each; 100k = ~14 days per chunk
+const ETH_CACHE_KEY      = 'kat_eth_xchain_v1';
 
 // Known CEX hot wallet addresses on Ethereum mainnet (lowercase)
 const CEX_WALLETS = new Set([
@@ -1049,33 +1051,78 @@ async function fetchDumped(address) {
 }
 
 // ── CROSS-CHAIN CEX DETECTION ─────────────────────────────────────────────────
-// Step 1: detect LayerZero OFT burns on Katana (already handled in fetchDumped as bridged).
-// Step 2: if bridged > 0, query ETH mainnet for KAT transfers from same address to CEX wallets.
-async function fetchCrossChainDump(address, bridgedAmount) {
-  if (bridgedAmount <= 0) return { cexSent: 0, cexDests: [] };
+// Bulk scan ALL KAT Transfer events on ETH mainnet once, build a map of
+// { farmerAddr -> { cexSent, cexDests } } filtered to our address set + CEX_WALLETS.
+// Cached in localStorage (same incremental pattern as buildClaimedMap).
+const ADDR_SET = new Set(ADDRESSES); // for O(1) membership checks in ETH scan
+let cexByAddr = {}; // { address -> { cexSent: number, cexDests: string[] } }
+
+async function buildCrossChainMap() {
+  let scanFrom = ETH_KAT_START_BLOCK;
   try {
-    const addrPadded = '0x' + address.replace('0x', '').toLowerCase().padStart(64, '0');
-    const ethLogs = await ethMainnetGetLogs([{
-      fromBlock: '0x' + ETH_KAT_START_BLOCK.toString(16),
-      toBlock:   'latest',
-      address:   KAT_ETH_ADDR,
-      topics:    [TRANSFER_TOPIC, addrPadded],
-    }]);
-    let cexSent = 0;
-    const cexDestsSet = new Set();
-    for (const log of ethLogs) {
-      if (!log.topics || log.topics.length < 3) continue;
-      const to = '0x' + log.topics[2].slice(26).toLowerCase();
-      if (CEX_WALLETS.has(to)) {
-        cexSent += fromWei(log.data);
-        cexDestsSet.add(to);
+    const cached = JSON.parse(localStorage.getItem(ETH_CACHE_KEY) || 'null');
+    if (cached && Number.isInteger(cached.blockScanned) && cached.data) {
+      cexByAddr = cached.data;
+      scanFrom = cached.blockScanned + 1;
+      console.log(`buildCrossChainMap: cache hit — ${Object.keys(cexByAddr).length} xchain addrs up to block ${cached.blockScanned}`);
+    }
+  } catch (e) { /* corrupt cache */ }
+
+  try {
+    const latestHex = await ethLimit(async () => {
+      const r = await fetch(ETH_RPC, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: ethSeq++, method: 'eth_blockNumber', params: [] }) });
+      return (await r.json()).result || '0x0';
+    });
+    const latest = parseInt(latestHex, 16);
+
+    if (scanFrom > latest) {
+      console.log('buildCrossChainMap: cache current, no new ETH blocks to scan');
+      return;
+    }
+
+    const chunks = [];
+    for (let from = scanFrom; from <= latest; from += ETH_LOG_CHUNK) {
+      chunks.push([from, Math.min(from + ETH_LOG_CHUNK - 1, latest)]);
+    }
+
+    // Fetch all KAT transfers on ETH mainnet (from=any) — filter client-side
+    const allLogs = await Promise.all(chunks.map(([from, to]) =>
+      ethMainnetGetLogs([{
+        fromBlock: '0x' + from.toString(16),
+        toBlock:   '0x' + to.toString(16),
+        address:   KAT_ETH_ADDR,
+        topics:    [TRANSFER_TOPIC],
+      }])
+    ));
+
+    for (const logs of allLogs) {
+      for (const log of (logs || [])) {
+        if (!log.topics || log.topics.length < 3) continue;
+        const from = '0x' + log.topics[1].slice(26).toLowerCase();
+        const to   = '0x' + log.topics[2].slice(26).toLowerCase();
+        if (!ADDR_SET.has(from) || !CEX_WALLETS.has(to)) continue;
+        if (!cexByAddr[from]) cexByAddr[from] = { cexSent: 0, cexDests: [] };
+        cexByAddr[from].cexSent += fromWei(log.data);
+        if (!cexByAddr[from].cexDests.includes(to)) cexByAddr[from].cexDests.push(to);
       }
     }
-    return { cexSent, cexDests: [...cexDestsSet] };
+    console.log(`buildCrossChainMap: ${chunks.length} ETH chunks → ${Object.keys(cexByAddr).length} xchain addrs`);
+
+    try {
+      localStorage.setItem(ETH_CACHE_KEY, JSON.stringify({ blockScanned: latest, data: cexByAddr }));
+    } catch (e) {
+      console.warn('buildCrossChainMap: localStorage write failed', e);
+    }
   } catch (e) {
-    console.warn('fetchCrossChainDump failed for', address, e);
-    return { cexSent: 0, cexDests: [] };
+    console.warn('buildCrossChainMap failed:', e);
   }
+}
+
+function fetchCrossChainDump(address, bridgedAmount) {
+  // bridgedAmount > 0 means an OFT burn was detected on Katana — only then is cross-chain relevant
+  if (bridgedAmount <= 0) return { cexSent: 0, cexDests: [] };
+  return cexByAddr[address.toLowerCase()] || { cexSent: 0, cexDests: [] };
 }
 
 // ── CLAIMED MAP (on-chain fallback — api.merkl.xyz is down) ──────────────────
@@ -1575,7 +1622,7 @@ async function main() {
 
   document.getElementById('progress-label').innerHTML =
     `Loading claimed data from chain…`;
-  await buildClaimedMap();
+  await Promise.all([buildClaimedMap(), buildCrossChainMap()]);
 
   document.getElementById('progress-label').innerHTML =
     `Fetching data for <b>${ADDRESSES.length}</b> addresses…`;
@@ -1598,8 +1645,8 @@ async function main() {
         balanceOf(AVKAT_ADDR, addr),
         fetchDumped(addr),
       ]);
-      // Cross-chain check only needed if address bridged KAT (OFT burn detected)
-      const xchain = await fetchCrossChainDump(addr, dumpData.bridged || 0);
+      // Cross-chain: O(1) map lookup — bulk scan already done in buildCrossChainMap()
+      const xchain = fetchCrossChainDump(addr, dumpData.bridged || 0);
       d = {
         address: addr,
         claimed:       merkl.claimed,
