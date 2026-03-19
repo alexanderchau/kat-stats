@@ -40,7 +40,7 @@
       /* Card colors */
       --card-claimed:   #FFE566;
       --card-claimable: #C8F5A4;
-      --card-dumpers:   #FFB3B3;
+      --card-farmers:   #FFB3B3;
       --card-hodlers:   #B3F5D4;
       --card-staked:    #E5B3FF;
     }
@@ -133,7 +133,7 @@
     .stat-card:has(#stat-claimed)   { background: var(--card-claimed);   color: #000; }
     .stat-card:has(#stat-inactive)  { background: var(--cream2);         color: #000; }
     .stat-card:has(#stat-claimable) { background: var(--card-claimable); color: #000; }
-    .stat-card:has(#stat-dumpers)       { background: var(--card-dumpers);   color: #000; }
+    .stat-card:has(#stat-farmers)       { background: var(--card-farmers);   color: #000; }
     .stat-card:has(#stat-hodlers)       { background: var(--card-hodlers);   color: #000; }
     .stat-card:has(#stat-staked)        { background: var(--card-staked);    color: #000; }
 
@@ -354,7 +354,7 @@
     tr { --row-base: var(--cream); }
     tr:nth-child(even)            { --row-base: var(--cream2); }
     tr:hover                      { --row-base: #FFE566; }
-    tr.row-dumper                 { --row-base: #FFF0F0; }
+    tr.row-farmer                 { --row-base: #FFF0F0; }
     tr.row-dumper:nth-child(even) { --row-base: #FFE8E8; }
     tr.row-dumper:hover           { --row-base: #FFE566; }
     tr.row-hodler                 { --row-base: #F0FFF8; }
@@ -415,7 +415,7 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    .badge-dumper   { background: #FFB3B3; color: #000; }
+    .badge-farmer   { background: #FFB3B3; color: #000; }
     .badge-partial  { background: #FFE566; color: #000; }
     .badge-hodler   { background: #B3F5D4; color: #000; }
     .badge-inactive { background: #E0E0E0; color: var(--dim); border-color: #999; }
@@ -571,10 +571,10 @@
     <div class="stat-value blue" id="stat-claimable">—</div>
     <div class="stat-sub" id="stat-claimable-sub"></div>
   </div>
-  <div class="stat-card" data-filter="dumper">
-    <div class="stat-label">Confirmed Dumpers</div>
-    <div class="stat-value red" id="stat-dumpers">—</div>
-    <div class="stat-sub" id="stat-dumpers-sub"></div>
+  <div class="stat-card" data-filter="farmer">
+    <div class="stat-label">Confirmed Farmers</div>
+    <div class="stat-value red" id="stat-farmers">—</div>
+    <div class="stat-sub" id="stat-farmers-sub"></div>
   </div>
   <div class="stat-card" data-filter="hodler">
     <div class="stat-label">Hodlers</div>
@@ -606,7 +606,7 @@
     </button>
     <ul class="custom-select-menu" id="status-filter-menu">
       <li data-value="">All statuses</li>
-      <li data-value="dumper">Dumpers (&gt;50%)</li>
+      <li data-value="farmer">Farmers (&gt;50%)</li>
       <li data-value="partial">Partial (5–50%)</li>
       <li data-value="hodler">Hodlers (&lt;5%)</li>
       <li data-value="inactive">Inactive</li>
@@ -614,7 +614,7 @@
     </ul>
     <select id="status-filter" style="display:none">
       <option value="">All statuses</option>
-      <option value="dumper">Dumpers (&gt;50%)</option>
+      <option value="farmer">Farmers (&gt;50%)</option>
       <option value="partial">Partial (5–50%)</option>
       <option value="hodler">Hodlers (&lt;5%)</option>
       <option value="inactive">Inactive</option>
@@ -657,7 +657,7 @@
       <tr>
         <th data-col="rank">#<span class="sort-arrow"></span></th>
         <th data-col="address">Address<span class="sort-arrow"></span></th>
-        <th data-col="status" data-tip="DUMPER >50% sold · PARTIAL 5–50% · HODLER <5% · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
+        <th data-col="status" data-tip="FARMER >50% sold · PARTIAL 5–50% · HODLER <5% · INACTIVE no rewards">Status<span class="sort-arrow"></span></th>
         <th data-col="total" class="num sorted" data-tip="Total KAT allocated via Merkl rewards (claimed + unclaimed)">KAT Allocated<span class="sort-arrow">↓</span></th>
         <th data-col="claimed" class="num" data-tip="KAT already withdrawn from Merkl into wallet">KAT Claimed<span class="sort-arrow"></span></th>
         <th data-col="transferred" class="num" data-tip="KAT sent to addresses that no longer hold it · ⛓ bridged via LayerZero OFT to ETH mainnet (⛓ → CEX = confirmed exchange deposit) · Green held transfers excluded from Dump %">KAT Sent<span class="sort-arrow"></span></th>
@@ -864,7 +864,7 @@ function disposed(d) {
 function classify(d) {
   if (d.claimed === 0) return 'inactive';
   const dumpRatio = Math.min(1, disposed(d) / d.claimed);
-  if (dumpRatio > 0.5)  return 'dumper';
+  if (dumpRatio > 0.5)  return 'farmer';
   if (dumpRatio > 0.05) return 'partial';
   return 'hodler';
 }
@@ -899,7 +899,7 @@ function getFilteredRows() {
 // ── RENDER ─────────────────────────────────────────────────────────────────────
 function badge(status) {
   const map = {
-    dumper:   ['badge-dumper',   'DUMPER'],
+    farmer:   ['badge-farmer',   'FARMER'],
     partial:  ['badge-partial',  'PARTIAL'],
     hodler:   ['badge-hodler',   'HODLER'],
     inactive: ['badge-inactive', 'INACTIVE'],
@@ -935,7 +935,7 @@ function renderTable() {
     const moved = d.moved || 0;
     const transferred = d.transferred || 0;
     const transferredTo = d.transferredTo || [];
-    const rowCls = d.status === 'dumper'   ? 'row-dumper'
+    const rowCls = d.status === 'farmer'   ? 'row-farmer'
                  : d.status === 'hodler'   ? 'row-hodler'
                  : d.status === 'inactive' ? 'row-inactive'
                  : '';
@@ -1031,7 +1031,7 @@ function updateStats() {
   const totalClaimed   = all.reduce((s, d) => s + d.claimed, 0);
   const totalClaimable = all.filter(d => d.status === 'partial').reduce((s, d) => s + d.claimable, 0);
   const inactiveCount  = all.filter(d => d.status === 'inactive').length;
-  const dumpers        = all.filter(d => d.status === 'dumper').length;
+  const farmers        = all.filter(d => d.status === 'farmer').length;
   const hodlers        = all.filter(d => d.status === 'hodler').length;
   const partials       = all.filter(d => d.status === 'partial').length;
 
@@ -1040,8 +1040,8 @@ function updateStats() {
   document.getElementById('stat-inactive').textContent = inactiveCount.toLocaleString();
   document.getElementById('stat-claimable').textContent    = fmtNum(totalClaimable, 0);
   document.getElementById('stat-claimable-sub').textContent = partials > 0 ? `${partials} partial holders` : '';
-  document.getElementById('stat-dumpers').textContent      = dumpers.toLocaleString();
-  document.getElementById('stat-dumpers-sub').textContent  = n > 0 ? `${((dumpers / n) * 100).toFixed(1)}% of ${n}` : '';
+  document.getElementById('stat-farmers').textContent      = farmers.toLocaleString();
+  document.getElementById('stat-farmers-sub').textContent  = n > 0 ? `${((farmers / n) * 100).toFixed(1)}% of ${n}` : '';
   document.getElementById('stat-hodlers').textContent      = hodlers.toLocaleString();
   document.getElementById('stat-hodlers-sub').textContent  = n > 0 ? `${((hodlers / n) * 100).toFixed(1)}% of ${n}` : '';
   const stakerCount  = all.filter(d => d.avkat > 0).length;

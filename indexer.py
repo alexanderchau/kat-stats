@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-KAT Dumpers Indexer
+KAT Farmer Indexer
 Scans Katana + ETH mainnet, writes data.json consumed by index.html.
 
 Usage:
@@ -78,7 +78,7 @@ def rpc_call(url, method, params, retries=3, timeout=30):
     for attempt in range(retries):
         try:
             body = json.dumps({'jsonrpc': '2.0', 'id': _next_id(), 'method': method, 'params': params}).encode()
-            req  = urllib.request.Request(url, data=body, headers={'Content-Type': 'application/json'}, method='POST')
+            req  = urllib.request.Request(url, data=body, headers={'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}, method='POST')
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read())
                 if 'error' in data:
@@ -164,7 +164,7 @@ def classify(d):
     if d['claimed'] == 0:
         return 'inactive'
     ratio = min(1.0, disposed(d) / d['claimed'])
-    if ratio > 0.5:  return 'dumper'
+    if ratio > 0.5:  return 'farmer'
     if ratio > 0.05: return 'partial'
     return 'hodler'
 
@@ -437,11 +437,11 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 def main():
-    parser = argparse.ArgumentParser(description='KAT Dumpers Indexer')
+    parser = argparse.ArgumentParser(description='KAT Farmer Indexer')
     parser.add_argument('--full', action='store_true', help='Rescan from genesis (ignore state.json)')
     args = parser.parse_args()
 
-    print('KAT Dumpers Indexer')
+    print('KAT Farmer Indexer')
     print('=' * 50)
 
     addresses   = load_addresses()
@@ -491,11 +491,11 @@ def main():
     address_data = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances)
 
     total    = len(address_data)
-    dumpers  = sum(1 for d in address_data if d['status'] == 'dumper')
+    farmers  = sum(1 for d in address_data if d['status'] == 'farmer')
     hodlers  = sum(1 for d in address_data if d['status'] == 'hodler')
     partials = sum(1 for d in address_data if d['status'] == 'partial')
     inactive = sum(1 for d in address_data if d['status'] == 'inactive')
-    print(f'  {total:,} addresses: {dumpers} dumpers, {hodlers} hodlers, {partials} partial, {inactive} inactive')
+    print(f'  {total:,} addresses: {farmers} farmers, {hodlers} hodlers, {partials} partial, {inactive} inactive')
 
     output = {
         'meta': {
