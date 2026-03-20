@@ -535,70 +535,94 @@
     }
     .footer-legend b { color: var(--text); font-weight: 700; }
     .footer-sources { color: var(--dim); }
-    /* ── SUPPLY PANEL ─────────────────────────────────────────────────────── */
-    #supply-section {
-      padding: 2rem 2.5rem;
+    /* ── SUPPLY PANEL — CASCADE ──────────────────────────────────────────── */
+    .cascade-hero {
+      padding: 3rem 2.5rem 1.5rem;
       background: var(--cream);
     }
-    .supply-top {
-      display: flex;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 1rem 2rem;
-      margin-bottom: 0.75rem;
+    .cascade-pct {
+      font-family: var(--mono);
+      font-size: 6rem;
+      font-weight: 800;
+      font-feature-settings: "tnum" 1;
+      line-height: 1;
+      color: var(--text);
+      margin-bottom: 0.3rem;
     }
-    .supply-headline { flex: 0 0 auto; }
-    .supply-label {
+    .cascade-sub {
       font-family: var(--ui);
-      font-size: 0.68rem;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      color: var(--dim);
+      margin-bottom: 0.5rem;
+    }
+    .cascade-amount {
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+      font-feature-settings: "tnum" 1;
+    }
+    .source-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 2px solid var(--black);
+      background: var(--cream);
+    }
+    .source-card {
+      padding: 1.2rem 1.5rem;
+      border-right: 2px solid var(--black);
+      position: relative;
+    }
+    .source-card:last-child { border-right: none; }
+    .source-card--expandable { cursor: pointer; }
+    .source-card--expandable:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 6px 6px 0 var(--black);
+      z-index: 2;
+    }
+    .source-label {
+      font-family: var(--ui);
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       font-weight: 700;
       color: var(--label);
       margin-bottom: 0.2rem;
     }
-    .supply-value {
+    .source-value {
       font-family: var(--mono);
-      font-size: 1.55rem;
-      font-weight: 700;
-      color: var(--text);
-      font-feature-settings: "tnum" 1;
-      line-height: 1;
-    }
-    .supply-pct {
-      font-size: 0.88rem;
-      color: var(--dim);
-      margin-left: 0.5rem;
-      font-weight: 400;
-    }
-    .supply-breakdown {
-      display: flex;
-      gap: 1.5rem 2rem;
-      flex-wrap: wrap;
-      margin-left: auto;
-      align-items: flex-end;
-    }
-    .supply-item { display: flex; flex-direction: column; gap: 1px; }
-    .supply-item-label {
-      font-family: var(--ui);
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-      color: var(--dim);
-    }
-    .supply-item-val {
-      font-family: var(--mono);
-      font-size: 1rem;
+      font-size: 1.6rem;
       font-weight: 700;
       color: var(--text);
       font-feature-settings: "tnum" 1;
     }
-    .supply-item-pct {
+    .source-pct {
       font-family: var(--mono);
       font-size: 0.75rem;
       color: var(--dim);
       font-feature-settings: "tnum" 1;
+    }
+    .source-chevron {
+      position: absolute;
+      top: 1.2rem;
+      right: 1rem;
+      font-size: 0.7rem;
+      color: var(--dim);
+      transition: transform 0.2s;
+    }
+    .source-card.expanded .source-chevron { transform: rotate(90deg); }
+    .source-card__detail {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      margin-top: 0;
+    }
+    .source-card.expanded .source-card__detail {
+      max-height: 400px;
+      margin-top: 1rem;
     }
     .protocol-bar-label {
       font-family: var(--ui);
@@ -614,6 +638,12 @@
       letter-spacing: 0;
       font-weight: 400;
       color: var(--dim);
+    }
+    @media (max-width: 700px) {
+      .cascade-pct { font-size: 3.5rem; }
+      .source-cards { grid-template-columns: 1fr; }
+      .source-card { border-right: none; border-bottom: 2px solid var(--black); }
+      .source-card:last-child { border-bottom: none; }
     }
     .protocol-bar {
       display: flex;
@@ -1019,48 +1049,34 @@
 </div>
 
 <div id="tab-supply" class="tab-pane">
-<div id="supply-section">
-  <div class="supply-top">
-    <div class="supply-headline">
-      <div class="supply-label">Total KAT in Circulation</div>
-      <div class="supply-value">568.8M <span class="supply-pct">5.69% of 10B total supply</span></div>
-    </div>
-    <div class="supply-breakdown">
-      <div class="supply-item">
-        <span class="supply-item-label">Merkl Rewards</span>
-        <span class="supply-item-val num-blue">528.8M</span>
-        <span class="supply-item-pct">5.29%</span>
-      </div>
-      <div class="supply-item">
-        <span class="supply-item-label">EtherFi Vault</span>
-        <span class="supply-item-val">20M</span>
-        <span class="supply-item-pct">0.20%</span>
-      </div>
-      <div class="supply-item">
-        <span class="supply-item-label">Lombard Vault</span>
-        <span class="supply-item-val">20M</span>
-        <span class="supply-item-pct">0.20%</span>
+  <div class="cascade-hero">
+    <div class="cascade-pct" id="supply-hero-pct">—</div>
+    <div class="cascade-sub">of 10B total supply distributed</div>
+    <div class="cascade-amount" id="supply-hero-total">—</div>
+  </div>
+  <div class="source-cards">
+    <div class="source-card source-card--expandable" data-source="merkl" id="supply-merkl-card">
+      <div class="source-label">Merkl Rewards</div>
+      <div class="source-value num-blue" id="supply-merkl-amt">—</div>
+      <div class="source-pct" id="supply-merkl-pct">—</div>
+      <div class="source-chevron">▶</div>
+      <div class="source-card__detail">
+        <div class="protocol-bar-label">Distribution by Protocol <span class="protocol-sub">(stratified sample · approx)</span></div>
+        <div class="protocol-bar" id="supply-proto-bar"></div>
+        <div class="proto-legend" id="supply-proto-legend"></div>
       </div>
     </div>
+    <div class="source-card" data-source="etherfi">
+      <div class="source-label">EtherFi Vault</div>
+      <div class="source-value" id="supply-etherfi-amt">—</div>
+      <div class="source-pct" id="supply-etherfi-pct">—</div>
+    </div>
+    <div class="source-card" data-source="lombard">
+      <div class="source-label">Lombard Vault</div>
+      <div class="source-value" id="supply-lombard-amt">—</div>
+      <div class="source-pct" id="supply-lombard-pct">—</div>
+    </div>
   </div>
-  <div class="protocol-bar-label">Merkl Distribution by Protocol <span class="protocol-sub">(stratified sample · approx)</span></div>
-  <div class="protocol-bar">
-    <div class="proto-seg" style="width:68.6%;background:var(--blue)" data-tip="Katana Vaults: 68.6% · ~362M KAT · epoch-based vault rewards"><span class="proto-seg-label">Katana Vaults</span></div>
-    <div class="proto-seg" style="width:19.9%;background:var(--amber)" data-tip="SushiSwap: 19.9% · ~105M KAT · LP 52% + swap fees 48%"><span class="proto-seg-label">SushiSwap</span></div>
-    <div class="proto-seg" style="width:5.6%;background:var(--violet)" data-tip="ERC20 vault: 5.6% · ~30M KAT"><span class="proto-seg-label">ERC20</span></div>
-    <div class="proto-seg" style="width:2.6%;background:var(--orange)" data-tip="Charm: 2.6% · ~14M KAT"><span class="proto-seg-label"></span></div>
-    <div class="proto-seg" style="width:2.5%;background:var(--green)" data-tip="Morpho: 2.5% · ~13M KAT"><span class="proto-seg-label"></span></div>
-    <div class="proto-seg" style="flex:1;background:var(--dim)" data-tip="Other / unclassified: ~0.8%"><span class="proto-seg-label"></span></div>
-  </div>
-  <div class="proto-legend">
-    <span class="proto-key" style="--c:var(--blue)">Katana Vaults 68.6%</span>
-    <span class="proto-key" style="--c:var(--amber)" data-tip="LP 52% + swap fees 48%">SushiSwap 19.9% ⓘ</span>
-    <span class="proto-key" style="--c:var(--violet)">ERC20 vault 5.6%</span>
-    <span class="proto-key" style="--c:var(--orange)">Charm 2.6%</span>
-    <span class="proto-key" style="--c:var(--green)">Morpho 2.5%</span>
-    <span class="proto-key" style="--c:var(--dim)">Other 0.8%</span>
-  </div>
-</div>
 </div>
 
 <div id="tab-stakers" class="tab-pane">
@@ -1734,6 +1750,132 @@ function exportStakerCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
+// ── SUPPLY TAB ───────────────────────────────────────────────────────────────
+const PROTO_COLORS = {
+  'Katana Vaults': '--blue',
+  'SushiSwap':     '--amber',
+  'ERC20 vault':   '--violet',
+  'Charm':         '--orange',
+  'Morpho':        '--green',
+  'other':         '--dim',
+};
+const PROTO_URLS = {
+  'Katana Vaults': 'https://app.katana.network/vaults',
+  'SushiSwap':     'https://www.sushi.com/katana/pool',
+};
+
+function fmtM(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return n.toFixed(0);
+}
+
+function renderSupplyTab(d) {
+  document.getElementById('supply-hero-pct').textContent = d.circulatingPct.toFixed(2) + '%';
+  document.getElementById('supply-hero-total').textContent = fmtM(d.totalCirculating) + ' KAT in circulation';
+
+  const s = d.sources;
+  document.getElementById('supply-merkl-amt').textContent = fmtM(s.merkl.amount);
+  document.getElementById('supply-merkl-pct').textContent = s.merkl.pct.toFixed(2) + '%';
+  document.getElementById('supply-etherfi-amt').textContent = fmtM(s.etherfi.amount);
+  document.getElementById('supply-etherfi-pct').textContent = s.etherfi.pct.toFixed(2) + '%';
+  document.getElementById('supply-lombard-amt').textContent = fmtM(s.lombard.amount);
+  document.getElementById('supply-lombard-pct').textContent = s.lombard.pct.toFixed(2) + '%';
+
+  // Protocol breakdown (optional — only if protocolMix exists)
+  const mix = d.protocolMix;
+  const card = document.getElementById('supply-merkl-card');
+  if (!mix || Object.keys(mix).length === 0) {
+    card.classList.remove('source-card--expandable');
+    card.style.cursor = 'default';
+    const chev = card.querySelector('.source-chevron');
+    if (chev) chev.style.display = 'none';
+    return;
+  }
+
+  // Build protocol bar
+  const bar = document.getElementById('supply-proto-bar');
+  const legend = document.getElementById('supply-proto-legend');
+  const sorted = Object.entries(mix).sort((a, b) => b[1].frac - a[1].frac);
+  const merklTotal = s.merkl.amount;
+
+  sorted.forEach(([name, info], i) => {
+    const pct = (info.frac * 100).toFixed(1);
+    const katAmt = fmtM(info.frac * merklTotal);
+    const color = PROTO_COLORS[name] || '--dim';
+    const isLast = i === sorted.length - 1;
+
+    // Bar segment
+    const seg = document.createElement('div');
+    seg.className = 'proto-seg';
+    seg.style.cssText = isLast
+      ? `flex:1;background:var(${color})`
+      : `width:${pct}%;background:var(${color})`;
+
+    // Tooltip with sub-breakdown
+    let tip = `${name}: ${pct}% · ~${katAmt} KAT`;
+    if (info.subs && Object.keys(info.subs).length > 0) {
+      const subStr = Object.entries(info.subs)
+        .sort((a, b) => b[1] - a[1])
+        .map(([s, f]) => `${s} ${(f * 100).toFixed(0)}%`)
+        .join(' + ');
+      tip += ` · ${subStr}`;
+    }
+    seg.setAttribute('data-tip', tip);
+
+    // Label (only show for segments > 8%)
+    const label = document.createElement('span');
+    label.className = 'proto-seg-label';
+    if (info.frac > 0.08) label.textContent = name;
+    seg.appendChild(label);
+    bar.appendChild(seg);
+
+    // Legend key
+    const key = document.createElement('span');
+    key.className = 'proto-key';
+    key.style.setProperty('--c', `var(${color})`);
+    key.textContent = `${name} ${pct}%`;
+    if (info.subs && Object.keys(info.subs).length > 0) {
+      const subStr = Object.entries(info.subs)
+        .sort((a, b) => b[1] - a[1])
+        .map(([s, f]) => `${s} ${(f * 100).toFixed(0)}%`)
+        .join(' + ');
+      key.setAttribute('data-tip', subStr);
+      key.textContent += ' ⓘ';
+    }
+    // External link
+    const url = PROTO_URLS[name];
+    if (url) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.style.cssText = 'color:inherit;text-decoration:none;';
+      link.textContent = key.textContent;
+      key.textContent = '';
+      key.appendChild(link);
+    }
+    legend.appendChild(key);
+  });
+
+  // Toggle expand on click
+  card.addEventListener('click', () => {
+    card.classList.toggle('expanded');
+  });
+}
+
+async function loadSupplyData() {
+  try {
+    const resp = await fetch('supply_data.json?' + Date.now());
+    if (!resp.ok) return;
+    const d = await resp.json();
+    renderSupplyTab(d);
+  } catch (e) {
+    console.error('Supply data fetch failed:', e.message);
+  }
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
   // Restore UI from URL state
@@ -1902,6 +2044,9 @@ async function main() {
 
   updateStats();
   scheduleRender();
+
+  // ── Supply tab (parallel — doesn't block other tabs)
+  loadSupplyData();
 
   // ── Buyers section ────────────────────────────────────────────────────────
   buyerData  = data.buyers || [];

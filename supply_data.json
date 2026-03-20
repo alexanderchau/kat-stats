@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "generatedAt": "2026-03-20T11:00:31.598966+00:00",
+    "katanaBlock": 27261601
+  },
+  "totalSupply": 10000000000,
+  "totalCirculating": 601669836.6398616,
+  "circulatingPct": 6.016698366398616,
+  "sources": {
+    "merkl": {
+      "label": "Merkl Rewards",
+      "amount": 561669836.6398616,
+      "pct": 5.616698366398616
+    },
+    "etherfi": {
+      "label": "EtherFi Vault",
+      "amount": 20000000.0,
+      "pct": 0.2
+    },
+    "lombard": {
+      "label": "Lombard Vault",
+      "amount": 20000000.0,
+      "pct": 0.2
+    }
+  }
+}

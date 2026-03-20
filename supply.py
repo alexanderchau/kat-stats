@@ -16,6 +16,7 @@ Usage:
 """
 
 import json, time, argparse
+from datetime import datetime, timezone
 from pathlib import Path
 import urllib.request, urllib.error
 
@@ -301,6 +302,7 @@ def main():
     parser.add_argument('--full',      action='store_true', help='Rescan from genesis')
     parser.add_argument('--top',       type=int, default=20, help='Top N wallets to show (default 20)')
     parser.add_argument('--protocols', action='store_true', help='Show Merkl protocol breakdown (makes API calls)')
+    parser.add_argument('--json', action='store_true', help='Output supply_data.json for frontend')
     args = parser.parse_args()
 
     print('KAT Supply Circulation Tracker')
@@ -325,7 +327,9 @@ def main():
         transfers_by_addr = scan_merkl_transfers(
             state['scannedBlock'] + 1, latest, state['transfersByAddr']
         )
-        save_state({'scannedBlock': latest, 'transfersByAddr': transfers_by_addr})
+        state['scannedBlock'] = latest
+        state['transfersByAddr'] = transfers_by_addr
+        save_state(state)
         print(f'  State saved (block {latest:,})')
 
     claimed_by_addr = transfers_by_addr
@@ -353,12 +357,59 @@ def main():
     print()
 
     # ── Protocol breakdown (optional) ───────────────────────────────────────────
+    protocol_mix = None
+    if 'protocol_mix' in state:
+        protocol_mix = state['protocol_mix']
+
     if args.protocols and claimed_by_addr:
         print('Sampling Merkl API for protocol breakdown (60 addresses)…')
         protocol_mix = scan_protocol_mix(claimed_by_addr)
+        state['protocol_mix'] = protocol_mix
+        state['protocol_mix_ts'] = datetime.now(timezone.utc).isoformat()
+        save_state(state)
         print()
         print_protocol_breakdown(protocol_mix, merkl_claimed)
         print()
+    elif protocol_mix and claimed_by_addr:
+        # Cached protocol_mix — still print it in terminal mode
+        if not args.json:
+            print_protocol_breakdown(protocol_mix, merkl_claimed)
+            print()
+
+    # ── JSON output ──────────────────────────────────────────────────────────────
+    if args.json:
+        output = {
+            'meta': {
+                'generatedAt': datetime.now(timezone.utc).isoformat(),
+                'katanaBlock': latest,
+            },
+            'totalSupply': TOTAL_KAT_SUPPLY,
+            'totalCirculating': total_circulating,
+            'circulatingPct': pct_total,
+            'sources': {
+                'merkl': {
+                    'label': 'Merkl Rewards',
+                    'amount': merkl_claimed,
+                    'pct': 100 * merkl_claimed / total_supply,
+                },
+                'etherfi': {
+                    'label': 'EtherFi Vault',
+                    'amount': vault_totals['EtherFi vault'],
+                    'pct': VAULT_ALLOCATIONS['EtherFi vault'] * 100,
+                },
+                'lombard': {
+                    'label': 'Lombard Vault',
+                    'amount': vault_totals['Lombard vault'],
+                    'pct': VAULT_ALLOCATIONS['Lombard vault'] * 100,
+                },
+            },
+        }
+        if protocol_mix:
+            output['protocolMix'] = protocol_mix
+
+        out_path = SCRIPT_DIR / 'supply_data.json'
+        out_path.write_text(json.dumps(output, indent=2))
+        print(f'  Wrote {out_path}')
 
     # ── Top claimants ───────────────────────────────────────────────────────────
     if not claimed_by_addr:
