@@ -413,7 +413,7 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs=None):
     lock = threading.Lock()
 
     def fetch_addr(addr):
-        kat   = balance_of(KAT_ADDR,  addr)
+        kat   = sum(balance_of(t, addr) for t in KAT_TOKENS)
         avkat = balance_of(AVKAT_ADDR, addr)
         return addr, kat, avkat
 
