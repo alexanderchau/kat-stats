@@ -113,7 +113,7 @@
       grid-template-columns: repeat(6, 1fr);
       border-bottom: 2px solid var(--black);
     }
-    #tab-dumpers .stats-grid { grid-template-columns: repeat(5, 1fr); }
+    #tab-dumpers .stats-grid { grid-template-columns: repeat(6, 1fr); }
     @media (max-width: 960px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
@@ -129,14 +129,6 @@
     }
     .stat-card:last-child { border-right: none; }
     .stat-card[data-filter] { cursor: pointer; }
-
-    /* Per-card background colors — bright colors pop on dark bg */
-    .stat-card:has(#stat-claimed)   { background: var(--card-claimed);   color: #000; }
-    .stat-card:has(#stat-inactive)  { background: var(--cream2);         color: #000; }
-    .stat-card:has(#stat-claimable) { background: var(--card-claimable); color: #000; }
-    .stat-card:has(#stat-farmers)       { background: var(--card-farmers);   color: #000; }
-    .stat-card:has(#stat-hodlers)       { background: var(--card-hodlers);   color: #000; }
-    .stat-card:has(#stat-staked)        { background: var(--card-staked);    color: #000; }
 
     .stat-card[data-filter]:hover {
       transform: translate(-2px, -2px);
@@ -849,11 +841,16 @@
 </div>
 <div class="stats-grid">
   <div class="stat-card">
+    <div class="stat-label">Addresses</div>
+    <div class="stat-value" id="stat-addr-count">—</div>
+    <div class="stat-sub" id="stat-snapshot-sub">loading…</div>
+  </div>
+  <div class="stat-card">
     <div class="stat-label">Total KAT Claimed</div>
     <div class="stat-value yellow" id="stat-claimed">—</div>
   </div>
   <div class="stat-card" data-filter="partial">
-    <div class="stat-label">Still Claimable</div>
+    <div class="stat-label">Partial Dumpers</div>
     <div class="stat-value blue" id="stat-claimable">—</div>
     <div class="stat-sub" id="stat-claimable-sub"></div>
   </div>
@@ -1007,7 +1004,7 @@
         <th data-bcol="address" data-tip="Wallet address — click to copy">Address<span class="sort-arrow"></span></th>
         <th data-bcol="category" data-tip="Pure Buyer = no pre-TGE airdrop allocation. Airdrop+ = also received pre-TGE farming rewards">Type<span class="sort-arrow"></span></th>
         <th data-bcol="buySource" data-tip="DEX = bought via Sushiswap pool. CEX = transferred in from a centralised exchange wallet. Both = both sources detected">Source<span class="sort-arrow"></span></th>
-        <th data-bcol="katNet" class="num sorted" data-tip="Net KAT held = total received from pools/CEX minus KAT sent back to pools. Market makers who bought and sold everything appear at 0 and are excluded">KAT Held<span class="sort-arrow">↓</span></th>
+        <th data-bcol="katNet" class="num sorted" data-tip="Net KAT held = total received from pools/CEX minus KAT sent back to pools">KAT Held<span class="sort-arrow">↓</span></th>
         <th data-bcol="txCount" class="num" data-tip="Number of inbound buy transactions (pool→wallet or CEX→wallet transfers)"># Buys<span class="sort-arrow"></span></th>
         <th data-bcol="stakedVKAT" class="num" data-tip="Has locked KAT into vKAT voting escrow — indicates long-term conviction, not a flipper">vKAT<span class="sort-arrow"></span></th>
         <th data-bcol="stakedAvKAT" class="num" data-tip="Has deposited KAT into avKAT auto-compounding vault">avKAT<span class="sort-arrow"></span></th>
@@ -1431,7 +1428,6 @@ function updateStats() {
   const all            = Object.values(results).filter(d => !d._loading);
   const n              = ADDRESSES.length;
   const totalClaimed   = all.reduce((s, d) => s + d.claimed, 0);
-  const totalClaimable = all.filter(d => d.status === 'partial').reduce((s, d) => s + d.claimable, 0);
   const inactiveCount  = all.filter(d => d.status === 'inactive').length;
   const farmers        = all.filter(d => d.status === 'farmer').length;
   const hodlers        = all.filter(d => d.status === 'hodler').length;
@@ -1439,8 +1435,8 @@ function updateStats() {
 
   document.getElementById('stat-total').textContent        = `${(Object.keys(results).length).toLocaleString()} / ${n}`;
   document.getElementById('stat-claimed').textContent  = fmtNum(totalClaimed, 0);
-  document.getElementById('stat-claimable').textContent    = fmtNum(totalClaimable, 0);
-  document.getElementById('stat-claimable-sub').textContent = partials > 0 ? `${partials} partial holders` : '';
+  document.getElementById('stat-claimable').textContent    = partials.toLocaleString();
+  document.getElementById('stat-claimable-sub').textContent = n > 0 ? `${((partials / n) * 100).toFixed(1)}% of ${n}` : '';
   document.getElementById('stat-hodlers').textContent      = hodlers.toLocaleString();
   document.getElementById('stat-hodlers-sub').textContent  = n > 0 ? `${((hodlers / n) * 100).toFixed(1)}% of ${n}` : '';
   const stakerCount  = all.filter(d => d.avkat > 0).length;
@@ -1900,9 +1896,9 @@ async function main() {
   const timeStr = generatedAt
     ? generatedAt.toLocaleString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC'
     : 'unknown';
-  document.getElementById('progress-label').innerHTML =
-    `<b>${ADDRESSES.length.toLocaleString()}</b> addresses · Snapshot: ${timeStr}`;
-  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('stat-addr-count').textContent = ADDRESSES.length.toLocaleString();
+  document.getElementById('stat-snapshot-sub').textContent = timeStr;
+  document.getElementById('progress-section').style.display = 'none';
 
   updateStats();
   scheduleRender();
