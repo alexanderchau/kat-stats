@@ -1058,20 +1058,28 @@
     <div class="cascade-sub">of 10B total supply distributed</div>
     <div class="cascade-amount" id="supply-hero-total">—</div>
   </div>
-  <div class="table-wrap">
-    <table id="supply-table">
-      <thead>
-        <tr>
-          <th style="text-align:left">Source</th>
-          <th class="num">KAT Emitted</th>
-          <th class="num">% of Supply</th>
-          <th style="text-align:left">Detail</th>
-        </tr>
-      </thead>
-      <tbody id="supply-table-body">
-        <tr class="loading-row"><td colspan="5">Loading supply data…</td></tr>
-      </tbody>
-    </table>
+  <div class="source-cards" id="supply-source-cards">
+    <div class="source-card source-card--expandable" id="supply-card-merkl">
+      <span class="source-chevron">▸</span>
+      <div class="source-label">Merkl Rewards</div>
+      <div class="source-value" id="supply-merkl-amt">—</div>
+      <div class="source-pct" id="supply-merkl-pct">—</div>
+      <div class="source-card__detail" id="supply-merkl-expand">
+        <div class="protocol-bar-label">Protocol Distribution <span class="protocol-sub">— click protocols for links</span></div>
+        <div class="protocol-bar" id="supply-proto-bar"></div>
+        <div class="proto-legend" id="supply-proto-legend"></div>
+      </div>
+    </div>
+    <div class="source-card">
+      <div class="source-label">EtherFi Vault</div>
+      <div class="source-value" id="supply-etherfi-amt">—</div>
+      <div class="source-pct" id="supply-etherfi-pct">—</div>
+    </div>
+    <div class="source-card">
+      <div class="source-label">Lombard Vault</div>
+      <div class="source-value" id="supply-lombard-amt">—</div>
+      <div class="source-pct" id="supply-lombard-pct">—</div>
+    </div>
   </div>
 </div>
 
@@ -1506,11 +1514,13 @@ function editLabel(cell, addr) {
     if (val) LABELS[addr] = val;
     else delete LABELS[addr];
     saveLabels();
+    input.remove();
     scheduleRender();
   }
   function cancel() {
     if (committed) return;
     committed = true;
+    input.remove();
     scheduleRender();
   }
 
@@ -1841,75 +1851,84 @@ function fmtM(n) {
 }
 
 function renderSupplyTab(d) {
+  // Hero
   document.getElementById('supply-hero-pct').textContent = d.circulatingPct.toFixed(2) + '%';
   document.getElementById('supply-hero-total').textContent = fmtM(d.totalCirculating) + ' KAT in circulation';
 
+  // Source cards
   const s = d.sources;
+  document.getElementById('supply-merkl-amt').textContent = fmtM(s.merkl.amount);
+  document.getElementById('supply-merkl-pct').textContent = s.merkl.pct.toFixed(2) + '% of supply';
+  document.getElementById('supply-etherfi-amt').textContent = fmtM(s.etherfi.amount);
+  document.getElementById('supply-etherfi-pct').textContent = s.etherfi.pct.toFixed(2) + '% of supply';
+  document.getElementById('supply-lombard-amt').textContent = fmtM(s.lombard.amount);
+  document.getElementById('supply-lombard-pct').textContent = s.lombard.pct.toFixed(2) + '% of supply';
+
+  // Protocol breakdown inside Merkl card
   const mix = d.protocolMix || {};
-  const merklTotal = s.merkl.amount;
-  const totalSupply = d.totalSupply;
   const sorted = Object.entries(mix).sort((a, b) => b[1].frac - a[1].frac);
+  const merklCard = document.getElementById('supply-card-merkl');
+  const chevron = merklCard.querySelector('.source-chevron');
+  const protoBar = document.getElementById('supply-proto-bar');
+  const protoLegend = document.getElementById('supply-proto-legend');
 
-  // Build table rows
-  const tbody = document.getElementById('supply-table-body');
-  tbody.innerHTML = '';
-  const rows = [];
-
-  // Merkl protocol sub-rows
-  if (sorted.length > 0) {
-    sorted.forEach(([name, info]) => {
-      const amt = info.frac * merklTotal;
-      const pctSupply = (amt / totalSupply * 100).toFixed(2);
-      const color = PROTO_COLORS[name] || '--dim';
-      let detail = '';
-      if (info.subs && Object.keys(info.subs).length > 0) {
-        detail = Object.entries(info.subs).sort((a,b) => b[1]-a[1]).map(([s,f]) => `${s} ${(f*100).toFixed(0)}%`).join(', ');
-      }
-      const url = PROTO_URLS[name];
-      const nameHtml = url
-        ? `<span style="color:var(${color})">■</span> <a class="ext-link" href="${url}" target="_blank" rel="noopener">${name}</a>`
-        : `<span style="color:var(${color})">■</span> ${name}`;
-      rows.push({ nameHtml, amt, pctSupply, detail });
-    });
-  } else {
-    rows.push({
-      nameHtml: '<b>Merkl Rewards</b>',
-      amt: s.merkl.amount,
-      pctSupply: s.merkl.pct.toFixed(2),
-      detail: 'Protocol breakdown unavailable',
-    });
+  if (sorted.length === 0) {
+    // No protocol data — hide expand affordance
+    chevron.style.display = 'none';
+    merklCard.classList.remove('source-card--expandable');
+    merklCard.style.cursor = 'default';
+    return;
   }
 
-  // Merkl total row
-  const merklRow = document.createElement('tr');
-  merklRow.style.cssText = 'border-top:2px solid var(--black);font-weight:700;';
-  merklRow.innerHTML = `<td><b>Merkl Total</b></td><td class="num">${fmtM(s.merkl.amount)}</td><td class="num">${s.merkl.pct.toFixed(2)}%</td><td></td>`;
+  // Build protocol bar segments
+  const merklTotal = s.merkl.amount;
+  protoBar.innerHTML = '';
+  protoLegend.innerHTML = '';
 
-  // EtherFi + Lombard rows
-  const vaultRows = [
-    { name: 'EtherFi Vault', amount: s.etherfi.amount, pct: s.etherfi.pct },
-    { name: 'Lombard Vault', amount: s.lombard.amount, pct: s.lombard.pct },
-  ];
+  sorted.forEach(([name, info], i) => {
+    const color = PROTO_COLORS[name] || '--dim';
+    const pct = (info.frac * 100).toFixed(1);
+    const amt = info.frac * merklTotal;
+    let tip = `${name}: ${pct}% — ${fmtM(amt)} KAT`;
+    if (info.subs && Object.keys(info.subs).length > 0) {
+      const subStr = Object.entries(info.subs).sort((a,b) => b[1]-a[1]).map(([s,f]) => `${s} ${(f*100).toFixed(0)}%`).join(', ');
+      tip += ` (${subStr})`;
+    }
 
-  // Render protocol rows
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.nameHtml}</td><td class="num">${fmtM(r.amt)}</td><td class="num">${r.pctSupply}%</td><td style="color:var(--dim);font-size:0.78rem">${r.detail}</td>`;
-    tbody.appendChild(tr);
+    const seg = document.createElement('div');
+    seg.className = 'proto-seg';
+    seg.style.background = `var(${color})`;
+    seg.setAttribute('data-tip', tip);
+    // Last segment absorbs rounding
+    if (i === sorted.length - 1) {
+      seg.style.flex = '1';
+    } else {
+      seg.style.width = pct + '%';
+    }
+    // Inline label for large segments
+    if (info.frac > 0.08) {
+      seg.innerHTML = `<span class="proto-seg-label">${name}</span>`;
+    }
+    protoBar.appendChild(seg);
+
+    // Legend key
+    const url = PROTO_URLS[name];
+    const key = document.createElement('span');
+    key.className = 'proto-key';
+    key.style.setProperty('--proto-color', `var(${color})`);
+    if (url) {
+      key.innerHTML = `<a class="ext-link" href="${url}" target="_blank" rel="noopener">${name}</a> ${pct}%`;
+    } else {
+      key.textContent = `${name} ${pct}%`;
+    }
+    protoLegend.appendChild(key);
   });
 
-  tbody.appendChild(merklRow);
-
-  vaultRows.forEach(v => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><b>${v.name}</b></td><td class="num">${fmtM(v.amount)}</td><td class="num">${v.pct.toFixed(2)}%</td><td style="color:var(--dim);font-size:0.78rem">Fixed allocation</td>`;
-    tbody.appendChild(tr);
+  // Expand/collapse on click
+  merklCard.addEventListener('click', e => {
+    if (e.target.closest('a')) return; // don't toggle when clicking links
+    merklCard.classList.toggle('expanded');
   });
-
-  const totalRow = document.createElement('tr');
-  totalRow.style.cssText = 'border-top:2px solid var(--black);font-weight:700;background:var(--cream2);';
-  totalRow.innerHTML = `<td><b>Total Circulating</b></td><td class="num">${fmtM(d.totalCirculating)}</td><td class="num">${d.circulatingPct.toFixed(2)}%</td><td></td>`;
-  tbody.appendChild(totalRow);
 }
 
 async function loadSupplyData() {
