@@ -125,6 +125,11 @@ def balance_of(token, wallet, url=KATANA_RPC):
     r = rpc_call(url, 'eth_call', [{'to': token, 'data': data}, 'latest'])
     return from_wei(r) if r else 0.0
 
+def total_assets(vault, url=KATANA_RPC):
+    """Call totalAssets() on an ERC-4626 vault."""
+    r = rpc_call(url, 'eth_call', [{'to': vault, 'data': '0x01e1d114'}, 'latest'])
+    return from_wei(r) if r else 0.0
+
 def is_contract(addr, url=KATANA_RPC):
     """Check if address is a contract (has code) vs EOA."""
     r = rpc_call(url, 'eth_getCode', [addr, 'latest'])
@@ -678,15 +683,23 @@ def main():
     s_total_staked = sum(s['totalStaked'] for s in stakers_data)
     print(f'  {s_total:,} stakers (≥100 KAT): {fmtM(s_total_staked)} KAT total staked')
 
-    # Read circulating supply from supply_state.json
+    # Read circulating supply from supply_data.json (full circ, not just Merkl)
     circ_supply = 0.0
-    supply_path = SCRIPT_DIR / 'supply_state.json'
-    if supply_path.exists():
+    supply_data_path = SCRIPT_DIR / 'supply_data.json'
+    if supply_data_path.exists():
         try:
-            ss = json.loads(supply_path.read_text())
-            circ_supply = sum(ss.get('transfersByAddr', {}).values())
+            sd = json.loads(supply_data_path.read_text())
+            circ_supply = sd.get('totalCirculating', 0.0)
         except Exception:
             pass
+
+    # On-chain contract totals (ground truth, not limited to tracked addresses)
+    # vKAT escrow holds KAT base token (not the wrapped variant)
+    KAT_BASE = '0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d'
+    on_chain_vkat  = balance_of(KAT_BASE, VOTING_ESCROW)
+    on_chain_avkat = total_assets(AVKAT_ADDR)
+    on_chain_total = on_chain_vkat + on_chain_avkat
+    print(f'  On-chain: vKAT={fmtM(on_chain_vkat)}, aVKAT={fmtM(on_chain_avkat)}, total={fmtM(on_chain_total)}')
 
     output = {
         'meta': {
@@ -697,6 +710,9 @@ def main():
             'buyerCount':   b_total,
             'stakerCount':  s_total,
             'circSupply':   round(circ_supply, 6),
+            'onChainVkat':  round(on_chain_vkat, 6),
+            'onChainAvkat': round(on_chain_avkat, 6),
+            'onChainTotal': round(on_chain_total, 6),
         },
         'addresses': address_data,
         'buyers':    buyers_data,
