@@ -1738,6 +1738,9 @@ function editLabel(cell, addr) {
   input.placeholder = 'label…';
   input.title = addr;
 
+  function restoreCell() {
+    cell.innerHTML = addrDisplay(addr);
+  }
   function commit() {
     if (committed) return;
     committed = true;
@@ -1745,7 +1748,7 @@ function editLabel(cell, addr) {
     if (val) LABELS[addr] = { label: val, chain };
     else delete LABELS[addr];
     saveLabels();
-    input.remove();
+    restoreCell();
     scheduleRender();
     renderBuyersTable();
     renderStakersTable();
@@ -1753,7 +1756,7 @@ function editLabel(cell, addr) {
   function cancel() {
     if (committed) return;
     committed = true;
-    input.remove();
+    restoreCell();
     scheduleRender();
     renderBuyersTable();
     renderStakersTable();
@@ -2110,8 +2113,10 @@ function getStakerFilteredRows() {
 }
 
 function stakerType(s) {
-  if (s.stakedVKAT && s.stakedAvKAT) return 'Both';
-  if (s.stakedVKAT) return 'vKAT';
+  const hasVkat  = s.vkatAmount > 0;
+  const hasAvkat = s.avkatAmount > 0;
+  if (hasVkat && hasAvkat) return 'Both';
+  if (hasVkat) return 'vKAT';
   return 'avKAT';
 }
 
