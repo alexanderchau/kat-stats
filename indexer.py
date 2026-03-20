@@ -679,6 +679,9 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances, vkat_locks)
         # Include only if net purchased via DEX/CEX >= 1000
         if kat_net < 1000:
             continue
+        lock_info = vkat_locks.get(addr, {'amount': 0.0})
+        vkat_amt  = lock_info['amount'] if has_vkat else 0.0
+        avkat_amt = bals['avkat']
         out.append({
             'address':     addr,
             'category':    'airdrop_buyer' if addr in addr_set else 'pure_buyer',
@@ -691,6 +694,8 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances, vkat_locks)
             'stakedVKAT':  has_vkat,
             'stakedAvKAT': has_avkat,
             'staked':      has_vkat or has_avkat,
+            'vkatAmount':  round(vkat_amt, 6),
+            'avkatAmount': round(avkat_amt, 6),
         })
     out.sort(key=lambda x: x['katNet'], reverse=True)
     return out
