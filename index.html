@@ -144,6 +144,9 @@
     .stat-card.active .stat-label { color: rgba(255,255,255,0.65); }
     .stat-card.active .stat-value { color: #fff; }
     .stat-card.active .stat-sub   { color: rgba(255,255,255,0.55); }
+    .stat-card.active .stat-growth.up   { color: #90EE90; }
+    .stat-card.active .stat-growth.down { color: #FF6B6B; }
+    .stat-card.active .stat-growth.flat { color: #CCC; }
 
     .stat-label {
       font-family: var(--ui);
@@ -508,7 +511,7 @@
       border-radius: 0;
       transition: background 0.08s, color 0.08s;
     }
-    .ext-link:hover { background: var(--black); color: var(--black); }
+    .ext-link:hover { background: var(--black); color: #fff; }
 
     /* ── LOADING ── */
     .loading-row td {
@@ -897,11 +900,11 @@
 <body>
 
 <!-- Addressbook Modal -->
-<div class="modal-overlay" id="addressbook-modal" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="modal-overlay" id="addressbook-modal" onclick="if(event.target===this){this.classList.remove('open');document.body.style.overflow=''}">
   <div class="modal-box">
     <div class="modal-header">
       <h2>Addressbook</h2>
-      <button class="modal-close" onclick="document.getElementById('addressbook-modal').classList.remove('open')">&times;</button>
+      <button class="modal-close" onclick="document.getElementById('addressbook-modal').classList.remove('open');document.body.style.overflow=''">&times;</button>
     </div>
     <div class="modal-body" id="addressbook-body"></div>
   </div>
@@ -1250,7 +1253,7 @@ const CEX_WALLETS = new Set([
   '0xd6216fc19db775df9774a6e33526131da7d19a2c',
   '0xa1d8d972560c2f8144af871db508f0b0b10a3fbf',
   // HTX / Huobi
-  '0x1062a747393198f70f71ec65a582423dba7e5ab',
+  '0x01062a747393198f70f71ec65a582423dba7e5ab',
   '0xab5c66752a9e8167967685f1450532fb96d5d24f',
 ]);
 
@@ -1277,7 +1280,7 @@ const CEX_LABELS = {
   '0x1c4b70a3968436b9a0a9cf5205c787eb81bb558e': { label: 'Gate.io', chain: 'eth' },
   '0xd6216fc19db775df9774a6e33526131da7d19a2c': { label: 'KuCoin', chain: 'eth' },
   '0xa1d8d972560c2f8144af871db508f0b0b10a3fbf': { label: 'KuCoin', chain: 'eth' },
-  '0x1062a747393198f70f71ec65a582423dba7e5ab':  { label: 'HTX', chain: 'eth' },
+  '0x01062a747393198f70f71ec65a582423dba7e5ab': { label: 'HTX', chain: 'eth' },
   '0xab5c66752a9e8167967685f1450532fb96d5d24f': { label: 'HTX', chain: 'eth' },
   // ── Katana chain addresses (from #multisig-operations-requests) ──
   // Multisig SAFEs
@@ -1464,6 +1467,11 @@ function pushState() {
 }
 
 // ── UTILITIES ─────────────────────────────────────────────────────────────────
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return text.replace(/[&<>"']/g, c => map[c]);
+}
+
 function fmtNum(n, dp = 2) {
   if (n === null || n === undefined || isNaN(n)) return '—';
   if (n === 0) return '—';
@@ -1550,7 +1558,7 @@ function getLabel(addr) {
 }
 function tinyAddrDisplay(addr) {
   const label = getLabel(addr);
-  if (label) return `<span class="addr-label" title="${addr}">${label}</span>`;
+  if (label) return `<span class="addr-label" title="${addr}">${escapeHtml(label)}</span>`;
   return shortAddr(addr);
 }
 function addrDisplay(addr) {
@@ -1558,7 +1566,7 @@ function addrDisplay(addr) {
   const short = shortAddr(addr);
   if (!label) return `<span title="${addr}">${short}</span>`;
   const truncated = label.length > 40 ? label.slice(0, 40) + '…' : label;
-  return `<span title="${addr}">${short}<span class="addr-sep">·</span><span class="addr-label">${truncated}</span></span>`;
+  return `<span title="${addr}">${short}<span class="addr-sep">·</span><span class="addr-label">${escapeHtml(truncated)}</span></span>`;
 }
 
 function renderTable() {
@@ -1802,7 +1810,7 @@ function showAddressbook() {
     const bal = r ? fmtNum(r.balance) : '—';
     const overrideTag = e.source === 'override' ? '<span class="ab-override" title="Custom override of CEX label">✎</span>' : '';
     return `<tr data-addr="${e.addr}">` +
-      `<td class="ab-label"><b>${e.label}</b>${overrideTag}</td>` +
+      `<td class="ab-label"><b>${escapeHtml(e.label)}</b>${overrideTag}</td>` +
       `<td class="ab-addr"><a href="https://katanascan.com/address/${e.addr}" target="_blank" rel="noopener">${e.addr}</a></td>` +
       `<td class="ab-chain">${chainPill(e.chain)}</td>` +
       `<td class="ab-bal">${bal}</td>` +
@@ -1896,6 +1904,7 @@ function showAddressbook() {
   });
 
   document.getElementById('addressbook-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 
 function exportCSV() {
