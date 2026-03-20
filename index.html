@@ -412,6 +412,7 @@
     .badge-partial  { background: #FFE566; color: #000; }
     .badge-hodler   { background: #B3F5D4; color: #000; }
     .badge-inactive { background: #E0E0E0; color: var(--dim); border-color: #999; }
+    .badge-staked   { background: #b366ff; color: #fff; }
 
     /* ── NUMBER COLORS ── */
     .num-red    { color: var(--red); }
@@ -1493,7 +1494,7 @@ function getFilteredRows() {
 }
 
 // ── RENDER ─────────────────────────────────────────────────────────────────────
-function badge(status) {
+function badge(status, avkat) {
   const map = {
     farmer:   ['badge-farmer',   'DUMPED'],
     partial:  ['badge-partial',  'PARTIAL'],
@@ -1501,7 +1502,9 @@ function badge(status) {
     inactive: ['badge-inactive', 'INACTIVE'],
   };
   const [cls, label] = map[status] || map.inactive;
-  return `<span class="badge ${cls}">${label}</span>`;
+  let html = `<span class="badge ${cls}">${label}</span>`;
+  if (avkat > 0) html += ` <span class="badge badge-staked">STAKED</span>`;
+  return html;
 }
 
 function shortAddr(a) {
@@ -1632,7 +1635,7 @@ function renderTable() {
       <td class="addr-cell" onclick="editLabel(this,'${d.address}')" title="Click to label">
         ${addrDisplay(d.address)}${errIcon}${anomalyFlag}${buyerAddrs.has(d.address) ? '<span class="badge-bought">bought</span>' : ''}
       </td>
-      <td>${d._loading ? '' : badge(d.status)}</td>
+      <td>${d._loading ? '' : badge(d.status, d.avkat)}</td>
       <td class="num">${d._loading ? pending : (d.claimed > 0 ? `<span class="num-yellow">${fmtNum(d.claimed)}</span>` : '—')}</td>
       <td class="num num-detail">${sentCell}</td>
       <td class="num">${d._loading ? pending : (moved > 0.01 ? `<span class="num-red">${fmtNum(moved)}</span>` : '—')}</td>
