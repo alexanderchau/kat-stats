@@ -2012,7 +2012,7 @@ function renderSupplyTab(d) {
   // Fixed allocation rows (vaults + TGE sources — everything except merkl)
   const fixedRows = Object.entries(s)
     .filter(([k, v]) => k !== 'merkl' && v.type === 'fixed')
-    .map(([k, v]) => ({ name: v.label, amount: v.amount, pct: v.pct }));
+    .map(([k, v]) => ({ name: v.label, amount: v.amount, pct: v.pct, desc: v.desc }));
 
   // Render protocol rows
   rows.forEach(r => {
@@ -2025,7 +2025,8 @@ function renderSupplyTab(d) {
 
   fixedRows.forEach(v => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><b>${v.name}</b></td><td class="num">${fmtM(v.amount)}</td><td class="num">${v.pct.toFixed(2)}%</td><td style="color:var(--dim);font-size:0.78rem">Fixed allocation</td>`;
+    const detail = v.desc || 'Fixed allocation';
+    tr.innerHTML = `<td><b>${v.name}</b></td><td class="num">${fmtM(v.amount)}</td><td class="num">${v.pct.toFixed(2)}%</td><td style="color:var(--dim);font-size:0.78rem">${detail}</td>`;
     tbody.appendChild(tr);
   });
 

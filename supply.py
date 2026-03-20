@@ -61,22 +61,17 @@ TOTAL_KAT_SUPPLY = 10_000_000_000
 # Employee/contributor tokens (~718M in nested SAFEs) are LOCKED per vesting.
 # vKAT DAO (186.9M) is protocol treasury, not circulating.
 # Ecosystem grants reserve (487M) still held by foundation.
+# Each entry: (amount, description shown in frontend)
 FIXED_ALLOCATIONS = {
-    # Protocol distributions (on-chain verified)
-    'EtherFi vault':          20_574_174,   # Sent to 0x607d... (Feb 24)
-    'Lombard vault':          15_000_000,   # Sent to IncentivesDistributor 0x4a61... (Feb 25)
-    # CEX deposits (from multisig ops Slack, to exchange hot wallets)
-    'CEX deposits':          308_000_000,   # Binance ~278M + Bitget 15M + Kraken 12M + KuCoin 1.75M + others
-    # Market makers (tokens for liquidity provision)
-    'Market makers':         207_000_000,   # GSR ~100M + Selini 55M + Lhava 50M + FlowDesk ~2M
-    # KOL & vendor payments
-    'KOL payments':           12_550_000,   # ARK Point 2.6M + Ethene Labs 3.5M + Nebula 3.45M + vendor 3M
-    # Ecosystem grants (distributed to protocols)
-    'Ecosystem grants':        4_370_000,   # Foresight 667K + Kensei 1M + Jumper 2.7M
-    # TGE distributions (unlocked at transferability, March 18 2026)
-    'Krates (vKAT)':          70_000_000,   # Pre-deposit Krates, unlocked at TGE
-    'POL staker airdrop':    140_000_000,   # Immediate tranche (1.4% of total supply)
-    'Public sale':           100_000_000,   # Binance Prime sale
+    'EtherFi vault':       (  20_574_174, 'Vault rewards to depositors'),
+    'Lombard vault':       (  15_000_000, 'Vault rewards to depositors'),
+    'CEX deposits':        ( 308_000_000, 'Binance, Bitget, Kraken, KuCoin, others'),
+    'Market makers':       ( 207_000_000, 'GSR, Selini, Lhava, FlowDesk'),
+    'KOL payments':        (  12_550_000, 'ARK Point, Ethene Labs, Nebula, vendors'),
+    'Ecosystem grants':    (   4_370_000, 'Foresight, Kensei, Jumper'),
+    'Krates (vKAT)':       (  70_000_000, 'Pre-deposit Krates, unlocked at TGE'),
+    'POL staker airdrop':  ( 140_000_000, 'Immediate tranche at TGE'),
+    'Public sale':         ( 100_000_000, 'Binance Prime sale'),
 }
 
 # ── RPC ─────────────────────────────────────────────────────────────────────────
@@ -362,7 +357,8 @@ def main():
     print()
 
     # Fixed allocations (absolute amounts, already distributed)
-    fixed_totals = dict(FIXED_ALLOCATIONS)  # already absolute KAT amounts
+    fixed_totals = {name: amt for name, (amt, _desc) in FIXED_ALLOCATIONS.items()}
+    fixed_descs  = {name: desc for name, (_amt, desc) in FIXED_ALLOCATIONS.items()}
 
     # Totals
     total_circulating = merkl_claimed + sum(fixed_totals.values())
@@ -418,6 +414,7 @@ def main():
                 'amount': amount,
                 'pct': 100 * amount / total_supply,
                 'type': 'fixed',
+                'desc': fixed_descs[name],
             }
 
         output = {

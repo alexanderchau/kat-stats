@@ -1,71 +1,80 @@
 {
   "meta": {
-    "generatedAt": "2026-03-20T14:57:04.944011+00:00",
-    "katanaBlock": 27275811
+    "generatedAt": "2026-03-20T15:12:17.724577+00:00",
+    "katanaBlock": 27276724
   },
   "totalSupply": 10000000000,
-  "totalCirculating": 1439315400.409361,
-  "circulatingPct": 14.39315400409361,
+  "totalCirculating": 1439373809.0810192,
+  "circulatingPct": 14.393738090810192,
   "sources": {
     "merkl": {
       "label": "Merkl Rewards",
-      "amount": 561821226.409361,
-      "pct": 5.618212264093611,
+      "amount": 561879635.0810192,
+      "pct": 5.618796350810191,
       "type": "dynamic"
     },
     "etherfi_vault": {
       "label": "EtherFi vault",
       "amount": 20574174,
       "pct": 0.20574174,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Vault rewards to depositors"
     },
     "lombard_vault": {
       "label": "Lombard vault",
       "amount": 15000000,
       "pct": 0.15,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Vault rewards to depositors"
     },
     "cex_deposits": {
       "label": "CEX deposits",
       "amount": 308000000,
       "pct": 3.08,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Binance, Bitget, Kraken, KuCoin, others"
     },
     "market_makers": {
       "label": "Market makers",
       "amount": 207000000,
       "pct": 2.07,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "GSR, Selini, Lhava, FlowDesk"
     },
     "kol_payments": {
       "label": "KOL payments",
       "amount": 12550000,
       "pct": 0.1255,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "ARK Point, Ethene Labs, Nebula, vendors"
     },
     "ecosystem_grants": {
       "label": "Ecosystem grants",
       "amount": 4370000,
       "pct": 0.0437,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Foresight, Kensei, Jumper"
     },
     "krates_vkat": {
       "label": "Krates (vKAT)",
       "amount": 70000000,
       "pct": 0.7,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Pre-deposit Krates, unlocked at TGE"
     },
     "pol_staker_airdrop": {
       "label": "POL staker airdrop",
       "amount": 140000000,
       "pct": 1.4,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Immediate tranche at TGE"
     },
     "public_sale": {
       "label": "Public sale",
       "amount": 100000000,
       "pct": 1.0,
-      "type": "fixed"
+      "type": "fixed",
+      "desc": "Binance Prime sale"
     }
   },
   "protocolMix": {
