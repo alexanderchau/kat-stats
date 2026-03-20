@@ -125,6 +125,11 @@ def balance_of(token, wallet, url=KATANA_RPC):
     r = rpc_call(url, 'eth_call', [{'to': token, 'data': data}, 'latest'])
     return from_wei(r) if r else 0.0
 
+def is_contract(addr, url=KATANA_RPC):
+    """Check if address is a contract (has code) vs EOA."""
+    r = rpc_call(url, 'eth_getCode', [addr, 'latest'])
+    return bool(r and len(r) > 2 and r != '0x')
+
 # ── Address / CEX wallet loading ───────────────────────────────────────────────
 def load_addresses():
     text = INDEX_PATH.read_text()
@@ -444,10 +449,47 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs=None):
             total = 0.0
         dest_balances[dest] = total
 
-    return addr_balances, dest_balances
+    # Classify each destination address
+    print(f'  Classifying {len(all_dests):,} destination addresses…')
+    dest_types = {}
+    # Known types first (no RPC needed)
+    unknown_dests = []
+    for dest in all_dests:
+        if dest in KAT_POOL_ADDRS:
+            dest_types[dest] = 'LP Pool'
+        elif dest in STAKE_DESTS:
+            dest_types[dest] = 'Staking'
+        elif dest in BRIDGE_DESTS:
+            dest_types[dest] = 'Bridge'
+        elif dest == DISTRIBUTOR_ADDR:
+            dest_types[dest] = 'Merkl Distributor'
+        else:
+            unknown_dests.append(dest)
+
+    # Batch is_contract checks for unknown destinations
+    contract_results = {}
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        futs = {ex.submit(is_contract, d): d for d in unknown_dests}
+        for fut in as_completed(futs):
+            d = futs[fut]
+            try:
+                contract_results[d] = fut.result()
+            except Exception:
+                contract_results[d] = False
+
+    for dest in unknown_dests:
+        if contract_results.get(dest, False):
+            dest_types[dest] = 'Contract'
+        else:
+            dest_types[dest] = 'Wallet'
+
+    contracts = sum(1 for v in dest_types.values() if v not in ('Wallet',))
+    print(f'  Classified: {contracts} contracts, {len(dest_types) - contracts} wallets')
+
+    return addr_balances, dest_balances, dest_types
 
 # ── Build output ───────────────────────────────────────────────────────────────
-def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances):
+def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types):
     out = []
     for addr in addresses:
         claimed = claimed_by_addr.get(addr, 0.0)
@@ -455,8 +497,18 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
 
         transferred, transferred_to = 0.0, []
         sent_held,   sent_held_to   = 0.0, []
+        defi_positions = []
         for dest, amount in r['dests'].items():
-            if dest_balances.get(dest, 0.0) >= amount * 0.95:
+            dtype = dest_types.get(dest, 'Wallet')
+            if dtype != 'Wallet':
+                # Contract destination = productive DeFi use, not a dump
+                defi_positions.append({
+                    'address': dest,
+                    'amount':  round(amount, 6),
+                    'type':    dtype,
+                    'held':    dest_balances.get(dest, 0) >= amount * 0.95,
+                })
+            elif dest_balances.get(dest, 0.0) >= amount * 0.95:
                 sent_held += amount
                 sent_held_to.append(dest)
             else:
@@ -467,20 +519,21 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
         bals   = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
 
         d = {
-            'address':       addr,
-            'claimed':       round(claimed, 6),
-            'claimable':     0,
-            'total':         round(claimed, 6),
-            'balance':       round(bals['kat'], 6),
-            'avkat':         round(bals['avkat'], 6),
-            'moved':         round(r['sold'], 6),
-            'transferred':   round(transferred, 6),
-            'transferredTo': transferred_to,
-            'sentHeld':      round(sent_held, 6),
-            'sentHeldTo':    sent_held_to,
-            'bridged':       round(r['bridged'], 6),
-            'cexSent':       round(xchain['cexSent'], 6),
-            'cexDests':      xchain['cexDests'],
+            'address':        addr,
+            'claimed':        round(claimed, 6),
+            'claimable':      0,
+            'total':          round(claimed, 6),
+            'balance':        round(bals['kat'], 6),
+            'avkat':          round(bals['avkat'], 6),
+            'moved':          round(r['sold'], 6),
+            'transferred':    round(transferred, 6),
+            'transferredTo':  transferred_to,
+            'sentHeld':       round(sent_held, 6),
+            'sentHeldTo':     sent_held_to,
+            'defiPositions':  defi_positions,
+            'bridged':        round(r['bridged'], 6),
+            'cexSent':        round(xchain['cexSent'], 6),
+            'cexDests':       xchain['cexDests'],
         }
         d['status'] = classify(d)
         out.append(d)
@@ -503,8 +556,8 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
         kat_net = b['katReceived'] - b.get('katSold', 0.0)
         bals = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
         kat_balance = bals['kat']
-        # Include if on-chain balance OR net bought >= 1000
-        if kat_net < 1000 and kat_balance < 1000:
+        # Include only if net purchased via DEX/CEX >= 1000
+        if kat_net < 1000:
             continue
         out.append({
             'address':     addr,
@@ -519,7 +572,7 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
             'stakedAvKAT': staked_avkat,
             'staked':      staked_vkat or staked_avkat,
         })
-    out.sort(key=lambda x: x['katHeld'], reverse=True)
+    out.sort(key=lambda x: x['katNet'], reverse=True)
     return out
 
 # ── Build stakers output ──────────────────────────────────────────────────
@@ -598,14 +651,14 @@ def main():
     # Collect buyer + staker addresses for balance fetching
     extra_addrs = set(buy_raw.keys()) | set(stake_raw.keys())
     print('4/5 Fetching fresh balances…')
-    addr_balances, dest_balances = get_fresh_balances(addresses, dump_raw, extra_addrs)
+    addr_balances, dest_balances, dest_types = get_fresh_balances(addresses, dump_raw, extra_addrs)
     print()
 
     save_state(state)
     print()
 
     print('5/5 Building data.json…')
-    address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances)
+    address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types)
     buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances)
     stakers_data  = build_stakers_output(stake_raw, addr_balances)
 

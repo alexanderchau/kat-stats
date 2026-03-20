@@ -2,10 +2,15 @@
 """
 KAT Supply Circulation Tracker
 
-Computes how much KAT has entered circulation via incentive programs:
-  - Merkl rewards:  all Claimed events from the distributor (on-chain scan)
+Computes how much KAT has entered circulation:
+  - Merkl rewards:  all Transfer events from the distributor (on-chain scan)
   - EtherFi vault:  hardcoded 0.2% of total supply
   - Lombard vault:  hardcoded 0.2% of total supply
+  - Krates:         0.7% (70M vKAT, unlocked at TGE)
+  - Ecosystem liq:  6% (600M KAT, unlocked at TGE)
+  - POL airdrop:    1.4% (140M vKAT, immediate tranche at TGE)
+  - Public sale:    1% (100M KAT, unlocked at TGE)
+  Note: TVL program KAT went out via Merkl distributor — already in on-chain scan.
 
 Also outputs a breakdown of the top source wallets by amount claimed.
 
@@ -49,10 +54,21 @@ KAT_TOKENS = {
 # Total KAT supply (base token, 10B)
 TOTAL_KAT_SUPPLY = 10_000_000_000
 
-# ── Vault distributions (hardcoded — fully distributed, % of total supply) ─────
+# ── Fixed allocations (hardcoded — already distributed, % of total supply) ─────
+# Vault distributions
 VAULT_ALLOCATIONS = {
     'EtherFi vault': 0.002,   # 0.2% of 10B = 20M KAT
     'Lombard vault': 0.002,   # 0.2% of 10B = 20M KAT
+}
+
+# TGE distributions (unlocked at transferability, March 18 2026)
+# NOTE: TVL program allocation (KAT) went out through Merkl distributor,
+#       so it's already captured in the on-chain Merkl scan — not listed here.
+TGE_ALLOCATIONS = {
+    'Krates (vKAT)':              0.007,   # 0.7% of 10B = 70M vKAT
+    'Ecosystem liquidity':        0.06,    # 6% of 10B = 600M KAT
+    'POL staker airdrop':         0.014,   # 1.4% of 10B = 140M vKAT (immediate tranche)
+    'Public sale (Binance)':      0.01,    # 1% of 10B = 100M KAT
 }
 
 # ── RPC ─────────────────────────────────────────────────────────────────────────
@@ -337,21 +353,25 @@ def main():
 
     print()
 
-    # Vault allocations (hardcoded — no per-wallet breakdown available)
+    # Fixed allocations (hardcoded — already distributed)
     vault_totals = {name: total_supply * pct for name, pct in VAULT_ALLOCATIONS.items()}
+    tge_totals   = {name: total_supply * pct for name, pct in TGE_ALLOCATIONS.items()}
 
     # Totals
-    total_circulating = merkl_claimed + sum(vault_totals.values())
+    total_circulating = merkl_claimed + sum(vault_totals.values()) + sum(tge_totals.values())
     pct_total         = 100 * total_circulating / total_supply
 
     # ── Supply breakdown ────────────────────────────────────────────────────────
-    col = 22
+    col = 26
     print('── CIRCULATION BREAKDOWN ─────────────────────────────')
     print(f'  {"Merkl rewards":<{col}} {merkl_claimed:>14,.0f} KAT   {100*merkl_claimed/total_supply:>5.2f}%')
     for name, amount in vault_totals.items():
         pct = VAULT_ALLOCATIONS[name] * 100
         print(f'  {name:<{col}} {amount:>14,.0f} KAT   {pct:>5.2f}%')
-    print('─' * 56)
+    for name, amount in tge_totals.items():
+        pct = TGE_ALLOCATIONS[name] * 100
+        print(f'  {name:<{col}} {amount:>14,.0f} KAT   {pct:>5.2f}%')
+    print('─' * 60)
     print(f'  {"TOTAL circulating":<{col}} {total_circulating:>14,.0f} KAT   {pct_total:>5.2f}%')
     print(f'  {"of total supply":<{col}} {total_supply:>14,.0f} KAT')
     print()
@@ -378,6 +398,28 @@ def main():
 
     # ── JSON output ──────────────────────────────────────────────────────────────
     if args.json:
+        # Build sources dict: merkl (dynamic) + all fixed allocations
+        sources = {
+            'merkl': {
+                'label': 'Merkl Rewards',
+                'amount': merkl_claimed,
+                'pct': 100 * merkl_claimed / total_supply,
+                'type': 'dynamic',
+            },
+        }
+        for key_name, (alloc_dict, totals_dict) in [
+            ('vault', (VAULT_ALLOCATIONS, vault_totals)),
+            ('tge',   (TGE_ALLOCATIONS, tge_totals)),
+        ]:
+            for name, amount in totals_dict.items():
+                slug = name.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '')
+                sources[slug] = {
+                    'label': name,
+                    'amount': amount,
+                    'pct': alloc_dict[name] * 100,
+                    'type': 'fixed',
+                }
+
         output = {
             'meta': {
                 'generatedAt': datetime.now(timezone.utc).isoformat(),
@@ -386,23 +428,7 @@ def main():
             'totalSupply': TOTAL_KAT_SUPPLY,
             'totalCirculating': total_circulating,
             'circulatingPct': pct_total,
-            'sources': {
-                'merkl': {
-                    'label': 'Merkl Rewards',
-                    'amount': merkl_claimed,
-                    'pct': 100 * merkl_claimed / total_supply,
-                },
-                'etherfi': {
-                    'label': 'EtherFi Vault',
-                    'amount': vault_totals['EtherFi vault'],
-                    'pct': VAULT_ALLOCATIONS['EtherFi vault'] * 100,
-                },
-                'lombard': {
-                    'label': 'Lombard Vault',
-                    'amount': vault_totals['Lombard vault'],
-                    'pct': VAULT_ALLOCATIONS['Lombard vault'] * 100,
-                },
-            },
+            'sources': sources,
         }
         if protocol_mix:
             output['protocolMix'] = protocol_mix

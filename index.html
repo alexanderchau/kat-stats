@@ -1037,7 +1037,7 @@
         <th data-bcol="address" data-tip="Wallet address — click to copy">Address<span class="sort-arrow"></span></th>
         <th data-bcol="category" data-tip="Pure Buyer = no pre-TGE airdrop allocation. Airdrop+ = also received pre-TGE farming rewards">Type<span class="sort-arrow"></span></th>
         <th data-bcol="buySource" data-tip="DEX = bought via Sushiswap pool. CEX = transferred in from a centralised exchange wallet. Both = both sources detected">Source<span class="sort-arrow"></span></th>
-        <th data-bcol="katHeld" class="num sorted" data-tip="Current on-chain KAT balance (live from contract)">KAT Held<span class="sort-arrow">↓</span></th>
+        <th data-bcol="katNet" class="num sorted" data-tip="Net KAT purchased via DEX/CEX (received − sold)">KAT Bought<span class="sort-arrow">↓</span></th>
         <th data-bcol="txCount" class="num" data-tip="Number of inbound buy transactions (pool→wallet or CEX→wallet transfers)"># Buys<span class="sort-arrow"></span></th>
         <th data-bcol="stakedVKAT" class="num" data-tip="Has locked KAT into vKAT voting escrow — indicates long-term conviction, not a flipper">vKAT<span class="sort-arrow"></span></th>
         <th data-bcol="stakedAvKAT" class="num" data-tip="Has deposited KAT into avKAT auto-compounding vault">avKAT<span class="sort-arrow"></span></th>
@@ -1373,6 +1373,7 @@ function renderTable() {
 
     const sentHeld = d.sentHeld || 0;
     const sentHeldTo = d.sentHeldTo || [];
+    const defiPositions = d.defiPositions || [];
     const visibleAddrs = transferredTo.slice(0, 3);
     const extraAddrs   = transferredTo.slice(3);
     const sentChips = visibleAddrs.map(a =>
@@ -1394,7 +1395,8 @@ function renderTable() {
           const hasDumped  = d.claimed > 0 && transferred > 0.01;
           const hasHeld    = d.claimed > 0 && sentHeld > 0.01;
           const hasBridged = bridged > 0.01;
-          if (!hasDumped && !hasHeld && !hasBridged) return '—';
+          const hasDefi    = defiPositions.length > 0;
+          if (!hasDumped && !hasHeld && !hasBridged && !hasDefi) return '—';
           let html = '';
           if (hasDumped) {
             html += `<span class="num-orange">${fmtNum(transferred)}</span>`;
@@ -1405,8 +1407,14 @@ function renderTable() {
             html += `<span class="num-green" title="Sent to wallets still holding the KAT — excluded from Dump %">${fmtNum(sentHeld)} held</span>`;
             if (heldChips) html += `<br>${heldChips}${heldMore}`;
           }
-          if (hasBridged) {
+          if (hasDefi) {
             if (hasDumped || hasHeld) html += '<br>';
+            html += defiPositions.map(p =>
+              `<a class="addr-tiny" href="https://katanascan.com/address/${p.address}" target="_blank" rel="noopener" title="${p.address} (${p.type})"><span class="num-blue">${fmtNum(p.amount)} ${p.type}</span></a>`
+            ).join(' ');
+          }
+          if (hasBridged) {
+            if (hasDumped || hasHeld || hasDefi) html += '<br>';
             const ethChip = '<span class="chain-badge chain-eth">◆ ETH</span>';
             if (cexSent > 0.01) {
               const names = [...new Set(cexDests.map(d => CEX_LABELS[d.toLowerCase()]).filter(Boolean))];
@@ -1538,7 +1546,7 @@ function exportLabels() {
 
 function exportCSV() {
   const rows = getFilteredRows();
-  const header = ['Address','KAT Claimed','KAT Balance','KAT Staked','KAT Sold','KAT Sent','Sent To','Dump %','Status'];
+  const header = ['Address','KAT Claimed','KAT Balance','KAT Staked','KAT Sold','KAT Sent','Sent To','DeFi Positions','Dump %','Status'];
   const lines  = rows.map(d => [
     d.address,
     d.claimed.toFixed(6),
@@ -1547,6 +1555,7 @@ function exportCSV() {
     (d.moved || 0).toFixed(6),
     (d.transferred || 0).toFixed(6),
     (d.transferredTo || []).join('|'),
+    (d.defiPositions || []).map(p => `${p.amount} ${p.type} (${p.address})`).join('|'),
     dumpPct(d).toFixed(2),
     d.status
   ].join(','));
@@ -1608,7 +1617,7 @@ let buyerAddrs       = new Set();
 let buyerCatFilter   = '';
 let buyerStakeFilter = '';
 let buyerFilterText  = '';
-let buyerSortCol     = 'katHeld';
+let buyerSortCol     = 'katNet';
 let buyerSortDir     = -1;
 
 function getBuyerFilteredRows() {
@@ -1679,7 +1688,7 @@ function renderBuyersTable() {
       </td>
       <td>${b.category === 'pure_buyer' ? '<span class="badge badge-pure-buyer">Buyer</span>' : '<span class="badge badge-airdrop-buyer">Airdrop+</span>'}</td>
       <td>${sourceBadge(b.buySource)}</td>
-      <td class="num"><span class="num-blue">${fmtNum(b.katHeld)}</span></td>
+      <td class="num"><span class="num-blue">${fmtNum(b.katNet)}</span></td>
       <td class="num">${b.txCount}</td>
       <td class="num">${vkatCell}</td>
       <td class="num">${avkatCell}</td>
@@ -1885,11 +1894,10 @@ function renderSupplyTab(d) {
   merklRow.style.cssText = 'border-top:2px solid var(--black);font-weight:700;';
   merklRow.innerHTML = `<td><b>Merkl Total</b></td><td class="num">${fmtM(s.merkl.amount)}</td><td class="num">${s.merkl.pct.toFixed(2)}%</td><td></td>`;
 
-  // EtherFi + Lombard rows
-  const vaultRows = [
-    { name: 'EtherFi Vault', amount: s.etherfi.amount, pct: s.etherfi.pct },
-    { name: 'Lombard Vault', amount: s.lombard.amount, pct: s.lombard.pct },
-  ];
+  // Fixed allocation rows (vaults + TGE sources — everything except merkl)
+  const fixedRows = Object.entries(s)
+    .filter(([k, v]) => k !== 'merkl' && v.type === 'fixed')
+    .map(([k, v]) => ({ name: v.label, amount: v.amount, pct: v.pct }));
 
   // Render protocol rows
   rows.forEach(r => {
@@ -1900,7 +1908,7 @@ function renderSupplyTab(d) {
 
   tbody.appendChild(merklRow);
 
-  vaultRows.forEach(v => {
+  fixedRows.forEach(v => {
     const tr = document.createElement('tr');
     tr.innerHTML = `<td><b>${v.name}</b></td><td class="num">${fmtM(v.amount)}</td><td class="num">${v.pct.toFixed(2)}%</td><td style="color:var(--dim);font-size:0.78rem">Fixed allocation</td>`;
     tbody.appendChild(tr);

@@ -1,26 +1,53 @@
 {
   "meta": {
-    "generatedAt": "2026-03-20T11:39:55.130390+00:00",
-    "katanaBlock": 27263955
+    "generatedAt": "2026-03-20T14:41:17.786153+00:00",
+    "katanaBlock": 27274865
   },
   "totalSupply": 10000000000,
-  "totalCirculating": 601686272.7541654,
-  "circulatingPct": 6.016862727541654,
+  "totalCirculating": 1511803522.2460494,
+  "circulatingPct": 15.118035222460495,
   "sources": {
     "merkl": {
       "label": "Merkl Rewards",
-      "amount": 561686272.7541654,
-      "pct": 5.616862727541654
+      "amount": 561803522.2460495,
+      "pct": 5.618035222460495,
+      "type": "dynamic"
     },
-    "etherfi": {
-      "label": "EtherFi Vault",
+    "etherfi_vault": {
+      "label": "EtherFi vault",
       "amount": 20000000.0,
-      "pct": 0.2
+      "pct": 0.2,
+      "type": "fixed"
     },
-    "lombard": {
-      "label": "Lombard Vault",
+    "lombard_vault": {
+      "label": "Lombard vault",
       "amount": 20000000.0,
-      "pct": 0.2
+      "pct": 0.2,
+      "type": "fixed"
+    },
+    "krates_vkat": {
+      "label": "Krates (vKAT)",
+      "amount": 70000000.0,
+      "pct": 0.7000000000000001,
+      "type": "fixed"
+    },
+    "ecosystem_liquidity": {
+      "label": "Ecosystem liquidity",
+      "amount": 600000000.0,
+      "pct": 6.0,
+      "type": "fixed"
+    },
+    "pol_staker_airdrop": {
+      "label": "POL staker airdrop",
+      "amount": 140000000.0,
+      "pct": 1.4000000000000001,
+      "type": "fixed"
+    },
+    "public_sale_binance": {
+      "label": "Public sale (Binance)",
+      "amount": 100000000.0,
+      "pct": 1.0,
+      "type": "fixed"
     }
   },
   "protocolMix": {
