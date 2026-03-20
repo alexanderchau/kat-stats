@@ -860,6 +860,14 @@
     .modal-body td { padding:0.4rem 1rem; border-bottom:1px solid #e0d8c8; font-size:0.85rem; }
     .modal-body tr:hover { background:var(--cream2); }
     .modal-body .ab-addr { font-family:var(--mono); font-size:0.78rem; color:var(--dim); }
+    /* Expandable supply rows */
+    tr.supply-parent { cursor:pointer; }
+    tr.supply-parent td:first-child::before { content:'▸ '; color:var(--dim); }
+    tr.supply-parent.open td:first-child::before { content:'▾ '; }
+    tr.supply-child { display:none; }
+    tr.supply-child.visible { display:table-row; }
+    tr.supply-child td { padding-left:2.5rem; color:var(--dim); font-size:0.85rem; }
+    tr.supply-child td:first-child { font-weight:400; }
   </style>
 </head>
 <body>
@@ -2078,7 +2086,7 @@ function renderSupplyTab(d) {
   // Fixed allocation rows (vaults + TGE sources — everything except merkl)
   const fixedRows = Object.entries(s)
     .filter(([k, v]) => k !== 'merkl' && v.type === 'fixed')
-    .map(([k, v]) => ({ name: v.label, amount: v.amount, pct: v.pct, desc: v.desc }));
+    .map(([k, v]) => ({ name: v.label, amount: v.amount, pct: v.pct, desc: v.desc, subs: v.subs }));
 
   // Render protocol rows
   rows.forEach(r => {
@@ -2089,11 +2097,29 @@ function renderSupplyTab(d) {
 
   tbody.appendChild(merklRow);
 
-  fixedRows.forEach(v => {
+  fixedRows.forEach((v, i) => {
+    const hasSubs = v.subs && v.subs.length > 0;
     const tr = document.createElement('tr');
     const detail = v.desc || 'Fixed allocation';
+    if (hasSubs) {
+      tr.className = 'supply-parent';
+      tr.dataset.group = `fixed-${i}`;
+      tr.onclick = () => {
+        tr.classList.toggle('open');
+        document.querySelectorAll(`tr.supply-child[data-group="fixed-${i}"]`).forEach(c => c.classList.toggle('visible'));
+      };
+    }
     tr.innerHTML = `<td><b>${v.name}</b></td><td class="num">${fmtM(v.amount)}</td><td class="num">${v.pct.toFixed(2)}%</td><td style="color:var(--dim);font-size:0.78rem">${detail}</td>`;
     tbody.appendChild(tr);
+    if (hasSubs) {
+      v.subs.forEach(sub => {
+        const sr = document.createElement('tr');
+        sr.className = 'supply-child';
+        sr.dataset.group = `fixed-${i}`;
+        sr.innerHTML = `<td>${sub.name}</td><td class="num">${fmtM(sub.amount)}</td><td class="num">${sub.pct.toFixed(2)}%</td><td></td>`;
+        tbody.appendChild(sr);
+      });
+    }
   });
 
   const totalRow = document.createElement('tr');

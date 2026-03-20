@@ -61,17 +61,39 @@ TOTAL_KAT_SUPPLY = 10_000_000_000
 # Employee/contributor tokens (~718M in nested SAFEs) are LOCKED per vesting.
 # vKAT DAO (186.9M) is protocol treasury, not circulating.
 # Ecosystem grants reserve (487M) still held by foundation.
-# Each entry: (amount, description shown in frontend)
+# Each entry: (amount, description, sub_items or None)
+# sub_items: list of (name, amount) for expandable rows
 FIXED_ALLOCATIONS = {
-    'EtherFi vault':       (  20_574_174, 'Vault rewards to depositors'),
-    'Lombard vault':       (  15_000_000, 'Vault rewards to depositors'),
-    'CEX deposits':        ( 308_000_000, 'Binance, Bitget, Kraken, KuCoin, others'),
-    'Market makers':       ( 207_000_000, 'GSR, Selini, Lhava, FlowDesk'),
-    'KOL payments':        (  12_550_000, 'ARK Point, Ethene Labs, Nebula, vendors'),
-    'Ecosystem grants':    (   4_370_000, 'Foresight, Kensei, Jumper'),
-    'Krates (vKAT)':       (  70_000_000, 'Pre-deposit Krates, unlocked at TGE'),
-    'POL staker airdrop':  ( 140_000_000, 'Immediate tranche at TGE'),
-    'Public sale':         ( 100_000_000, 'Binance Prime sale'),
+    'EtherFi vault':       (  20_574_174, 'Vault rewards to depositors', None),
+    'Lombard vault':       (  15_000_000, 'Vault rewards to depositors', None),
+    'CEX deposits':        ( 308_000_000, 'Binance, Bitget, Kraken, KuCoin, others', [
+        ('Binance', 278_000_000),
+        ('Bitget', 15_000_000),
+        ('Kraken', 12_000_000),
+        ('KuCoin', 1_750_000),
+        ('Bitpanda', 500_000),
+        ('Others', 750_000),
+    ]),
+    'Market makers':       ( 207_000_000, 'GSR, Selini, Lhava, FlowDesk', [
+        ('GSR', 100_000_000),
+        ('Selini', 55_000_000),
+        ('Lhava', 50_000_000),
+        ('FlowDesk', 2_000_000),
+    ]),
+    'KOL payments':        (  12_550_000, 'ARK Point, Ethene Labs, Nebula, vendors', [
+        ('Ethene Labs', 3_500_000),
+        ('Nebula', 3_450_000),
+        ('Vendor payment', 3_000_000),
+        ('ARK Point', 2_600_000),
+    ]),
+    'Ecosystem grants':    (   4_370_000, 'Foresight, Kensei, Jumper', [
+        ('Jumper', 2_700_000),
+        ('Kensei', 1_000_000),
+        ('Foresight', 670_000),
+    ]),
+    'Krates (vKAT)':       (  70_000_000, 'Pre-deposit Krates, unlocked at TGE', None),
+    'POL staker airdrop':  ( 140_000_000, 'Immediate tranche at TGE', None),
+    'Public sale':         ( 100_000_000, 'Binance Prime sale', None),
 }
 
 # ── RPC ─────────────────────────────────────────────────────────────────────────
@@ -357,8 +379,9 @@ def main():
     print()
 
     # Fixed allocations (absolute amounts, already distributed)
-    fixed_totals = {name: amt for name, (amt, _desc) in FIXED_ALLOCATIONS.items()}
-    fixed_descs  = {name: desc for name, (_amt, desc) in FIXED_ALLOCATIONS.items()}
+    fixed_totals = {name: amt for name, (amt, _desc, _subs) in FIXED_ALLOCATIONS.items()}
+    fixed_descs  = {name: desc for name, (_amt, desc, _subs) in FIXED_ALLOCATIONS.items()}
+    fixed_subs   = {name: subs for name, (_amt, _desc, subs) in FIXED_ALLOCATIONS.items() if subs}
 
     # Totals
     total_circulating = merkl_claimed + sum(fixed_totals.values())
@@ -409,13 +432,19 @@ def main():
         }
         for name, amount in fixed_totals.items():
             slug = name.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '')
-            sources[slug] = {
+            entry = {
                 'label': name,
                 'amount': amount,
                 'pct': 100 * amount / total_supply,
                 'type': 'fixed',
                 'desc': fixed_descs[name],
             }
+            if name in fixed_subs:
+                entry['subs'] = [
+                    {'name': sn, 'amount': sa, 'pct': 100 * sa / total_supply}
+                    for sn, sa in fixed_subs[name]
+                ]
+            sources[slug] = entry
 
         output = {
             'meta': {

@@ -1,16 +1,16 @@
 {
   "meta": {
-    "generatedAt": "2026-03-20T15:12:17.724577+00:00",
-    "katanaBlock": 27276724
+    "generatedAt": "2026-03-20T16:38:37.240274+00:00",
+    "katanaBlock": 27281903
   },
   "totalSupply": 10000000000,
-  "totalCirculating": 1439373809.0810192,
-  "circulatingPct": 14.393738090810192,
+  "totalCirculating": 1439444569.712191,
+  "circulatingPct": 14.394445697121911,
   "sources": {
     "merkl": {
       "label": "Merkl Rewards",
-      "amount": 561879635.0810192,
-      "pct": 5.618796350810191,
+      "amount": 561950395.7121911,
+      "pct": 5.6195039571219105,
       "type": "dynamic"
     },
     "etherfi_vault": {
@@ -32,28 +32,121 @@
       "amount": 308000000,
       "pct": 3.08,
       "type": "fixed",
-      "desc": "Binance, Bitget, Kraken, KuCoin, others"
+      "desc": "Binance, Bitget, Kraken, KuCoin, others",
+      "subs": [
+        {
+          "name": "Binance",
+          "amount": 278000000,
+          "pct": 2.78
+        },
+        {
+          "name": "Bitget",
+          "amount": 15000000,
+          "pct": 0.15
+        },
+        {
+          "name": "Kraken",
+          "amount": 12000000,
+          "pct": 0.12
+        },
+        {
+          "name": "KuCoin",
+          "amount": 1750000,
+          "pct": 0.0175
+        },
+        {
+          "name": "Bitpanda",
+          "amount": 500000,
+          "pct": 0.005
+        },
+        {
+          "name": "Others",
+          "amount": 750000,
+          "pct": 0.0075
+        }
+      ]
     },
     "market_makers": {
       "label": "Market makers",
       "amount": 207000000,
       "pct": 2.07,
       "type": "fixed",
-      "desc": "GSR, Selini, Lhava, FlowDesk"
+      "desc": "GSR, Selini, Lhava, FlowDesk",
+      "subs": [
+        {
+          "name": "GSR",
+          "amount": 100000000,
+          "pct": 1.0
+        },
+        {
+          "name": "Selini",
+          "amount": 55000000,
+          "pct": 0.55
+        },
+        {
+          "name": "Lhava",
+          "amount": 50000000,
+          "pct": 0.5
+        },
+        {
+          "name": "FlowDesk",
+          "amount": 2000000,
+          "pct": 0.02
+        }
+      ]
     },
     "kol_payments": {
       "label": "KOL payments",
       "amount": 12550000,
       "pct": 0.1255,
       "type": "fixed",
-      "desc": "ARK Point, Ethene Labs, Nebula, vendors"
+      "desc": "ARK Point, Ethene Labs, Nebula, vendors",
+      "subs": [
+        {
+          "name": "Ethene Labs",
+          "amount": 3500000,
+          "pct": 0.035
+        },
+        {
+          "name": "Nebula",
+          "amount": 3450000,
+          "pct": 0.0345
+        },
+        {
+          "name": "Vendor payment",
+          "amount": 3000000,
+          "pct": 0.03
+        },
+        {
+          "name": "ARK Point",
+          "amount": 2600000,
+          "pct": 0.026
+        }
+      ]
     },
     "ecosystem_grants": {
       "label": "Ecosystem grants",
       "amount": 4370000,
       "pct": 0.0437,
       "type": "fixed",
-      "desc": "Foresight, Kensei, Jumper"
+      "desc": "Foresight, Kensei, Jumper",
+      "subs": [
+        {
+          "name": "Jumper",
+          "amount": 2700000,
+          "pct": 0.027
+        },
+        {
+          "name": "Kensei",
+          "amount": 1000000,
+          "pct": 0.01
+        },
+        {
+          "name": "Foresight",
+          "amount": 670000,
+          "pct": 0.0067
+        }
+      ]
     },
     "krates_vkat": {
       "label": "Krates (vKAT)",
