@@ -850,7 +850,7 @@
     /* Addressbook modal */
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; }
     .modal-overlay.open { display:flex; align-items:center; justify-content:center; }
-    .modal-box { background:var(--cream); border:2px solid var(--black); max-width:800px; width:90vw; max-height:80vh; display:flex; flex-direction:column; }
+    .modal-box { background:var(--cream); border:2px solid var(--black); max-width:1000px; width:90vw; max-height:80vh; display:flex; flex-direction:column; }
     .modal-header { display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:2px solid var(--black); background:var(--black); color:#fff; }
     .modal-header h2 { margin:0; font-family:var(--ui); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.08em; }
     .modal-close { background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer; padding:0 0.5rem; }
@@ -860,6 +860,18 @@
     .modal-body td { padding:0.4rem 1rem; border-bottom:1px solid #e0d8c8; font-size:0.85rem; }
     .modal-body tr:hover { background:var(--cream2); }
     .modal-body .ab-addr { font-family:var(--mono); font-size:0.78rem; color:var(--dim); }
+    .modal-body .ab-bal { font-family:var(--mono); font-size:0.82rem; text-align:right; white-space:nowrap; }
+    .modal-body .ab-chain { text-align:center; }
+    .chain-pill { display:inline-block; padding:0.1rem 0.45rem; border-radius:3px; font-family:var(--ui); font-size:0.65rem; font-weight:700; letter-spacing:0.04em; cursor:pointer; user-select:none; }
+    .chain-pill-eth { background:var(--cream2); color:var(--dim); border:1px solid #c8bfab; }
+    .chain-pill-kat { background:var(--accent,#e8a832); color:#fff; border:1px solid transparent; }
+    .modal-body .ab-label { cursor:pointer; min-width:100px; }
+    .modal-body .ab-label:hover { background:var(--cream2); }
+    .ab-override { opacity:0.5; font-size:0.65rem; margin-left:0.3rem; }
+    .ab-add-row input { border:1px solid #c8bfab; background:var(--cream); padding:0.25rem 0.5rem; font-size:0.82rem; font-family:var(--mono); width:100%; box-sizing:border-box; }
+    .ab-add-row input:focus { outline:none; border-color:var(--black); }
+    .ab-add-btn { background:var(--black); color:#fff; border:none; padding:0.25rem 0.75rem; font-family:var(--ui); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; cursor:pointer; }
+    .ab-add-btn:hover { opacity:0.8; }
     /* Expandable supply rows */
     tr.supply-parent { cursor:pointer; }
     tr.supply-parent td:first-child::before { content:'▸ '; color:var(--dim); }
@@ -1117,30 +1129,30 @@
 <div id="tab-stakers" class="tab-pane">
 
 <div class="stats-grid" id="staker-stats-grid">
-  <div class="stat-card" style="background:var(--card-staked)">
+  <div class="stat-card">
     <div class="stat-label">Total KAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
     <div class="stat-sub" id="sstat-total-sub">on-chain</div>
   </div>
-  <div class="stat-card" style="background:var(--card-staked)">
+  <div class="stat-card">
     <div class="stat-label">% of Circ Supply</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-pct-circ">—</div>
     <div class="stat-sub" id="sstat-pct-circ-sub"></div>
   </div>
-  <div class="stat-card" style="background:var(--card-staked)">
+  <div class="stat-card">
     <div class="stat-label"># Stakers</div>
     <div class="stat-value" id="sstat-count">—</div>
     <div class="stat-sub" id="sstat-count-sub">tracked</div>
   </div>
-  <div class="stat-card" style="background:var(--card-staked)">
+  <div class="stat-card">
     <div class="stat-label">vKAT Locked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
   </div>
-  <div class="stat-card" style="background:var(--card-staked)">
+  <div class="stat-card">
     <div class="stat-label">avKAT Deposited</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-avkat">—</div>
   </div>
-  <div class="stat-card" style="background:var(--card-staked)">
+  <div class="stat-card">
     <div class="stat-label">vKAT / avKAT Split</div>
     <div class="stat-value" id="sstat-split">—</div>
   </div>
@@ -1225,146 +1237,146 @@ const CEX_WALLETS = new Set([
   '0xab5c66752a9e8167967685f1450532fb96d5d24f',
 ]);
 
-// CEX label map — addr (lowercase) → exchange name
+// CEX label map — addr (lowercase) → { label, chain }
 const CEX_LABELS = {
   // ── Ethereum mainnet known addresses ──
-  '0x28c6c06298d514db089934071355e5743bf21d60': 'Binance',
-  '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8': 'Binance',
-  '0xf977814e90da44bfa03b6295a0616a897441acec': 'Binance',
-  '0x21a31ee1afc51d94c2efccaa2092ad1028285549': 'Binance',
-  '0xdfd5293d8e347dfe59e90efd55b2956a1343963d': 'Binance',
-  '0x56eddb7aa87536c09ccc2793473599fd21a8b17f': 'Binance',
-  '0x6cc5f688a315f3dc28a7781717a9a798a59fda7b': 'OKX',
-  '0x236f9f97e0e62388479bf9e5ba4889e46b0273c3': 'OKX',
-  '0x4a8bc80fb5b6d54e82e37938fd34f3dd1d8bab71': 'OKX',
-  '0xf89d7b9c864f589bbf53a82105107622b35eaa40': 'Bybit',
-  '0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4': 'Bybit',
-  '0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43': 'Coinbase',
-  '0x7830c87c02e56aff27fa8ab1241711331fa86f43': 'Coinbase',
-  '0x71660c4005ba85c37ccec55d0c4493e66fe775d3': 'Coinbase',
-  '0x2910543af39aba0cd09dbb2d50200b3e800a63d2': 'Kraken',
-  '0x0a869d79a7052c7f1b55a8ebabbea3420f0d1e13': 'Kraken',
-  '0x0d0707963952f2fba59dd06f2b425ace40b492fe': 'Gate.io',
-  '0x1c4b70a3968436b9a0a9cf5205c787eb81bb558e': 'Gate.io',
-  '0xd6216fc19db775df9774a6e33526131da7d19a2c': 'KuCoin',
-  '0xa1d8d972560c2f8144af871db508f0b0b10a3fbf': 'KuCoin',
-  '0x1062a747393198f70f71ec65a582423dba7e5ab':  'HTX',
-  '0xab5c66752a9e8167967685f1450532fb96d5d24f': 'HTX',
+  '0x28c6c06298d514db089934071355e5743bf21d60': { label: 'Binance', chain: 'eth' },
+  '0xbe0eb53f46cd790cd13851d5eff43d12404d33e8': { label: 'Binance', chain: 'eth' },
+  '0xf977814e90da44bfa03b6295a0616a897441acec': { label: 'Binance', chain: 'eth' },
+  '0x21a31ee1afc51d94c2efccaa2092ad1028285549': { label: 'Binance', chain: 'eth' },
+  '0xdfd5293d8e347dfe59e90efd55b2956a1343963d': { label: 'Binance', chain: 'eth' },
+  '0x56eddb7aa87536c09ccc2793473599fd21a8b17f': { label: 'Binance', chain: 'eth' },
+  '0x6cc5f688a315f3dc28a7781717a9a798a59fda7b': { label: 'OKX', chain: 'eth' },
+  '0x236f9f97e0e62388479bf9e5ba4889e46b0273c3': { label: 'OKX', chain: 'eth' },
+  '0x4a8bc80fb5b6d54e82e37938fd34f3dd1d8bab71': { label: 'OKX', chain: 'eth' },
+  '0xf89d7b9c864f589bbf53a82105107622b35eaa40': { label: 'Bybit', chain: 'eth' },
+  '0x1db92e2eebc8e0c075a02bea49a2935bcd2dfcf4': { label: 'Bybit', chain: 'eth' },
+  '0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43': { label: 'Coinbase', chain: 'eth' },
+  '0x7830c87c02e56aff27fa8ab1241711331fa86f43': { label: 'Coinbase', chain: 'eth' },
+  '0x71660c4005ba85c37ccec55d0c4493e66fe775d3': { label: 'Coinbase', chain: 'eth' },
+  '0x2910543af39aba0cd09dbb2d50200b3e800a63d2': { label: 'Kraken', chain: 'eth' },
+  '0x0a869d79a7052c7f1b55a8ebabbea3420f0d1e13': { label: 'Kraken', chain: 'eth' },
+  '0x0d0707963952f2fba59dd06f2b425ace40b492fe': { label: 'Gate.io', chain: 'eth' },
+  '0x1c4b70a3968436b9a0a9cf5205c787eb81bb558e': { label: 'Gate.io', chain: 'eth' },
+  '0xd6216fc19db775df9774a6e33526131da7d19a2c': { label: 'KuCoin', chain: 'eth' },
+  '0xa1d8d972560c2f8144af871db508f0b0b10a3fbf': { label: 'KuCoin', chain: 'eth' },
+  '0x1062a747393198f70f71ec65a582423dba7e5ab':  { label: 'HTX', chain: 'eth' },
+  '0xab5c66752a9e8167967685f1450532fb96d5d24f': { label: 'HTX', chain: 'eth' },
   // ── Katana chain addresses (from #multisig-operations-requests) ──
   // Multisig SAFEs
-  '0x92d8ce89ff02c640daf0b7c23d497ccf1880c390': 'KAT Foundation (main)',
-  '0x45fffb006a00725d0e36f30f2a3c5fc59e66ac06': 'KAT Engineering',
-  '0xc3ee005931e07f3d5476544f605bd333158fce77': 'KAT Exchange SAFE 1',
-  '0x130ca6751fbd34d833365f4e09a15b260296e0cf': 'KAT Exchange SAFE 2',
-  '0x47fb09984c6679640720a8e028239a363c3eb67d': 'KAT Exchange SAFE 3',
-  '0x49efa5827d04511c71124c5bbc483e454f336e50': 'KAT Exchange SAFE 4',
-  '0xe7b02ce27c909e5601d45af0b256253dd6b14a5a': 'KAT Ops SAFE',
-  '0x06764f9118abfe1a67d6450fa9bc7135e736728e': 'KAT Employee SAFE',
+  '0x92d8ce89ff02c640daf0b7c23d497ccf1880c390': { label: 'KAT Foundation (main)', chain: 'kat' },
+  '0x45fffb006a00725d0e36f30f2a3c5fc59e66ac06': { label: 'KAT Engineering', chain: 'kat' },
+  '0xc3ee005931e07f3d5476544f605bd333158fce77': { label: 'KAT Exchange SAFE 1', chain: 'kat' },
+  '0x130ca6751fbd34d833365f4e09a15b260296e0cf': { label: 'KAT Exchange SAFE 2', chain: 'kat' },
+  '0x47fb09984c6679640720a8e028239a363c3eb67d': { label: 'KAT Exchange SAFE 3', chain: 'kat' },
+  '0x49efa5827d04511c71124c5bbc483e454f336e50': { label: 'KAT Exchange SAFE 4', chain: 'kat' },
+  '0xe7b02ce27c909e5601d45af0b256253dd6b14a5a': { label: 'KAT Ops SAFE', chain: 'kat' },
+  '0x06764f9118abfe1a67d6450fa9bc7135e736728e': { label: 'KAT Employee SAFE', chain: 'kat' },
   // Binance
-  '0x3c274b82b20a84a02d816fd37ee096f7ac2cd396': 'Binance (rewards)',
-  '0x7fea4949b60808b5b9a104a089d0db3dc84be51f': 'Binance (hot)',
-  '0x488eda2d0917ecddbbff3623da5d0fccd756aec2ea': 'Binance',
-  '0xe81c576132d5ff8f5397e00cd4de450abca8991a': 'Binance',
-  '0x37c293d0050ffcf36368c2348f083e503393d5f5': 'Binance (Earn)',
-  '0xd7aa21aad1b6be47888cbad2f18fb5dc631ec5c5': 'Binance (Earn)',
-  '0x0e56a2094a3c41e1c5593cf6b12ad6a8a15c90af': 'Binance (Earn)',
-  '0xffb2d9b8c887604b2341685b6845d7751a1c875b': 'Binance',
-  '0x905f2ba4623de0fb5bd1e795d5da77be4ed3e710': 'Binance',
-  '0x7d3217feb6f310f7e7b7c8ee130db59dcad1dd45': 'Binance',
-  '0xfddfd40ccf1d03cc383f35163664b44b23353951': 'Binance',
-  '0xce434b0ae521d84022096ac7b286b32d1301928d': 'Binance',
-  '0x2cbe626d4298d37da4ceb342efeef7c598950534': 'Binance',
-  '0x1b474d1747e1257ce86a65aba649fd1e25036202': 'Binance',
-  '0x822c8954e32f941250b329fd153082c41c3dbbf1': 'Binance',
-  '0x1e643dee7269ce1919c2590af52eef635add75be': 'Binance',
-  '0x4219690c135cde6d4acae33097df6d9b197ee63f': 'Binance',
-  '0x1bba909636b714e1f06fa0c065b63690e01ca2b6': 'Binance (marketing)',
-  '0xda942bcc2463297ea463774739a4008d1c98a436': 'Binance (test)',
-  '0xda2e41eb0ed33eb29708aeaadc231ac59ef5883f': 'Bitget',
-  '0x31034fb4a5212994f1540ab7067f721f152421ac': 'Bitget',
+  '0x3c274b82b20a84a02d816fd37ee096f7ac2cd396': { label: 'Binance (rewards)', chain: 'kat' },
+  '0x7fea4949b60808b5b9a104a089d0db3dc84be51f': { label: 'Binance (hot)', chain: 'kat' },
+  '0x488eda2d0917ecddbbff3623da5d0fccd756aec2ea': { label: 'Binance', chain: 'kat' },
+  '0xe81c576132d5ff8f5397e00cd4de450abca8991a': { label: 'Binance', chain: 'kat' },
+  '0x37c293d0050ffcf36368c2348f083e503393d5f5': { label: 'Binance (Earn)', chain: 'kat' },
+  '0xd7aa21aad1b6be47888cbad2f18fb5dc631ec5c5': { label: 'Binance (Earn)', chain: 'kat' },
+  '0x0e56a2094a3c41e1c5593cf6b12ad6a8a15c90af': { label: 'Binance (Earn)', chain: 'kat' },
+  '0xffb2d9b8c887604b2341685b6845d7751a1c875b': { label: 'Binance', chain: 'kat' },
+  '0x905f2ba4623de0fb5bd1e795d5da77be4ed3e710': { label: 'Binance', chain: 'kat' },
+  '0x7d3217feb6f310f7e7b7c8ee130db59dcad1dd45': { label: 'Binance', chain: 'kat' },
+  '0xfddfd40ccf1d03cc383f35163664b44b23353951': { label: 'Binance', chain: 'kat' },
+  '0xce434b0ae521d84022096ac7b286b32d1301928d': { label: 'Binance', chain: 'kat' },
+  '0x2cbe626d4298d37da4ceb342efeef7c598950534': { label: 'Binance', chain: 'kat' },
+  '0x1b474d1747e1257ce86a65aba649fd1e25036202': { label: 'Binance', chain: 'kat' },
+  '0x822c8954e32f941250b329fd153082c41c3dbbf1': { label: 'Binance', chain: 'kat' },
+  '0x1e643dee7269ce1919c2590af52eef635add75be': { label: 'Binance', chain: 'kat' },
+  '0x4219690c135cde6d4acae33097df6d9b197ee63f': { label: 'Binance', chain: 'kat' },
+  '0x1bba909636b714e1f06fa0c065b63690e01ca2b6': { label: 'Binance (marketing)', chain: 'kat' },
+  '0xda942bcc2463297ea463774739a4008d1c98a436': { label: 'Binance (test)', chain: 'kat' },
+  '0xda2e41eb0ed33eb29708aeaadc231ac59ef5883f': { label: 'Bitget', chain: 'kat' },
+  '0x31034fb4a5212994f1540ab7067f721f152421ac': { label: 'Bitget', chain: 'kat' },
   // OKX
-  '0x3adb57b812fdc961534f1ebd255c9e9c0aaf2247': 'OKX',
-  '0x0e644d665289fd2cf6f704909abbd9cab5eb8076': 'OKX',
-  '0x2bfc58889fabe56ac89edac6de9237e771e2dba9': 'OKX',
-  '0x78262365b94ed595e37dfb9b2474c1703400cf05': 'OKX (rewards)',
-  '0xacf961ae22191f0d080497a3a3b427180f18ed67': 'OKX (rewards)',
-  '0xac9554fe0051bf90cd873f0befb5de7522d1caef': 'OKX (rewards)',
-  '0x93a6f18918a7d89b1f5f259c351f6e1f47061c9c': 'OKX',
-  '0x84e4999a3d11aae356677928526ae5bce734a109': 'OKX',
+  '0x3adb57b812fdc961534f1ebd255c9e9c0aaf2247': { label: 'OKX', chain: 'kat' },
+  '0x0e644d665289fd2cf6f704909abbd9cab5eb8076': { label: 'OKX', chain: 'kat' },
+  '0x2bfc58889fabe56ac89edac6de9237e771e2dba9': { label: 'OKX', chain: 'kat' },
+  '0x78262365b94ed595e37dfb9b2474c1703400cf05': { label: 'OKX (rewards)', chain: 'kat' },
+  '0xacf961ae22191f0d080497a3a3b427180f18ed67': { label: 'OKX (rewards)', chain: 'kat' },
+  '0xac9554fe0051bf90cd873f0befb5de7522d1caef': { label: 'OKX (rewards)', chain: 'kat' },
+  '0x93a6f18918a7d89b1f5f259c351f6e1f47061c9c': { label: 'OKX', chain: 'kat' },
+  '0x84e4999a3d11aae356677928526ae5bce734a109': { label: 'OKX', chain: 'kat' },
   // Kraken
-  '0xff4bfb0a143f9f9ba786d45b5c6eaf5d515af6c4': 'Kraken',
-  '0x72e93123e8b5d168246739cdc45360ea11209364': 'Kraken',
-  '0xd069cba2c488260aa3c243d8b64f7730a86816d5': 'Kraken',
-  '0xba6ecd9c964e8ee9913878dcb967f187a95483d7': 'Kraken',
-  '0x14e0a924e761ae2a10a66892106c27eb2f3aa9cd': 'Kraken',
+  '0xff4bfb0a143f9f9ba786d45b5c6eaf5d515af6c4': { label: 'Kraken', chain: 'kat' },
+  '0x72e93123e8b5d168246739cdc45360ea11209364': { label: 'Kraken', chain: 'kat' },
+  '0xd069cba2c488260aa3c243d8b64f7730a86816d5': { label: 'Kraken', chain: 'kat' },
+  '0xba6ecd9c964e8ee9913878dcb967f187a95483d7': { label: 'Kraken', chain: 'kat' },
+  '0x14e0a924e761ae2a10a66892106c27eb2f3aa9cd': { label: 'Kraken', chain: 'kat' },
   // KuCoin
-  '0x73286cd7eff34ca7853a18c22ef607943f828786': 'KuCoin',
-  '0x727c3f3aa76e20763333499883c47f3558eda8dd': 'KuCoin',
-  '0x8f8b5d62d14d3d9cee91de194e796c34a3786d3a': 'KuCoin',
+  '0x73286cd7eff34ca7853a18c22ef607943f828786': { label: 'KuCoin', chain: 'kat' },
+  '0x727c3f3aa76e20763333499883c47f3558eda8dd': { label: 'KuCoin', chain: 'kat' },
+  '0x8f8b5d62d14d3d9cee91de194e796c34a3786d3a': { label: 'KuCoin', chain: 'kat' },
   // Bithumb
-  '0x4b71b16e61a4436a9d19a8f100b8f61f5a1c2a8d': 'Bithumb',
-  '0x6b32e2d6f5fb63191d5f48cc639bffcc6a32ca92': 'Bithumb',
-  '0xb3a30f9b95bf2cb843f8a84849b2f36c43e97cd3': 'Bithumb',
+  '0x4b71b16e61a4436a9d19a8f100b8f61f5a1c2a8d': { label: 'Bithumb', chain: 'kat' },
+  '0x6b32e2d6f5fb63191d5f48cc639bffcc6a32ca92': { label: 'Bithumb', chain: 'kat' },
+  '0xb3a30f9b95bf2cb843f8a84849b2f36c43e97cd3': { label: 'Bithumb', chain: 'kat' },
   // LBank
-  '0x9c4fe1c3d5975e5c5e493f24352969aa280b7cfc': 'LBank',
-  '0xc3bccf23bee71b7833dad033355a75a122d389f3': 'LBank',
+  '0x9c4fe1c3d5975e5c5e493f24352969aa280b7cfc': { label: 'LBank', chain: 'kat' },
+  '0xc3bccf23bee71b7833dad033355a75a122d389f3': { label: 'LBank', chain: 'kat' },
   // Gate.io (Katana)
-  '0x0d0707963952f2fba59dd06f2b425ace40b492fe': 'Gate.io',
+  '0x0d0707963952f2fba59dd06f2b425ace40b492fe': { label: 'Gate.io', chain: 'kat' },
   // Bitvavo
-  '0x3432f3469bd08f7ca0641b5f9956323f2c230e18': 'Bitvavo',
+  '0x3432f3469bd08f7ca0641b5f9956323f2c230e18': { label: 'Bitvavo', chain: 'kat' },
   // Coinbase (Katana)
-  '0xa4f5487aa7a0432c604a6d729b735320e573e37e': 'Coinbase (Base)',
-  '0xc0d0b4b56e027e5c17c097df31a057acf0961d8e': 'Coinbase',
+  '0xa4f5487aa7a0432c604a6d729b735320e573e37e': { label: 'Coinbase (Base)', chain: 'kat' },
+  '0xc0d0b4b56e027e5c17c097df31a057acf0961d8e': { label: 'Coinbase', chain: 'kat' },
   // MEXC
-  '0xea161c14fc39cf1acaf83cf41e4914f554286636': 'MEXC',
+  '0xea161c14fc39cf1acaf83cf41e4914f554286636': { label: 'MEXC', chain: 'kat' },
   // Crypto.com
-  '0x4e6509c90c439d1c3b6a72e2738ad0aed74c79c9': 'Crypto.com',
-  '0xac2fdde165d9f13a223f58b9ac1dde51b63feff2b': 'Crypto.com',
+  '0x4e6509c90c439d1c3b6a72e2738ad0aed74c79c9': { label: 'Crypto.com', chain: 'kat' },
+  '0xac2fdde165d9f13a223f58b9ac1dde51b63feff2b': { label: 'Crypto.com', chain: 'kat' },
   // Market Makers
-  '0x3fda190045f3c798182bb05e4cf5a5bd63f507b4': 'GSR',
-  '0xe8631328d36c8c64517f553b0e705657963564b7': 'GSR',
-  '0x695b0866972c3d7f6aea0aca6c144fdfbd620b7f': 'GSR',
-  '0x49c7f3617a70664325613ded0694a4e345337d89': 'GSR',
-  '0xbe0b787d9246cc76a10fa70e2948a633e83f9835': 'GSR',
-  '0xcbb04c99625a67f5ea798554c71067a0b6fda800': 'GSR',
-  '0xb23f63cefac438f455b32bfd385a5535b6866c46': 'GSR',
-  '0x5ff5ea681525112ad1f2bf54a5bbb11066ae85bf': 'GSR',
-  '0xfa3d25d1d4b4fd391189355f96752fa8a4dd7a9b': 'GSR',
-  '0xb66018f3807d31e42256d005636b8d6d72bd43fa': 'Selini',
-  '0xb1b230e505fdaca4dca12ac022d559ac2d0fe687': 'Lhava',
-  '0x4d2ae02e9faf440badf0e275522a06cbba12d1e5': 'FlowDesk',
-  '0x67c912ff560951526bffdff66dfbd4df8ae23756': 'FlowDesk',
+  '0x3fda190045f3c798182bb05e4cf5a5bd63f507b4': { label: 'GSR', chain: 'kat' },
+  '0xe8631328d36c8c64517f553b0e705657963564b7': { label: 'GSR', chain: 'kat' },
+  '0x695b0866972c3d7f6aea0aca6c144fdfbd620b7f': { label: 'GSR', chain: 'kat' },
+  '0x49c7f3617a70664325613ded0694a4e345337d89': { label: 'GSR', chain: 'kat' },
+  '0xbe0b787d9246cc76a10fa70e2948a633e83f9835': { label: 'GSR', chain: 'kat' },
+  '0xcbb04c99625a67f5ea798554c71067a0b6fda800': { label: 'GSR', chain: 'kat' },
+  '0xb23f63cefac438f455b32bfd385a5535b6866c46': { label: 'GSR', chain: 'kat' },
+  '0x5ff5ea681525112ad1f2bf54a5bbb11066ae85bf': { label: 'GSR', chain: 'kat' },
+  '0xfa3d25d1d4b4fd391189355f96752fa8a4dd7a9b': { label: 'GSR', chain: 'kat' },
+  '0xb66018f3807d31e42256d005636b8d6d72bd43fa': { label: 'Selini', chain: 'kat' },
+  '0xb1b230e505fdaca4dca12ac022d559ac2d0fe687': { label: 'Lhava', chain: 'kat' },
+  '0x4d2ae02e9faf440badf0e275522a06cbba12d1e5': { label: 'FlowDesk', chain: 'kat' },
+  '0x67c912ff560951526bffdff66dfbd4df8ae23756': { label: 'FlowDesk', chain: 'kat' },
   // Protocol Integrations
-  '0x607d0c7e3578802eb46d388cb86cfba8ff657306': 'EtherFi vault',
-  '0x4a610757352d63d45b0a1680e95158887955582c': 'Lombard (Veda dist.)',
-  '0xaade9c6ac7c88ac7360121f4bf60633cd8916983': 'Concrete',
-  '0x46b72614c8ecce5648851a521520d388a620111a': 'Concrete',
-  '0x59e9012193a001a913e4c6dff5b3a10081245790': 'Foresight',
-  '0x36c7c0646f69256def37f271960ef576e7dd4bc7': 'Kensei (Bitget)',
-  '0xb53ee5cd82393c71f522b6b36adaa5a97dfaa03a': 'Jumper',
-  '0xb72291652f15cf73651357383c0a86fbba29b675': 'vKAT DAO',
+  '0x607d0c7e3578802eb46d388cb86cfba8ff657306': { label: 'EtherFi vault', chain: 'kat' },
+  '0x4a610757352d63d45b0a1680e95158887955582c': { label: 'Lombard (Veda dist.)', chain: 'kat' },
+  '0xaade9c6ac7c88ac7360121f4bf60633cd8916983': { label: 'Concrete', chain: 'kat' },
+  '0x46b72614c8ecce5648851a521520d388a620111a': { label: 'Concrete', chain: 'kat' },
+  '0x59e9012193a001a913e4c6dff5b3a10081245790': { label: 'Foresight', chain: 'kat' },
+  '0x36c7c0646f69256def37f271960ef576e7dd4bc7': { label: 'Kensei (Bitget)', chain: 'kat' },
+  '0xb53ee5cd82393c71f522b6b36adaa5a97dfaa03a': { label: 'Jumper', chain: 'kat' },
+  '0xb72291652f15cf73651357383c0a86fbba29b675': { label: 'vKAT DAO', chain: 'kat' },
   // KOLs
-  '0x418ba6b758ea65e6e07eee3361c44a4f393c8114': 'ARK Point (KOL)',
-  '0xb856034c3233ecd7579f4bdc7e078200f47acdfd': 'Ethene Labs (KOL)',
-  '0xc9073248b4fea9594b54a5369b0da8af1839fd88': 'Nebula (KOL)',
+  '0x418ba6b758ea65e6e07eee3361c44a4f393c8114': { label: 'ARK Point (KOL)', chain: 'kat' },
+  '0xb856034c3233ecd7579f4bdc7e078200f47acdfd': { label: 'Ethene Labs (KOL)', chain: 'kat' },
+  '0xc9073248b4fea9594b54a5369b0da8af1839fd88': { label: 'Nebula (KOL)', chain: 'kat' },
   // Infrastructure
-  '0x7231dbacdfc968e07656d12389ab20de82fbfceb': 'avKAT vault',
-  '0xc03bec89b26aeaf5b0c9126ba3fe89e725df58b2': 'KMS (Merkl campaigns)',
-  '0xbfdc6dd35642ba70bdc8bbabd822396a5892a167': 'KAT hot wallet',
-  '0xf352131a436a6801c5e6c7e8c6d9d52c9575b79a': 'Whitelisted ops',
-  '0xd0673f989bc3ba9314d0aaf28bfc84e99b7898cc': 'OKX (transfer)',
-  '0x89063623f00238106c9a60032fae2ab702b8a1fb': 'KAT vault (LayerZero)',
+  '0x7231dbacdfc968e07656d12389ab20de82fbfceb': { label: 'avKAT vault', chain: 'kat' },
+  '0xc03bec89b26aeaf5b0c9126ba3fe89e725df58b2': { label: 'KMS (Merkl campaigns)', chain: 'kat' },
+  '0xbfdc6dd35642ba70bdc8bbabd822396a5892a167': { label: 'KAT hot wallet', chain: 'kat' },
+  '0xf352131a436a6801c5e6c7e8c6d9d52c9575b79a': { label: 'Whitelisted ops', chain: 'kat' },
+  '0xd0673f989bc3ba9314d0aaf28bfc84e99b7898cc': { label: 'OKX (transfer)', chain: 'kat' },
+  '0x89063623f00238106c9a60032fae2ab702b8a1fb': { label: 'KAT vault (LayerZero)', chain: 'kat' },
   // Exchange listing SAFEs (Rishal)
-  '0x15ef7fd7f252190f48b78e5050cb424f3972bea6': 'Exchange listing SAFE',
-  '0x22dda81c13bcc3cf7f543cd363e5e6aeae0c941': 'Exchange listing SAFE',
-  '0x4ed9becc0707c18c72cfcca96fe81d4feb4ed22f': 'Exchange listing SAFE',
-  '0xc3ee005931e07f3d5476544f605bd333158fce77': 'Exchange listing SAFE',
-  '0x130ca6751fbd34d833365f4e09a15b260296e0cf': 'Exchange listing SAFE',
-  '0x47fb09984c6679640720a8e028239a363c3eb67d': 'Exchange listing SAFE',
-  '0x49efa5827d04511c71124c5bbc483e454f336e50': 'Exchange listing SAFE',
-  '0x35524a1a02d6c89c8fcead21644cb61b032bd3de': 'Exchange listing SAFE',
-  '0x8ff02a1c9d834211762f91ea286da3c196c4f2b9': 'Whitelisted ops',
-  '0xdd0ccaf96fceec57a78f8b497b905d91f269c262': 'OKX (test)',
+  '0x15ef7fd7f252190f48b78e5050cb424f3972bea6': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x22dda81c13bcc3cf7f543cd363e5e6aeae0c941': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x4ed9becc0707c18c72cfcca96fe81d4feb4ed22f': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0xc3ee005931e07f3d5476544f605bd333158fce77': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x130ca6751fbd34d833365f4e09a15b260296e0cf': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x47fb09984c6679640720a8e028239a363c3eb67d': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x49efa5827d04511c71124c5bbc483e454f336e50': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x35524a1a02d6c89c8fcead21644cb61b032bd3de': { label: 'Exchange listing SAFE', chain: 'kat' },
+  '0x8ff02a1c9d834211762f91ea286da3c196c4f2b9': { label: 'Whitelisted ops', chain: 'kat' },
+  '0xdd0ccaf96fceec57a78f8b497b905d91f269c262': { label: 'OKX (test)', chain: 'kat' },
 };
 
 // ── USER LABELS ───────────────────────────────────────────────────────────────
@@ -1485,9 +1497,17 @@ function badge(status) {
 function shortAddr(a) {
   return `<b>${a.slice(0, 6)}</b><span class="addr-ellipsis">…</span>${a.slice(-4)}`;
 }
-function getLabel(addr) {
+function getLabelEntry(addr) {
+  // Returns { label, chain } or null. Handles legacy string LABELS from localStorage.
   const a = addr.toLowerCase();
-  return LABELS[addr] || LABELS[a] || CEX_LABELS[a] || null;
+  const raw = LABELS[addr] || LABELS[a] || CEX_LABELS[a] || null;
+  if (!raw) return null;
+  if (typeof raw === 'string') return { label: raw, chain: 'kat' };
+  return raw;
+}
+function getLabel(addr) {
+  const entry = getLabelEntry(addr);
+  return entry ? entry.label : null;
 }
 function tinyAddrDisplay(addr) {
   const label = getLabel(addr);
