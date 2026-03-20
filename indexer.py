@@ -394,14 +394,18 @@ def scan_cex(state, addr_set, cex_wallets):
     return cex_by_addr, latest
 
 # ── Fresh balances ─────────────────────────────────────────────────────────────
-def get_fresh_balances(addresses, dump_raw):
+def get_fresh_balances(addresses, dump_raw, extra_addrs=None):
     all_dest_tokens = list(KAT_TOKENS) + [AVKAT_ADDR]
     all_dests = set()
     for r in dump_raw.values():
         all_dests.update(r['dests'].keys())
 
-    total_tasks = len(addresses) + len(all_dests)
-    print(f'  Balances: {len(addresses):,} addresses + {len(all_dests):,} destinations = {total_tasks:,} tasks…')
+    # Extra addresses (buyers/stakers) that also need balance fetches
+    extra = set(extra_addrs or []) - set(addresses)
+    all_fetch = list(addresses) + list(extra)
+
+    total_tasks = len(all_fetch) + len(all_dests)
+    print(f'  Balances: {len(all_fetch):,} addresses + {len(all_dests):,} destinations = {total_tasks:,} tasks…')
 
     addr_balances = {}  # addr  -> { kat, avkat }
     dest_balances = {}  # dest  -> total (all KAT tokens + avkat)
@@ -418,7 +422,7 @@ def get_fresh_balances(addresses, dump_raw):
         return dest, total
 
     with ThreadPoolExecutor(max_workers=16) as ex:
-        addr_futs = {ex.submit(fetch_addr, a): a for a in addresses}
+        addr_futs = {ex.submit(fetch_addr, a): a for a in all_fetch}
         dest_futs = {ex.submit(fetch_dest, d): d for d in all_dests}
         all_futs  = list(addr_futs.keys()) + list(dest_futs.keys())
 
@@ -487,7 +491,7 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
     return out
 
 # ── Build buyers output ────────────────────────────────────────────────────────
-def build_buyers_output(buy_raw, stake_raw, addr_set):
+def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
     out = []
     for addr, b in buy_raw.items():
         sources = b.get('sources', [])
@@ -501,12 +505,16 @@ def build_buyers_output(buy_raw, stake_raw, addr_set):
         staked_vkat  = s.get('stakedVKAT', False)
         staked_avkat = s.get('stakedAvKAT', False)
         kat_net = b['katReceived'] - b.get('katSold', 0.0)
-        if kat_net < 1000:
+        bals = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
+        kat_balance = bals['kat']
+        # Include if on-chain balance OR net bought >= 1000
+        if kat_net < 1000 and kat_balance < 1000:
             continue
         out.append({
             'address':     addr,
             'category':    'airdrop_buyer' if addr in addr_set else 'pure_buyer',
             'buySource':   buy_source,
+            'katHeld':     round(kat_balance, 6),
             'katNet':      round(kat_net, 6),
             'katReceived': round(b['katReceived'], 6),
             'katSold':     round(b.get('katSold', 0.0), 6),
@@ -515,22 +523,26 @@ def build_buyers_output(buy_raw, stake_raw, addr_set):
             'stakedAvKAT': staked_avkat,
             'staked':      staked_vkat or staked_avkat,
         })
-    out.sort(key=lambda x: x['katNet'], reverse=True)
+    out.sort(key=lambda x: x['katHeld'], reverse=True)
     return out
 
 # ── Build stakers output ──────────────────────────────────────────────────
-def build_stakers_output(stake_raw):
+def build_stakers_output(stake_raw, addr_balances):
     out = []
     for addr, s in stake_raw.items():
+        bals = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
+        # On-chain avKAT balance = actual current stake in avKAT vault
+        avkat_bal = bals['avkat']
+        # vKAT: use cumulative (no standard balanceOf for vote-escrowed tokens)
+        # but still flag if they ever staked
         vkat_amt  = s.get('vkatAmount', 0.0)
-        avkat_amt = s.get('avkatAmount', 0.0)
-        total     = vkat_amt + avkat_amt
+        total     = vkat_amt + avkat_bal
         if total < 100:
             continue
         out.append({
             'address':     addr,
             'vkatAmount':  round(vkat_amt, 6),
-            'avkatAmount': round(avkat_amt, 6),
+            'avkatAmount': round(avkat_bal, 6),
             'totalStaked': round(total, 6),
             'stakedVKAT':  s.get('stakedVKAT', False),
             'stakedAvKAT': s.get('stakedAvKAT', False),
@@ -587,8 +599,10 @@ def main():
     state['katanaBlock'] = latest_katana
     state['ethBlock']    = latest_eth
 
+    # Collect buyer + staker addresses for balance fetching
+    extra_addrs = set(buy_raw.keys()) | set(stake_raw.keys())
     print('4/5 Fetching fresh balances…')
-    addr_balances, dest_balances = get_fresh_balances(addresses, dump_raw)
+    addr_balances, dest_balances = get_fresh_balances(addresses, dump_raw, extra_addrs)
     print()
 
     save_state(state)
@@ -596,8 +610,8 @@ def main():
 
     print('5/5 Building data.json…')
     address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances)
-    buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set)
-    stakers_data  = build_stakers_output(stake_raw)
+    buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances)
+    stakers_data  = build_stakers_output(stake_raw, addr_balances)
 
     total    = len(address_data)
     farmers  = sum(1 for d in address_data if d['status'] == 'farmer')

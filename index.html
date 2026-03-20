@@ -1034,11 +1034,11 @@
   <table id="buyer-table">
     <thead>
       <tr>
-        <th data-bcol="rank" data-tip="Rank by KAT held (net)">#<span class="sort-arrow"></span></th>
+        <th data-bcol="rank" data-tip="Rank by on-chain KAT balance">#<span class="sort-arrow"></span></th>
         <th data-bcol="address" data-tip="Wallet address — click to copy">Address<span class="sort-arrow"></span></th>
         <th data-bcol="category" data-tip="Pure Buyer = no pre-TGE airdrop allocation. Airdrop+ = also received pre-TGE farming rewards">Type<span class="sort-arrow"></span></th>
         <th data-bcol="buySource" data-tip="DEX = bought via Sushiswap pool. CEX = transferred in from a centralised exchange wallet. Both = both sources detected">Source<span class="sort-arrow"></span></th>
-        <th data-bcol="katNet" class="num sorted" data-tip="Net KAT held = total received from pools/CEX minus KAT sent back to pools">KAT Held<span class="sort-arrow">↓</span></th>
+        <th data-bcol="katHeld" class="num sorted" data-tip="Current on-chain KAT balance (live from contract)">KAT Held<span class="sort-arrow">↓</span></th>
         <th data-bcol="txCount" class="num" data-tip="Number of inbound buy transactions (pool→wallet or CEX→wallet transfers)"># Buys<span class="sort-arrow"></span></th>
         <th data-bcol="stakedVKAT" class="num" data-tip="Has locked KAT into vKAT voting escrow — indicates long-term conviction, not a flipper">vKAT<span class="sort-arrow"></span></th>
         <th data-bcol="stakedAvKAT" class="num" data-tip="Has deposited KAT into avKAT auto-compounding vault">avKAT<span class="sort-arrow"></span></th>
@@ -1612,7 +1612,7 @@ let buyerAddrs       = new Set();
 let buyerCatFilter   = '';
 let buyerStakeFilter = '';
 let buyerFilterText  = '';
-let buyerSortCol     = 'katNet';
+let buyerSortCol     = 'katHeld';
 let buyerSortDir     = -1;
 
 function getBuyerFilteredRows() {
@@ -1683,7 +1683,7 @@ function renderBuyersTable() {
       </td>
       <td>${b.category === 'pure_buyer' ? '<span class="badge badge-pure-buyer">Buyer</span>' : '<span class="badge badge-airdrop-buyer">Airdrop+</span>'}</td>
       <td>${sourceBadge(b.buySource)}</td>
-      <td class="num"><span class="num-blue">${fmtNum(b.katNet)}</span></td>
+      <td class="num"><span class="num-blue">${fmtNum(b.katHeld)}</span></td>
       <td class="num">${b.txCount}</td>
       <td class="num">${vkatCell}</td>
       <td class="num">${avkatCell}</td>
@@ -1700,10 +1700,10 @@ function renderBuyersTable() {
 
 function exportBuyerCSV() {
   const rows   = getBuyerFilteredRows();
-  const header = ['Address','Category','Buy Source','KAT Held','KAT Received','KAT Sold','# Buys','vKAT','avKAT'];
+  const header = ['Address','Category','Buy Source','KAT Held (On-Chain)','Net Bought','KAT Received','KAT Sold','# Buys','vKAT','avKAT'];
   const lines  = rows.map(b => [
     b.address, b.category, b.buySource,
-    b.katNet.toFixed(6), b.katReceived.toFixed(6), (b.katSold||0).toFixed(6), b.txCount,
+    (b.katHeld||0).toFixed(6), b.katNet.toFixed(6), b.katReceived.toFixed(6), (b.katSold||0).toFixed(6), b.txCount,
     b.stakedVKAT  ? 'yes' : 'no',
     b.stakedAvKAT ? 'yes' : 'no',
   ].join(','));
