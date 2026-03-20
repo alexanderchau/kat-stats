@@ -206,7 +206,9 @@ def _classify_reason(key):
     if 'EPOCH' in k:    return ('Katana Vaults', None)
     if 'BONUS' in k or 'TOPUP' in k: return ('bonus/topup', None)
     if 'COMP' in k or 'MISSING' in k: return ('compensation', None)
-    return ('other', None)
+    # Preserve unrecognised key as its own bucket (cleaned up for display)
+    clean = key.split('~')[-1].split('_')[0].capitalize() if key else 'unknown'
+    return (clean, None)
 
 def _fetch_json(url, retries=3):
     for i in range(retries):
@@ -295,7 +297,7 @@ def print_protocol_breakdown(protocol_mix, merkl_total):
     print(f'  {"─"*sep} {"─"*14}  {"─"*7}')
 
     ORDER = ['Katana Vaults', 'SushiSwap', 'Morpho', 'Yearn',
-             'Steer', 'Charm', 'Ichi', 'bonus/topup', 'compensation', 'other']
+             'Steer', 'Charm', 'Ichi', 'bonus/topup', 'compensation']
     shown = set()
 
     for proto in ORDER + [p for p in protocol_mix if p not in ORDER]:
