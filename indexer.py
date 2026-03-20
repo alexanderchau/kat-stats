@@ -13,7 +13,7 @@ State is persisted in state.json so each run only fetches new blocks.
 import json, re, sys, time, threading, argparse
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import urllib.request, urllib.error
 
 SCRIPT_DIR = Path(__file__).parent
@@ -62,6 +62,7 @@ BRIDGE_DESTS = {BRIDGE, BRIDGE2}
 ZERO_ADDR   = '0x0000000000000000000000000000000000000000'
 
 VOTING_ESCROW = '0x4d6fc15ca6258b168225d283262743c623c13ead'  # vKAT lock
+LOCK_NFT      = '0x106f7d67ea25cb9eff5064cf604ebf6259ff296d'  # vKAT ERC-721 (Lock NFT)
 STAKE_DESTS   = {VOTING_ESCROW, AVKAT_ADDR}                   # vKAT + avKAT vault
 
 KAT_ETH_ADDR  = '0x8f051ca72a3440d83b18e71c3e59676203ab8f91'
@@ -134,6 +135,55 @@ def is_contract(addr, url=KATANA_RPC):
     """Check if address is a contract (has code) vs EOA."""
     r = rpc_call(url, 'eth_getCode', [addr, 'latest'])
     return bool(r and len(r) > 2 and r != '0x')
+
+def enumerate_vkat_locks():
+    """Enumerate all vKAT Lock NFTs → {owner: {amount, endTime}}."""
+    # 1. Total supply
+    r = rpc_call(KATANA_RPC, 'eth_call', [{'to': LOCK_NFT, 'data': '0x18160ddd'}, 'latest'])
+    total = int(r, 16) if r else 0
+    if total == 0:
+        return {}
+    print(f'  vKAT: enumerating {total:,} Lock NFTs…')
+
+    # 2. Get all token IDs via tokenByIndex(i)
+    def get_token_id(idx):
+        data = '0x4f6ccce7' + hex(idx)[2:].zfill(64)
+        r = rpc_call(KATANA_RPC, 'eth_call', [{'to': LOCK_NFT, 'data': data}, 'latest'])
+        return int(r, 16) if r else None
+
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        token_ids = list(ex.map(get_token_id, range(total)))
+    token_ids = [t for t in token_ids if t is not None]
+
+    # 3. For each token: ownerOf + locked
+    def get_lock_info(token_id):
+        tid_hex = hex(token_id)[2:].zfill(64)
+        owner_r = rpc_call(KATANA_RPC, 'eth_call',
+                           [{'to': LOCK_NFT, 'data': '0x6352211e' + tid_hex}, 'latest'])
+        owner = ('0x' + owner_r[26:].lower()) if owner_r else None
+        lock_r = rpc_call(KATANA_RPC, 'eth_call',
+                          [{'to': VOTING_ESCROW, 'data': '0xb45a3c0e' + tid_hex}, 'latest'])
+        amount, end_time = 0.0, 0
+        if lock_r and len(lock_r) >= 130:
+            amount = int(lock_r[2:66], 16) / (10 ** KAT_DECIMALS)
+            end_time = int(lock_r[66:130], 16)
+        return owner, amount, end_time
+
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        results = list(ex.map(get_lock_info, token_ids))
+
+    # 4. Aggregate per owner
+    owner_locks = {}
+    for owner, amount, end_time in results:
+        if owner and amount > 0:
+            if owner not in owner_locks:
+                owner_locks[owner] = {'amount': 0.0, 'endTime': 0}
+            owner_locks[owner]['amount'] += amount
+            owner_locks[owner]['endTime'] = max(owner_locks[owner]['endTime'], end_time)
+
+    total_locked = sum(v['amount'] for v in owner_locks.values())
+    print(f'  vKAT: {len(owner_locks):,} owners, {fmtM(total_locked)} KAT locked')
+    return owner_locks
 
 # ── Address / CEX wallet loading ───────────────────────────────────────────────
 def load_addresses():
@@ -646,15 +696,22 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
     return out
 
 # ── Build stakers output ──────────────────────────────────────────────────
-def build_stakers_output(stake_raw, addr_balances):
+def build_stakers_output(stake_raw, addr_balances, vkat_locks):
+    # Merge vKAT NFT holders into stake_raw so they appear even if they
+    # never sent a KAT Transfer to the escrow (e.g. received NFT via transfer)
+    for addr in vkat_locks:
+        if addr not in stake_raw:
+            stake_raw[addr] = {'stakedVKAT': True, 'stakedAvKAT': False, 'vkatAmount': 0.0, 'avkatAmount': 0.0}
+        else:
+            stake_raw[addr]['stakedVKAT'] = True
+
     out = []
     for addr, s in stake_raw.items():
         bals = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
-        # On-chain avKAT balance = actual current stake in avKAT vault
         avkat_bal = bals['avkat']
-        # vKAT: use cumulative (no standard balanceOf for vote-escrowed tokens)
-        # but still flag if they ever staked
-        vkat_amt  = s.get('vkatAmount', 0.0)
+        # vKAT: on-chain locked amount from NFT enumeration (replaces stale cumulative)
+        lock_info = vkat_locks.get(addr, {'amount': 0.0, 'endTime': 0})
+        vkat_amt  = lock_info['amount']
         total     = vkat_amt + avkat_bal
         if total < 100:
             continue
@@ -734,9 +791,10 @@ def main():
     print()
 
     print('6/6 Building data.json…')
+    vkat_locks    = enumerate_vkat_locks()
     address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types)
     buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances)
-    stakers_data  = build_stakers_output(stake_raw, addr_balances)
+    stakers_data  = build_stakers_output(stake_raw, addr_balances, vkat_locks)
 
     total    = len(address_data)
     farmers  = sum(1 for d in address_data if d['status'] == 'farmer')
@@ -771,6 +829,13 @@ def main():
     on_chain_avkat = total_assets(AVKAT_ADDR)
     on_chain_total = on_chain_vkat + on_chain_avkat
     print(f'  On-chain: vKAT={fmtM(on_chain_vkat)}, aVKAT={fmtM(on_chain_avkat)}, total={fmtM(on_chain_total)}')
+    # Cross-check: enumerated vKAT vs on-chain KAT held by escrow
+    enumerated_vkat = sum(v['amount'] for v in vkat_locks.values())
+    drift_pct = abs(enumerated_vkat - on_chain_vkat) / on_chain_vkat * 100 if on_chain_vkat > 0 else 0
+    if drift_pct > 0.1:
+        print(f'  ⚠ vKAT drift: enumerated={fmtM(enumerated_vkat)} vs on-chain={fmtM(on_chain_vkat)} ({drift_pct:.2f}%)')
+    else:
+        print(f'  ✓ vKAT cross-check OK: enumerated={fmtM(enumerated_vkat)} ≈ on-chain={fmtM(on_chain_vkat)}')
 
     output = {
         'meta': {
@@ -793,6 +858,27 @@ def main():
     DATA_PATH.write_text(json.dumps(output, separators=(',', ':')))
     size_kb = DATA_PATH.stat().st_size / 1024
     print(f'\n✓ Wrote {DATA_PATH.name} ({size_kb:.1f} KB)')
+
+    # ── Save daily snapshot for growth stats ──────────────────────────────────
+    snap_path = SCRIPT_DIR / 'snapshots.json'
+    try:
+        snapshots = json.loads(snap_path.read_text()) if snap_path.exists() else {}
+    except Exception:
+        snapshots = {}
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    snapshots[today] = {
+        'totalStaked': round(on_chain_total, 2),
+        'pctCirc': round(on_chain_total / circ_supply * 100, 2) if circ_supply else 0,
+        'count': s_total,
+        'vkat': round(on_chain_vkat, 2),
+        'avkat': round(on_chain_avkat, 2),
+    }
+    # Prune entries older than 90 days
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=90)).strftime('%Y-%m-%d')
+    snapshots = {k: v for k, v in snapshots.items() if k >= cutoff}
+    snap_path.write_text(json.dumps(snapshots, indent=2))
+    print(f'  Saved {snap_path.name} ({len(snapshots)} snapshots)')
+
     print('Done.')
 
 if __name__ == '__main__':
