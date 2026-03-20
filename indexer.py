@@ -25,7 +25,7 @@ INDEX_PATH = SCRIPT_DIR / 'index.html'
 KATANA_RPC    = 'https://rpc.katana.network/'
 ETH_RPC       = 'https://ethereum.publicnode.com'
 LOG_CHUNK     = 29_999    # Katana max getLogs range (30k fails)
-ETH_LOG_CHUNK = 100_000   # ETH mainnet (~14 days per chunk)
+ETH_LOG_CHUNK = 50_000    # ETH mainnet (~7 days per chunk, RPC limit)
 
 # ── Contracts ──────────────────────────────────────────────────────────────────
 DISTRIBUTOR_ADDR = '0x3ef3d8ba38ebe18db133cec108f4d14ce00dd9ae'
@@ -356,10 +356,73 @@ def scan_transfers(state, addr_set, cex_wallets, latest_block):
     print(f'  Transfers: {len(dump_raw):,} airdrop addrs · {len(buy_raw):,} buyers · {len(stake_raw):,} stakers')
     return dump_raw, buy_raw, stake_raw
 
+# ── Scan: aVKAT holders (discover all depositors via share token transfers) ────
+def scan_avkat_holders(state, stake_raw):
+    """Scan aVKAT token Transfer events to discover all holders.
+    Addresses that received aVKAT shares via zaps/routers/transfers won't appear
+    in stake_raw from the KAT transfer scan. This closes that gap."""
+    avkat_holders = state.get('avkatHolders', set())
+    if isinstance(avkat_holders, list):
+        avkat_holders = set(avkat_holders)
+    scan_from = state.get('avkatHolderBlock', DEPLOY_BLOCK - 1) + 1
+    latest    = get_block_number(KATANA_RPC)
+
+    if scan_from > latest:
+        print(f'  aVKAT holders: cache current at block {latest:,}')
+        return avkat_holders, latest
+
+    chunks = [(f, min(f + LOG_CHUNK - 1, latest)) for f in range(scan_from, latest + 1, LOG_CHUNK)]
+    print(f'  aVKAT holders: {len(chunks)} chunks ({scan_from:,} → {latest:,})…')
+
+    new_found = 0
+    for i, (frm, to) in enumerate(chunks, 1):
+        logs = eth_get_logs(KATANA_RPC, {
+            'fromBlock': hex(frm),
+            'toBlock':   hex(to),
+            'address':   AVKAT_ADDR,
+            'topics':    [TRANSFER_TOPIC],
+        })
+        for log in logs:
+            topics = log.get('topics', [])
+            if len(topics) < 3:
+                continue
+            # Track both sender and recipient of aVKAT shares
+            sender = '0x' + topics[1][26:].lower()
+            dest   = '0x' + topics[2][26:].lower()
+            for addr in (sender, dest):
+                if addr != ZERO_ADDR and addr != AVKAT_ADDR and addr not in avkat_holders:
+                    avkat_holders.add(addr)
+                    new_found += 1
+        if i % 20 == 0 or i == len(chunks):
+            print(f'    {i}/{len(chunks)} chunks…', end='\r')
+
+    # Merge into stake_raw so they get balance-fetched
+    merged = 0
+    for addr in avkat_holders:
+        if addr not in stake_raw:
+            stake_raw[addr] = {'stakedVKAT': False, 'stakedAvKAT': True, 'vkatAmount': 0.0, 'avkatAmount': 0.0}
+            merged += 1
+        elif not stake_raw[addr].get('stakedAvKAT'):
+            stake_raw[addr]['stakedAvKAT'] = True
+
+    print(f'  aVKAT holders: {len(avkat_holders):,} total, {new_found:,} new, {merged:,} merged into stakeRaw')
+    return avkat_holders, latest
+
 # ── Scan: ETH mainnet CEX transfers ────────────────────────────────────────────
-def scan_cex(state, addr_set, cex_wallets):
+def scan_cex(state, addr_set, cex_wallets, dump_raw=None):
     if not cex_wallets:
         return state['cexByAddr'], state['ethBlock']
+
+    # Build reverse map: intermediary dest -> original claimer
+    # Dumpers often transfer KAT to an intermediary wallet on KAT chain, which
+    # then bridges to ETH and deposits to a CEX.  Without this map the ETH-side
+    # scan only catches direct claimers, missing the majority of CEX deposits.
+    dest_to_claimer = {}
+    if dump_raw:
+        for claimer, raw in dump_raw.items():
+            for dest_addr in raw.get('dests', {}):
+                dest_to_claimer[dest_addr] = claimer
+    eth_senders = addr_set | set(dest_to_claimer)
 
     scan_from   = state['ethBlock'] + 1
     latest      = get_block_number(ETH_RPC)
@@ -370,7 +433,7 @@ def scan_cex(state, addr_set, cex_wallets):
         return cex_by_addr, latest
 
     chunks = [(f, min(f + ETH_LOG_CHUNK - 1, latest)) for f in range(scan_from, latest + 1, ETH_LOG_CHUNK)]
-    print(f'  CEX: {len(chunks)} ETH chunks ({scan_from:,} → {latest:,})…')
+    print(f'  CEX: {len(chunks)} ETH chunks ({scan_from:,} → {latest:,}), tracking {len(eth_senders):,} senders…')
 
     for i, (frm, to) in enumerate(chunks, 1):
         logs = eth_get_logs(ETH_RPC, {
@@ -385,14 +448,16 @@ def scan_cex(state, addr_set, cex_wallets):
                 continue
             sender = '0x' + topics[1][26:].lower()
             dest   = '0x' + topics[2][26:].lower()
-            if sender not in addr_set or dest not in cex_wallets:
+            if sender not in eth_senders or dest not in cex_wallets:
                 continue
+            # Attribute to original claimer if sender is an intermediary
+            owner = dest_to_claimer.get(sender, sender)
             amount = from_wei(log.get('data', '0x0'))
-            if sender not in cex_by_addr:
-                cex_by_addr[sender] = {'cexSent': 0.0, 'cexDests': []}
-            cex_by_addr[sender]['cexSent'] += amount
-            if dest not in cex_by_addr[sender]['cexDests']:
-                cex_by_addr[sender]['cexDests'].append(dest)
+            if owner not in cex_by_addr:
+                cex_by_addr[owner] = {'cexSent': 0.0, 'cexDests': []}
+            cex_by_addr[owner]['cexSent'] += amount
+            if dest not in cex_by_addr[owner]['cexDests']:
+                cex_by_addr[owner]['cexDests'].append(dest)
         if i % 5 == 0 or i == len(chunks):
             print(f'    {i}/{len(chunks)} chunks…', end='\r')
 
@@ -633,20 +698,26 @@ def main():
         print(f'  State: katana={state["katanaBlock"]:,}, eth={state["ethBlock"]:,}')
     print()
 
-    print('1/5 Scanning Claimed events…')
+    print('1/6 Scanning Claimed events…')
     claimed_by_addr, latest_katana = scan_claimed(state, addr_set)
     state['claimedByAddr'] = claimed_by_addr
     print()
 
-    print('2/5 Scanning Transfer events (dump + buyers + staking)…')
+    print('2/6 Scanning Transfer events (dump + buyers + staking)…')
     dump_raw, buy_raw, stake_raw = scan_transfers(state, addr_set, cex_wallets, latest_katana)
     state['dumpRaw']  = dump_raw
     state['buyRaw']   = buy_raw
     state['stakeRaw'] = stake_raw
     print()
 
-    print('3/5 Scanning ETH mainnet CEX transfers…')
-    cex_by_addr, latest_eth = scan_cex(state, addr_set, cex_wallets)
+    print('3/6 Scanning aVKAT holders (share token transfers)…')
+    avkat_holders, _ = scan_avkat_holders(state, stake_raw)
+    state['avkatHolders']    = list(avkat_holders)
+    state['avkatHolderBlock'] = latest_katana
+    print()
+
+    print('4/6 Scanning ETH mainnet CEX transfers…')
+    cex_by_addr, latest_eth = scan_cex(state, addr_set, cex_wallets, dump_raw)
     state['cexByAddr'] = cex_by_addr
     print()
 
@@ -655,14 +726,14 @@ def main():
 
     # Collect buyer + staker addresses for balance fetching
     extra_addrs = set(buy_raw.keys()) | set(stake_raw.keys())
-    print('4/5 Fetching fresh balances…')
+    print('5/6 Fetching fresh balances…')
     addr_balances, dest_balances, dest_types = get_fresh_balances(addresses, dump_raw, extra_addrs)
     print()
 
     save_state(state)
     print()
 
-    print('5/5 Building data.json…')
+    print('6/6 Building data.json…')
     address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types)
     buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances)
     stakers_data  = build_stakers_output(stake_raw, addr_balances)
