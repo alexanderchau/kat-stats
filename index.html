@@ -542,23 +542,239 @@
     }
     .footer-legend b { color: var(--text); font-weight: 700; }
     .footer-sources { color: var(--dim); }
+    /* ── SUPPLY PANEL ─────────────────────────────────────────────────────── */
+    #supply-section {
+      padding: 1rem 2.5rem;
+      border-bottom: 2px solid var(--black);
+      background: var(--cream2);
+    }
+    .supply-top {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 1rem 2rem;
+      margin-bottom: 0.75rem;
+    }
+    .supply-headline { flex: 0 0 auto; }
+    .supply-label {
+      font-family: var(--ui);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: var(--label);
+      margin-bottom: 0.2rem;
+    }
+    .supply-value {
+      font-family: var(--mono);
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--text);
+      font-feature-settings: "tnum" 1;
+      line-height: 1;
+    }
+    .supply-pct {
+      font-size: 0.88rem;
+      color: var(--dim);
+      margin-left: 0.5rem;
+      font-weight: 400;
+    }
+    .supply-breakdown {
+      display: flex;
+      gap: 1.5rem 2rem;
+      flex-wrap: wrap;
+      margin-left: auto;
+      align-items: flex-end;
+    }
+    .supply-item { display: flex; flex-direction: column; gap: 1px; }
+    .supply-item-label {
+      font-family: var(--ui);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      color: var(--dim);
+    }
+    .supply-item-val {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      font-feature-settings: "tnum" 1;
+    }
+    .supply-item-pct {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--dim);
+      font-feature-settings: "tnum" 1;
+    }
+    .protocol-bar-label {
+      font-family: var(--ui);
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      color: var(--label);
+      margin-bottom: 0.35rem;
+    }
+    .protocol-sub {
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+      color: var(--dim);
+    }
+    .protocol-bar {
+      display: flex;
+      height: 26px;
+      border: 2px solid var(--black);
+      overflow: hidden;
+      margin-bottom: 0.45rem;
+    }
+    .proto-seg {
+      position: relative;
+      display: flex;
+      align-items: center;
+      overflow: visible;
+      cursor: default;
+      transition: filter 0.1s;
+      flex-shrink: 0;
+    }
+    .proto-seg:hover { filter: brightness(1.18); z-index: 5; }
+    .proto-seg-label {
+      font-family: var(--ui);
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.92);
+      padding: 0 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+      pointer-events: none;
+    }
+    .proto-seg[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--black);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      padding: 6px 10px;
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.35);
+      border: 2px solid var(--black);
+      pointer-events: none;
+    }
+    .proto-legend {
+      display: flex;
+      gap: 0.3rem 1.2rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .proto-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text);
+      position: relative;
+      cursor: default;
+    }
+    .proto-key::before {
+      content: '';
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      background: var(--c, #999);
+      border: 1.5px solid var(--black);
+      flex-shrink: 0;
+    }
+    .proto-key[data-tip] { cursor: help; text-decoration: underline dotted var(--dim); }
+    .proto-key[data-tip]:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 0;
+      background: var(--black);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 5px 9px;
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+      pointer-events: none;
+    }
+
     /* ── Buyers section ──────────────────────────────────────────────────── */
     .section-header {
       display: flex; align-items: center; gap: 12px;
-      margin: 40px 0 16px;
-      padding-top: 32px;
-      border-top: 1px solid var(--border);
+      padding: 1rem 2.5rem 0.75rem;
+      border-bottom: 2px solid var(--black);
+      background: var(--cream2);
     }
-    .section-header h2 { margin: 0; font-size: 1.1rem; letter-spacing: 0.08em; color: var(--text); }
-    .section-header .section-sub { color: var(--dim); font-size: 0.8rem; }
-    .buyer-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .section-header h2 {
+      margin: 0;
+      font-family: var(--ui);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .section-header .section-sub {
+      color: var(--dim);
+      font-size: 0.82rem;
+      font-family: var(--mono);
+    }
+    .buyer-controls {
+      display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap;
+      padding: 0.85rem 2.5rem;
+      border-bottom: 2px solid var(--black);
+      background: var(--cream2);
+    }
     .badge-source-dex   { background: #b3d9ff; color: #000; }
     .badge-source-cex   { background: #ffd9b3; color: #000; }
     .badge-source-both  { background: #d9b3ff; color: #000; }
-    .badge-airdrop      { background: #b3ffcc; color: #000; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
-    .badge-bought       { background: #b3d9ff; color: #000; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
-    .check-staked       { color: #4caf50; font-weight: 700; }
-    .dash-unstaked      { color: var(--dim); }
+    .badge-pure-buyer   { background: #b3d9ff; color: #000; }
+    .badge-airdrop-buyer { background: var(--card-claimed); color: #000; }
+    .badge-airdrop {
+      display: inline-block;
+      padding: 0.15rem 0.4rem;
+      border: 2px solid var(--black);
+      border-radius: 0;
+      font-family: var(--ui);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--card-claimable);
+      color: #000;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .badge-bought {
+      display: inline-block;
+      padding: 0.15rem 0.4rem;
+      border: 2px solid var(--black);
+      border-radius: 0;
+      font-family: var(--ui);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: #b3d9ff;
+      color: #000;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .check-staked { color: var(--green); font-weight: 700; font-family: var(--mono); }
+    .dash-unstaked { color: var(--dim); font-family: var(--mono); }
   
 
     /* ── TABS ─────────────────────────────────────────────────────────────────── */
@@ -608,19 +824,10 @@
     <div class="stat-label">Total KAT Claimed</div>
     <div class="stat-value yellow" id="stat-claimed">—</div>
   </div>
-  <div class="stat-card" data-filter="inactive">
-    <div class="stat-label">Inactive Addrs</div>
-    <div class="stat-value" id="stat-inactive">—</div>
-  </div>
   <div class="stat-card" data-filter="partial">
     <div class="stat-label">Still Claimable</div>
     <div class="stat-value blue" id="stat-claimable">—</div>
     <div class="stat-sub" id="stat-claimable-sub"></div>
-  </div>
-  <div class="stat-card" data-filter="farmer">
-    <div class="stat-label">Confirmed Farmers</div>
-    <div class="stat-value red" id="stat-farmers">—</div>
-    <div class="stat-sub" id="stat-farmers-sub"></div>
   </div>
   <div class="stat-card" data-filter="hodler">
     <div class="stat-label">Hodlers</div>
@@ -641,6 +848,49 @@
   <div class="progress-label" id="progress-label">Initializing...</div>
 </div>
 
+<div id="supply-section">
+  <div class="supply-top">
+    <div class="supply-headline">
+      <div class="supply-label">Total KAT in Circulation</div>
+      <div class="supply-value">568.8M <span class="supply-pct">5.69% of 10B total supply</span></div>
+    </div>
+    <div class="supply-breakdown">
+      <div class="supply-item">
+        <span class="supply-item-label">Merkl Rewards</span>
+        <span class="supply-item-val num-blue">528.8M</span>
+        <span class="supply-item-pct">5.29%</span>
+      </div>
+      <div class="supply-item">
+        <span class="supply-item-label">EtherFi Vault</span>
+        <span class="supply-item-val">20M</span>
+        <span class="supply-item-pct">0.20%</span>
+      </div>
+      <div class="supply-item">
+        <span class="supply-item-label">Lombard Vault</span>
+        <span class="supply-item-val">20M</span>
+        <span class="supply-item-pct">0.20%</span>
+      </div>
+    </div>
+  </div>
+  <div class="protocol-bar-label">Merkl Distribution by Protocol <span class="protocol-sub">(stratified sample · approx)</span></div>
+  <div class="protocol-bar">
+    <div class="proto-seg" style="width:68.6%;background:var(--blue)" data-tip="Katana Vaults: 68.6% · ~362M KAT · epoch-based vault rewards"><span class="proto-seg-label">Katana Vaults</span></div>
+    <div class="proto-seg" style="width:19.9%;background:var(--amber)" data-tip="SushiSwap: 19.9% · ~105M KAT · LP 52% + swap fees 48%"><span class="proto-seg-label">SushiSwap</span></div>
+    <div class="proto-seg" style="width:5.6%;background:var(--violet)" data-tip="ERC20 vault: 5.6% · ~30M KAT"><span class="proto-seg-label">ERC20</span></div>
+    <div class="proto-seg" style="width:2.6%;background:var(--orange)" data-tip="Charm: 2.6% · ~14M KAT"><span class="proto-seg-label"></span></div>
+    <div class="proto-seg" style="width:2.5%;background:var(--green)" data-tip="Morpho: 2.5% · ~13M KAT"><span class="proto-seg-label"></span></div>
+    <div class="proto-seg" style="flex:1;background:var(--dim)" data-tip="Other / unclassified: ~0.8%"><span class="proto-seg-label"></span></div>
+  </div>
+  <div class="proto-legend">
+    <span class="proto-key" style="--c:var(--blue)">Katana Vaults 68.6%</span>
+    <span class="proto-key" style="--c:var(--amber)" data-tip="LP 52% + swap fees 48%">SushiSwap 19.9% ⓘ</span>
+    <span class="proto-key" style="--c:var(--violet)">ERC20 vault 5.6%</span>
+    <span class="proto-key" style="--c:var(--orange)">Charm 2.6%</span>
+    <span class="proto-key" style="--c:var(--green)">Morpho 2.5%</span>
+    <span class="proto-key" style="--c:var(--dim)">Other 0.8%</span>
+  </div>
+</div>
+
 <div id="error-msg" class="error-msg"></div>
 
 <div class="tab-nav">
@@ -658,7 +908,7 @@
     </button>
     <ul class="custom-select-menu" id="status-filter-menu">
       <li data-value="">All statuses</li>
-      <li data-value="farmer">Farmers (&gt;50%)</li>
+      <li data-value="farmer">Dumpers (&gt;50%)</li>
       <li data-value="partial">Partial (5–50%)</li>
       <li data-value="hodler">Hodlers (&lt;5%)</li>
       <li data-value="inactive">Inactive</li>
@@ -666,7 +916,7 @@
     </ul>
     <select id="status-filter" style="display:none">
       <option value="">All statuses</option>
-      <option value="farmer">Farmers (&gt;50%)</option>
+      <option value="farmer">Dumpers (&gt;50%)</option>
       <option value="partial">Partial (5–50%)</option>
       <option value="hodler">Hodlers (&lt;5%)</option>
       <option value="inactive">Inactive</option>
@@ -1055,11 +1305,8 @@ function updateStats() {
 
   document.getElementById('stat-total').textContent        = `${(Object.keys(results).length).toLocaleString()} / ${n}`;
   document.getElementById('stat-claimed').textContent  = fmtNum(totalClaimed, 0);
-  document.getElementById('stat-inactive').textContent = inactiveCount.toLocaleString();
   document.getElementById('stat-claimable').textContent    = fmtNum(totalClaimable, 0);
   document.getElementById('stat-claimable-sub').textContent = partials > 0 ? `${partials} partial holders` : '';
-  document.getElementById('stat-farmers').textContent      = farmers.toLocaleString();
-  document.getElementById('stat-farmers-sub').textContent  = n > 0 ? `${((farmers / n) * 100).toFixed(1)}% of ${n}` : '';
   document.getElementById('stat-hodlers').textContent      = hodlers.toLocaleString();
   document.getElementById('stat-hodlers-sub').textContent  = n > 0 ? `${((hodlers / n) * 100).toFixed(1)}% of ${n}` : '';
   const stakerCount  = all.filter(d => d.avkat > 0).length;
@@ -1218,7 +1465,7 @@ function renderBuyersTable() {
       <td class="addr-cell" onclick="copyAddr(this,'${b.address}')" title="Click to copy">
         <span class="addr-short">${shortAddr(b.address)}</span>${airdropBadge}
       </td>
-      <td>${b.category === 'pure_buyer' ? 'Buyer' : 'Airdrop+'}</td>
+      <td>${b.category === 'pure_buyer' ? '<span class="badge badge-pure-buyer">Buyer</span>' : '<span class="badge badge-airdrop-buyer">Airdrop+</span>'}</td>
       <td>${sourceBadge(b.buySource)}</td>
       <td class="num"><span class="num-blue">${fmtNum(b.katReceived)}</span></td>
       <td class="num">${b.txCount}</td>
