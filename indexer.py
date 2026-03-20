@@ -660,7 +660,7 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
     return out
 
 # ── Build buyers output ────────────────────────────────────────────────────────
-def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
+def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances, vkat_locks):
     out = []
     for addr, b in buy_raw.items():
         sources = b.get('sources', [])
@@ -670,12 +670,12 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
             buy_source = sources[0]
         else:
             buy_source = 'dex'
-        s = stake_raw.get(addr, {})
-        staked_vkat  = s.get('stakedVKAT', False)
-        staked_avkat = s.get('stakedAvKAT', False)
         kat_net = b['katReceived'] - b.get('katSold', 0.0)
         bals = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
-        kat_balance = bals['kat']
+        kat_balance = bals['kat'] + bals['avkat']  # Include avKAT in held total
+        # Derive staking booleans from on-chain state, not stale events
+        has_vkat  = addr in vkat_locks and vkat_locks[addr]['amount'] > 0
+        has_avkat = bals['avkat'] > 0
         # Include only if net purchased via DEX/CEX >= 1000
         if kat_net < 1000:
             continue
@@ -688,9 +688,9 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances):
             'katReceived': round(b['katReceived'], 6),
             'katSold':     round(b.get('katSold', 0.0), 6),
             'txCount':     b['txCount'],
-            'stakedVKAT':  staked_vkat,
-            'stakedAvKAT': staked_avkat,
-            'staked':      staked_vkat or staked_avkat,
+            'stakedVKAT':  has_vkat,
+            'stakedAvKAT': has_avkat,
+            'staked':      has_vkat or has_avkat,
         })
     out.sort(key=lambda x: x['katNet'], reverse=True)
     return out
@@ -720,8 +720,8 @@ def build_stakers_output(stake_raw, addr_balances, vkat_locks):
             'vkatAmount':  round(vkat_amt, 6),
             'avkatAmount': round(avkat_bal, 6),
             'totalStaked': round(total, 6),
-            'stakedVKAT':  s.get('stakedVKAT', False),
-            'stakedAvKAT': s.get('stakedAvKAT', False),
+            'stakedVKAT':  vkat_amt > 0,
+            'stakedAvKAT': avkat_bal > 0,
         })
     out.sort(key=lambda x: x['totalStaked'], reverse=True)
     return out
@@ -793,7 +793,7 @@ def main():
     print('6/6 Building data.json…')
     vkat_locks    = enumerate_vkat_locks()
     address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types)
-    buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances)
+    buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances, vkat_locks)
     stakers_data  = build_stakers_output(stake_raw, addr_balances, vkat_locks)
 
     total    = len(address_data)
