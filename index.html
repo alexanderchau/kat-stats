@@ -847,9 +847,33 @@
     .tab-btn.active { color: var(--text); border-bottom-color: var(--black); }
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
+    /* Addressbook modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; }
+    .modal-overlay.open { display:flex; align-items:center; justify-content:center; }
+    .modal-box { background:var(--cream); border:2px solid var(--black); max-width:800px; width:90vw; max-height:80vh; display:flex; flex-direction:column; }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:2px solid var(--black); background:var(--black); color:#fff; }
+    .modal-header h2 { margin:0; font-family:var(--ui); font-size:0.9rem; text-transform:uppercase; letter-spacing:0.08em; }
+    .modal-close { background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer; padding:0 0.5rem; }
+    .modal-body { overflow-y:auto; padding:0; }
+    .modal-body table { width:100%; border-collapse:collapse; }
+    .modal-body th { background:var(--cream2); position:sticky; top:0; padding:0.5rem 1rem; font-family:var(--ui); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; text-align:left; border-bottom:1px solid var(--black); }
+    .modal-body td { padding:0.4rem 1rem; border-bottom:1px solid #e0d8c8; font-size:0.85rem; }
+    .modal-body tr:hover { background:var(--cream2); }
+    .modal-body .ab-addr { font-family:var(--mono); font-size:0.78rem; color:var(--dim); }
   </style>
 </head>
 <body>
+
+<!-- Addressbook Modal -->
+<div class="modal-overlay" id="addressbook-modal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Addressbook</h2>
+      <button class="modal-close" onclick="document.getElementById('addressbook-modal').classList.remove('open')">&times;</button>
+    </div>
+    <div class="modal-body" id="addressbook-body"></div>
+  </div>
+</div>
 
 <header>
   <div class="header-left">
@@ -879,9 +903,9 @@
   <div class="progress-label" id="progress-label">Initializing...</div>
 </div>
 <div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-label">Addresses</div>
-    <div class="stat-value" id="stat-addr-count">—</div>
+  <div class="stat-card" style="cursor:pointer" onclick="showAddressbook()">
+    <div class="stat-label">Addressbook</div>
+    <div class="stat-value" id="stat-addr-count" style="font-size:1.4rem">—</div>
     <div class="stat-sub" id="stat-snapshot-sub">loading…</div>
   </div>
   <div class="stat-card">
@@ -1673,6 +1697,20 @@ function exportLabels() {
   URL.revokeObjectURL(a.href);
 }
 
+function showAddressbook() {
+  const entries = Object.entries(CEX_LABELS).concat(Object.entries(LABELS));
+  // Dedupe by address, prefer LABELS over CEX_LABELS
+  const map = {};
+  entries.forEach(([addr, label]) => { map[addr.toLowerCase()] = { addr, label }; });
+  const sorted = Object.values(map).sort((a, b) => a.label.localeCompare(b.label));
+  const rows = sorted.map(e =>
+    `<tr><td><b>${e.label}</b></td><td class="ab-addr"><a href="https://katanascan.com/address/${e.addr}" target="_blank" rel="noopener">${e.addr}</a></td></tr>`
+  ).join('');
+  document.getElementById('addressbook-body').innerHTML =
+    `<table><thead><tr><th>Label</th><th>Address</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('addressbook-modal').classList.add('open');
+}
+
 function exportCSV() {
   const rows = getFilteredRows();
   const header = ['Address','KAT Claimed','KAT Balance','KAT Staked','KAT Sold','KAT Sent','Sent To','DeFi Positions','Dump %','Status'];
@@ -2234,8 +2272,9 @@ async function main() {
   const timeStr = generatedAt
     ? generatedAt.toLocaleString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' UTC'
     : 'unknown';
-  document.getElementById('stat-addr-count').textContent = ADDRESSES.length.toLocaleString();
-  document.getElementById('stat-snapshot-sub').textContent = timeStr;
+  const labelCount = Object.keys(CEX_LABELS).length + Object.keys(LABELS).length;
+  document.getElementById('stat-addr-count').textContent = `${labelCount} labelled`;
+  document.getElementById('stat-snapshot-sub').textContent = `${ADDRESSES.length} scanned · ${timeStr}`;
   document.getElementById('progress-section').style.display = 'none';
 
   updateStats();
