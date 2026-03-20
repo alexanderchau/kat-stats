@@ -1451,7 +1451,8 @@ function shortAddr(a) {
   return `<b>${a.slice(0, 6)}</b><span class="addr-ellipsis">…</span>${a.slice(-4)}`;
 }
 function getLabel(addr) {
-  return LABELS[addr] || CEX_LABELS[addr] || null;
+  const a = addr.toLowerCase();
+  return LABELS[addr] || LABELS[a] || CEX_LABELS[a] || null;
 }
 function addrDisplay(addr) {
   const label = getLabel(addr);
