@@ -113,6 +113,7 @@
       grid-template-columns: repeat(6, 1fr);
       border-bottom: 2px solid var(--black);
     }
+    #tab-dumpers .stats-grid { grid-template-columns: repeat(5, 1fr); }
     @media (max-width: 960px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
@@ -830,6 +831,23 @@
   </div>
 </header>
 
+<div id="progress-section">
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <div class="progress-label" id="progress-label">Initializing...</div>
+</div>
+
+<div id="error-msg" class="error-msg"></div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" data-tab="dumpers">Pre-TGE Farmers</button>
+  <button class="tab-btn" data-tab="buyers">New KAT Buyers</button>
+  <button class="tab-btn" data-tab="supply">Supply</button>
+  <button class="tab-btn" data-tab="stakers">KAT Stakers</button>
+</div>
+
+<div id="tab-dumpers" class="tab-pane active">
 <div class="stats-grid">
   <div class="stat-card">
     <div class="stat-label">Total KAT Claimed</div>
@@ -850,24 +868,12 @@
     <div class="stat-value" style="color:var(--violet)" id="stat-staked">—</div>
     <div class="stat-sub" id="stat-staked-sub"></div>
   </div>
-</div>
-
-<div id="progress-section">
-  <div class="progress-track">
-    <div class="progress-fill" id="progress-fill"></div>
+  <div class="stat-card" data-filter="inactive">
+    <div class="stat-label">Never Claimed</div>
+    <div class="stat-value" id="stat-inactive">—</div>
+    <div class="stat-sub" id="stat-inactive-sub"></div>
   </div>
-  <div class="progress-label" id="progress-label">Initializing...</div>
 </div>
-
-<div id="error-msg" class="error-msg"></div>
-
-<div class="tab-nav">
-  <button class="tab-btn active" data-tab="dumpers">Pre-TGE Farmers</button>
-  <button class="tab-btn" data-tab="buyers">New KAT Buyers</button>
-  <button class="tab-btn" data-tab="supply">Supply</button>
-</div>
-
-<div id="tab-dumpers" class="tab-pane active">
 <div class="controls">
   <input class="filter-input" id="filter-input" type="text" placeholder="Address… (/ to focus)">
   <div class="custom-select-wrap" id="status-filter-wrap">
@@ -998,14 +1004,14 @@
   <table id="buyer-table">
     <thead>
       <tr>
-        <th data-bcol="rank">#<span class="sort-arrow"></span></th>
-        <th data-bcol="address">Address<span class="sort-arrow"></span></th>
-        <th data-bcol="category">Type<span class="sort-arrow"></span></th>
-        <th data-bcol="buySource">Source<span class="sort-arrow"></span></th>
-        <th data-bcol="katReceived" class="num sorted" data-tip="Total KAT received from pool/CEX swaps">KAT Bought<span class="sort-arrow">↓</span></th>
-        <th data-bcol="txCount" class="num" data-tip="Number of buy transactions"># Buys<span class="sort-arrow"></span></th>
-        <th data-bcol="stakedVKAT" class="num" data-tip="Locked KAT into vKAT voting escrow (0x4d6f…)">vKAT<span class="sort-arrow"></span></th>
-        <th data-bcol="stakedAvKAT" class="num" data-tip="Deposited KAT into avKAT vault (0x7231…)">avKAT<span class="sort-arrow"></span></th>
+        <th data-bcol="rank" data-tip="Rank by KAT held (net)">#<span class="sort-arrow"></span></th>
+        <th data-bcol="address" data-tip="Wallet address — click to copy">Address<span class="sort-arrow"></span></th>
+        <th data-bcol="category" data-tip="Pure Buyer = no pre-TGE airdrop allocation. Airdrop+ = also received pre-TGE farming rewards">Type<span class="sort-arrow"></span></th>
+        <th data-bcol="buySource" data-tip="DEX = bought via Sushiswap pool. CEX = transferred in from a centralised exchange wallet. Both = both sources detected">Source<span class="sort-arrow"></span></th>
+        <th data-bcol="katNet" class="num sorted" data-tip="Net KAT held = total received from pools/CEX minus KAT sent back to pools. Market makers who bought and sold everything appear at 0 and are excluded">KAT Held<span class="sort-arrow">↓</span></th>
+        <th data-bcol="txCount" class="num" data-tip="Number of inbound buy transactions (pool→wallet or CEX→wallet transfers)"># Buys<span class="sort-arrow"></span></th>
+        <th data-bcol="stakedVKAT" class="num" data-tip="Has locked KAT into vKAT voting escrow — indicates long-term conviction, not a flipper">vKAT<span class="sort-arrow"></span></th>
+        <th data-bcol="stakedAvKAT" class="num" data-tip="Has deposited KAT into avKAT auto-compounding vault">avKAT<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
     </thead>
@@ -1058,6 +1064,63 @@
     <span class="proto-key" style="--c:var(--green)">Morpho 2.5%</span>
     <span class="proto-key" style="--c:var(--dim)">Other 0.8%</span>
   </div>
+</div>
+</div>
+
+<div id="tab-stakers" class="tab-pane">
+
+<div class="stats-grid" id="staker-stats-grid">
+  <div class="stat-card" style="background:var(--card-staked)">
+    <div class="stat-label">Total KAT Staked</div>
+    <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
+  </div>
+  <div class="stat-card" style="background:var(--card-staked)">
+    <div class="stat-label">% of Circ Supply</div>
+    <div class="stat-value" style="color:var(--violet)" id="sstat-pct-circ">—</div>
+    <div class="stat-sub" id="sstat-pct-circ-sub"></div>
+  </div>
+  <div class="stat-card" style="background:var(--card-staked)">
+    <div class="stat-label"># Stakers</div>
+    <div class="stat-value" id="sstat-count">—</div>
+  </div>
+  <div class="stat-card" style="background:var(--card-staked)">
+    <div class="stat-label">vKAT Locked</div>
+    <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
+  </div>
+  <div class="stat-card" style="background:var(--card-staked)">
+    <div class="stat-label">avKAT Deposited</div>
+    <div class="stat-value" style="color:var(--violet)" id="sstat-avkat">—</div>
+  </div>
+  <div class="stat-card" style="background:var(--card-staked)">
+    <div class="stat-label">vKAT / avKAT Split</div>
+    <div class="stat-value" id="sstat-split">—</div>
+  </div>
+</div>
+
+<div class="buyer-controls">
+  <input class="filter-input" id="staker-filter-input" type="text" placeholder="Address…" style="width:260px">
+  <span class="controls-sep">|</span>
+  <button class="btn" id="staker-export-btn">↓ Export CSV</button>
+  <div class="controls-right" id="staker-table-count"></div>
+</div>
+
+<div class="table-wrap">
+  <table id="staker-table">
+    <thead>
+      <tr>
+        <th data-scol="rank">#<span class="sort-arrow"></span></th>
+        <th data-scol="address">Address<span class="sort-arrow"></span></th>
+        <th data-scol="vkatAmount" class="num" data-tip="KAT sent to vKAT voting escrow (0x4d6f…)">vKAT Amount<span class="sort-arrow"></span></th>
+        <th data-scol="avkatAmount" class="num" data-tip="KAT sent to avKAT auto-compounding vault (0x7231…)">avKAT Amount<span class="sort-arrow"></span></th>
+        <th data-scol="totalStaked" class="num sorted" data-tip="Total KAT staked (vKAT + avKAT)">Total Staked<span class="sort-arrow">↓</span></th>
+        <th data-scol="type" data-tip="vKAT = voting escrow only, avKAT = vault only, Both = both">Type<span class="sort-arrow"></span></th>
+        <th>Links</th>
+      </tr>
+    </thead>
+    <tbody id="staker-table-body">
+      <tr class="loading-row"><td colspan="7"><span class="spinner"></span> Loading…</td></tr>
+    </tbody>
+  </table>
 </div>
 </div>
 
@@ -1216,6 +1279,7 @@ function getFilteredRows() {
   if (filterText)   rows = rows.filter(d => d.address.includes(filterText.toLowerCase()));
   if (filterStatus === 'staked') rows = rows.filter(d => d.avkat > 0);
   else if (filterStatus) rows = rows.filter(d => d.status === filterStatus);
+  else rows = rows.filter(d => d.status !== 'inactive'); // hidden by default — click "Never Claimed" card to show
   if (minAmount > 0) rows = rows.filter(d => (d.total || 0) >= minAmount);
 
   rows.sort((a, b) => {
@@ -1384,6 +1448,8 @@ function updateStats() {
   const totalStaked  = all.reduce((s, d) => s + (d.avkat || 0), 0);
   document.getElementById('stat-staked').textContent      = fmtNum(totalStaked, 0);
   document.getElementById('stat-staked-sub').textContent  = stakerCount > 0 ? `${stakerCount} stakers` : '';
+  document.getElementById('stat-inactive').textContent    = inactiveCount.toLocaleString();
+  document.getElementById('stat-inactive-sub').textContent = inactiveCount > 0 ? `never claimed` : '';
 }
 
 // ── COPY ──────────────────────────────────────────────────────────────────────
@@ -1468,7 +1534,7 @@ let buyerAddrs       = new Set();
 let buyerCatFilter   = '';
 let buyerStakeFilter = '';
 let buyerFilterText  = '';
-let buyerSortCol     = 'katReceived';
+let buyerSortCol     = 'katNet';
 let buyerSortDir     = -1;
 
 function getBuyerFilteredRows() {
@@ -1538,7 +1604,7 @@ function renderBuyersTable() {
       </td>
       <td>${b.category === 'pure_buyer' ? '<span class="badge badge-pure-buyer">Buyer</span>' : '<span class="badge badge-airdrop-buyer">Airdrop+</span>'}</td>
       <td>${sourceBadge(b.buySource)}</td>
-      <td class="num"><span class="num-blue">${fmtNum(b.katReceived)}</span></td>
+      <td class="num"><span class="num-blue">${fmtNum(b.katNet)}</span></td>
       <td class="num">${b.txCount}</td>
       <td class="num">${vkatCell}</td>
       <td class="num">${avkatCell}</td>
@@ -1554,10 +1620,10 @@ function renderBuyersTable() {
 
 function exportBuyerCSV() {
   const rows   = getBuyerFilteredRows();
-  const header = ['Address','Category','Buy Source','KAT Bought','# Buys','vKAT','avKAT'];
+  const header = ['Address','Category','Buy Source','KAT Held','KAT Received','KAT Sold','# Buys','vKAT','avKAT'];
   const lines  = rows.map(b => [
     b.address, b.category, b.buySource,
-    b.katReceived.toFixed(6), b.txCount,
+    b.katNet.toFixed(6), b.katReceived.toFixed(6), (b.katSold||0).toFixed(6), b.txCount,
     b.stakedVKAT  ? 'yes' : 'no',
     b.stakedAvKAT ? 'yes' : 'no',
   ].join(','));
@@ -1565,6 +1631,111 @@ function exportBuyerCSV() {
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
   Object.assign(document.createElement('a'), { href: url, download: 'kat-buyers.csv' }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+// ── STAKERS STATE ─────────────────────────────────────────────────────────────
+let stakerData       = [];
+let stakerFilterText = '';
+let stakerSortCol    = 'totalStaked';
+let stakerSortDir    = -1;
+let circSupply       = 0;
+
+function getStakerFilteredRows() {
+  let rows = stakerData.slice();
+  if (stakerFilterText) rows = rows.filter(s => s.address.includes(stakerFilterText));
+  rows.sort((a, b) => {
+    let av = a[stakerSortCol], bv = b[stakerSortCol];
+    if (stakerSortCol === 'type') {
+      av = stakerType(a); bv = stakerType(b);
+      return stakerSortDir * av.localeCompare(bv);
+    }
+    if (typeof av === 'string') return stakerSortDir * av.localeCompare(bv);
+    return stakerSortDir * ((av || 0) - (bv || 0));
+  });
+  return rows;
+}
+
+function stakerType(s) {
+  if (s.stakedVKAT && s.stakedAvKAT) return 'Both';
+  if (s.stakedVKAT) return 'vKAT';
+  return 'avKAT';
+}
+
+function updateStakerStats() {
+  const all          = stakerData;
+  const totalStaked  = all.reduce((s, d) => s + d.totalStaked, 0);
+  const totalVkat    = all.reduce((s, d) => s + d.vkatAmount, 0);
+  const totalAvkat   = all.reduce((s, d) => s + d.avkatAmount, 0);
+  const pctCirc      = circSupply > 0 ? (totalStaked / circSupply * 100) : 0;
+
+  document.getElementById('sstat-total-staked').textContent = fmtNum(totalStaked, 0);
+  document.getElementById('sstat-pct-circ').textContent     = pctCirc > 0 ? pctCirc.toFixed(1) + '%' : '—';
+  document.getElementById('sstat-pct-circ-sub').textContent = circSupply > 0 ? `of ${fmtNum(circSupply, 0)} circ` : '';
+  document.getElementById('sstat-count').textContent        = all.length.toLocaleString();
+  document.getElementById('sstat-vkat').textContent         = fmtNum(totalVkat, 0);
+  document.getElementById('sstat-avkat').textContent        = fmtNum(totalAvkat, 0);
+  const vPct = totalStaked > 0 ? (totalVkat / totalStaked * 100).toFixed(0) : 0;
+  const aPct = totalStaked > 0 ? (totalAvkat / totalStaked * 100).toFixed(0) : 0;
+  document.getElementById('sstat-split').textContent        = `${vPct}/${aPct}`;
+}
+
+function renderStakersTable() {
+  const rows    = getStakerFilteredRows();
+  const countEl = document.getElementById('staker-table-count');
+  countEl.textContent = stakerFilterText
+    ? `${rows.length} / ${stakerData.length}`
+    : `${stakerData.length.toLocaleString()} stakers`;
+
+  const tbody = document.getElementById('staker-table-body');
+  if (stakerData.length === 0) {
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="7">No staker data — run: python3 indexer.py --full</td></tr>';
+    return;
+  }
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="7">No matching stakers</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((s, i) => {
+    const type = stakerType(s);
+    const typeBadge = type === 'Both'
+      ? '<span class="badge" style="background:var(--violet);color:#fff">Both</span>'
+      : type === 'vKAT'
+        ? '<span class="badge" style="background:#9933ff;color:#fff">vKAT</span>'
+        : '<span class="badge" style="background:#b366ff;color:#fff">avKAT</span>';
+    return `<tr>
+      <td>${i + 1}</td>
+      <td class="addr-cell" onclick="copyAddr(this,'${s.address}')" title="Click to copy">
+        <span class="addr-short">${shortAddr(s.address)}</span>
+      </td>
+      <td class="num">${s.vkatAmount > 0 ? `<span class="num-blue">${fmtNum(s.vkatAmount)}</span>` : '—'}</td>
+      <td class="num">${s.avkatAmount > 0 ? `<span class="num-blue">${fmtNum(s.avkatAmount)}</span>` : '—'}</td>
+      <td class="num"><span class="num-blue">${fmtNum(s.totalStaked)}</span></td>
+      <td>${typeBadge}</td>
+      <td>
+        <div class="ext-links">
+          <a class="ext-link" href="https://katanascan.com/address/${s.address}" target="_blank" rel="noopener">explr</a>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function exportStakerCSV() {
+  const rows   = getStakerFilteredRows();
+  const header = ['Address','vKAT Amount','avKAT Amount','Total Staked','Type'];
+  const lines  = rows.map(s => [
+    s.address,
+    s.vkatAmount.toFixed(6),
+    s.avkatAmount.toFixed(6),
+    s.totalStaked.toFixed(6),
+    stakerType(s),
+  ].join(','));
+  const csv  = [header.join(','), ...lines].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), { href: url, download: 'kat-stakers.csv' }).click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
@@ -1798,6 +1969,34 @@ async function main() {
       th.classList.add('sorted');
       th.querySelector('.sort-arrow').textContent = buyerSortDir === -1 ? '↓' : '↑';
       renderBuyersTable();
+    });
+  });
+
+  // ── Stakers section ────────────────────────────────────────────────────────
+  stakerData = data.stakers || [];
+  circSupply = data.meta?.circSupply || 0;
+  updateStakerStats();
+  renderStakersTable();
+
+  document.getElementById('staker-filter-input').addEventListener('input', e => {
+    stakerFilterText = e.target.value.trim().toLowerCase();
+    renderStakersTable();
+  });
+
+  document.getElementById('staker-export-btn').addEventListener('click', exportStakerCSV);
+
+  document.querySelectorAll('th[data-scol]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.scol;
+      if (stakerSortCol === col) { stakerSortDir *= -1; }
+      else { stakerSortCol = col; stakerSortDir = (col === 'address' || col === 'type') ? 1 : -1; }
+      document.querySelectorAll('th[data-scol]').forEach(t => {
+        t.classList.remove('sorted');
+        t.querySelector('.sort-arrow').textContent = '';
+      });
+      th.classList.add('sorted');
+      th.querySelector('.sort-arrow').textContent = stakerSortDir === -1 ? '↓' : '↑';
+      renderStakersTable();
     });
   });
 }

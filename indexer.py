@@ -113,6 +113,12 @@ def from_wei(hex_val):
     except Exception:
         return 0.0
 
+def fmtM(n):
+    if n >= 1e9: return f'{n/1e9:.2f}B'
+    if n >= 1e6: return f'{n/1e6:.2f}M'
+    if n >= 1e3: return f'{n/1e3:.1f}K'
+    return f'{n:.0f}'
+
 def balance_of(token, wallet, url=KATANA_RPC):
     padded = wallet.replace('0x', '').lower().zfill(64)
     data   = '0x70a08231' + padded
@@ -166,9 +172,15 @@ def disposed(d):
     return d.get('moved', 0) + d.get('transferred', 0) + d.get('bridged', 0)
 
 def classify(d):
-    if d['claimed'] == 0:
+    total_out = disposed(d)
+    # Only inactive if truly zero — no Merkl claim AND no KAT activity at all
+    if d['claimed'] == 0 and total_out == 0 and d.get('balance', 0) == 0:
         return 'inactive'
-    ratio = min(1.0, disposed(d) / d['claimed'])
+    # Use claimed as denominator; fall back to balance+outflows for non-Merkl wallets
+    denom = d['claimed'] if d['claimed'] > 0 else d.get('balance', 0) + total_out
+    if denom == 0:
+        return 'inactive'
+    ratio = min(1.0, total_out / denom)
     if ratio > 0.5:  return 'farmer'
     if ratio > 0.05: return 'partial'
     return 'hodler'
@@ -250,11 +262,17 @@ def scan_transfers(state, addr_set, cex_wallets, latest_block):
         # ── Staking: to = vKAT escrow or avKAT vault ──
         if dest in STAKE_DESTS:
             if sender not in stake_raw:
-                stake_raw[sender] = {'stakedVKAT': False, 'stakedAvKAT': False}
+                stake_raw[sender] = {'stakedVKAT': False, 'stakedAvKAT': False, 'vkatAmount': 0.0, 'avkatAmount': 0.0}
+            # Backfill amount fields for old state entries
+            if 'vkatAmount' not in stake_raw[sender]:
+                stake_raw[sender]['vkatAmount'] = 0.0
+                stake_raw[sender]['avkatAmount'] = 0.0
             if dest == VOTING_ESCROW:
                 stake_raw[sender]['stakedVKAT'] = True
+                stake_raw[sender]['vkatAmount'] += amount
             else:
                 stake_raw[sender]['stakedAvKAT'] = True
+                stake_raw[sender]['avkatAmount'] += amount
 
         # ── Buyers: from = pool or CEX → to = external wallet ──
         if (sender in buy_sources
@@ -263,11 +281,15 @@ def scan_transfers(state, addr_set, cex_wallets, latest_block):
                 and dest not in KAT_POOL_ADDRS):
             source = 'cex' if sender in cex_wallets else 'dex'
             if dest not in buy_raw:
-                buy_raw[dest] = {'katReceived': 0.0, 'txCount': 0, 'sources': []}
+                buy_raw[dest] = {'katReceived': 0.0, 'katSold': 0.0, 'txCount': 0, 'sources': []}
             buy_raw[dest]['katReceived'] += amount
             buy_raw[dest]['txCount'] += 1
             if source not in buy_raw[dest]['sources']:
                 buy_raw[dest]['sources'].append(source)
+
+        # ── Buyer sells: known buyer sending KAT back to a pool ──
+        if sender in buy_raw and dest in KAT_POOL_ADDRS:
+            buy_raw[sender]['katSold'] = buy_raw[sender].get('katSold', 0.0) + amount
 
         # ── Dump: from = airdrop address ──
         if sender in addr_set:
@@ -478,17 +500,42 @@ def build_buyers_output(buy_raw, stake_raw, addr_set):
         s = stake_raw.get(addr, {})
         staked_vkat  = s.get('stakedVKAT', False)
         staked_avkat = s.get('stakedAvKAT', False)
+        kat_net = b['katReceived'] - b.get('katSold', 0.0)
+        if kat_net < 1000:
+            continue
         out.append({
             'address':     addr,
             'category':    'airdrop_buyer' if addr in addr_set else 'pure_buyer',
             'buySource':   buy_source,
+            'katNet':      round(kat_net, 6),
             'katReceived': round(b['katReceived'], 6),
+            'katSold':     round(b.get('katSold', 0.0), 6),
             'txCount':     b['txCount'],
             'stakedVKAT':  staked_vkat,
             'stakedAvKAT': staked_avkat,
             'staked':      staked_vkat or staked_avkat,
         })
-    out.sort(key=lambda x: x['katReceived'], reverse=True)
+    out.sort(key=lambda x: x['katNet'], reverse=True)
+    return out
+
+# ── Build stakers output ──────────────────────────────────────────────────
+def build_stakers_output(stake_raw):
+    out = []
+    for addr, s in stake_raw.items():
+        vkat_amt  = s.get('vkatAmount', 0.0)
+        avkat_amt = s.get('avkatAmount', 0.0)
+        total     = vkat_amt + avkat_amt
+        if total < 100:
+            continue
+        out.append({
+            'address':     addr,
+            'vkatAmount':  round(vkat_amt, 6),
+            'avkatAmount': round(avkat_amt, 6),
+            'totalStaked': round(total, 6),
+            'stakedVKAT':  s.get('stakedVKAT', False),
+            'stakedAvKAT': s.get('stakedAvKAT', False),
+        })
+    out.sort(key=lambda x: x['totalStaked'], reverse=True)
     return out
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -548,8 +595,9 @@ def main():
     print()
 
     print('5/5 Building data.json…')
-    address_data = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances)
-    buyers_data  = build_buyers_output(buy_raw, stake_raw, addr_set)
+    address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances)
+    buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set)
+    stakers_data  = build_stakers_output(stake_raw)
 
     total    = len(address_data)
     farmers  = sum(1 for d in address_data if d['status'] == 'farmer')
@@ -563,6 +611,20 @@ def main():
     b_staked = sum(1 for b in buyers_data if b['staked'])
     print(f'  {b_total:,} buyers: {b_pure} pure · {b_total - b_pure} airdrop+ · {b_staked} staked ({100*b_staked/b_total:.1f}%)' if b_total else '  0 buyers found')
 
+    s_total = len(stakers_data)
+    s_total_staked = sum(s['totalStaked'] for s in stakers_data)
+    print(f'  {s_total:,} stakers (≥100 KAT): {fmtM(s_total_staked)} KAT total staked')
+
+    # Read circulating supply from supply_state.json
+    circ_supply = 0.0
+    supply_path = SCRIPT_DIR / 'supply_state.json'
+    if supply_path.exists():
+        try:
+            ss = json.loads(supply_path.read_text())
+            circ_supply = sum(ss.get('transfersByAddr', {}).values())
+        except Exception:
+            pass
+
     output = {
         'meta': {
             'generatedAt':  datetime.now(timezone.utc).isoformat(),
@@ -570,9 +632,12 @@ def main():
             'ethBlock':     latest_eth,
             'addressCount': total,
             'buyerCount':   b_total,
+            'stakerCount':  s_total,
+            'circSupply':   round(circ_supply, 6),
         },
         'addresses': address_data,
         'buyers':    buyers_data,
+        'stakers':   stakers_data,
     }
 
     DATA_PATH.write_text(json.dumps(output, separators=(',', ':')))
