@@ -544,9 +544,8 @@
     .footer-sources { color: var(--dim); }
     /* ── SUPPLY PANEL ─────────────────────────────────────────────────────── */
     #supply-section {
-      padding: 1rem 2.5rem;
-      border-bottom: 2px solid var(--black);
-      background: var(--cream2);
+      padding: 2rem 2.5rem;
+      background: var(--cream);
     }
     .supply-top {
       display: flex;
@@ -860,54 +859,12 @@
   <div class="progress-label" id="progress-label">Initializing...</div>
 </div>
 
-<div id="supply-section">
-  <div class="supply-top">
-    <div class="supply-headline">
-      <div class="supply-label">Total KAT in Circulation</div>
-      <div class="supply-value">568.8M <span class="supply-pct">5.69% of 10B total supply</span></div>
-    </div>
-    <div class="supply-breakdown">
-      <div class="supply-item">
-        <span class="supply-item-label">Merkl Rewards</span>
-        <span class="supply-item-val num-blue">528.8M</span>
-        <span class="supply-item-pct">5.29%</span>
-      </div>
-      <div class="supply-item">
-        <span class="supply-item-label">EtherFi Vault</span>
-        <span class="supply-item-val">20M</span>
-        <span class="supply-item-pct">0.20%</span>
-      </div>
-      <div class="supply-item">
-        <span class="supply-item-label">Lombard Vault</span>
-        <span class="supply-item-val">20M</span>
-        <span class="supply-item-pct">0.20%</span>
-      </div>
-    </div>
-  </div>
-  <div class="protocol-bar-label">Merkl Distribution by Protocol <span class="protocol-sub">(stratified sample · approx)</span></div>
-  <div class="protocol-bar">
-    <div class="proto-seg" style="width:68.6%;background:var(--blue)" data-tip="Katana Vaults: 68.6% · ~362M KAT · epoch-based vault rewards"><span class="proto-seg-label">Katana Vaults</span></div>
-    <div class="proto-seg" style="width:19.9%;background:var(--amber)" data-tip="SushiSwap: 19.9% · ~105M KAT · LP 52% + swap fees 48%"><span class="proto-seg-label">SushiSwap</span></div>
-    <div class="proto-seg" style="width:5.6%;background:var(--violet)" data-tip="ERC20 vault: 5.6% · ~30M KAT"><span class="proto-seg-label">ERC20</span></div>
-    <div class="proto-seg" style="width:2.6%;background:var(--orange)" data-tip="Charm: 2.6% · ~14M KAT"><span class="proto-seg-label"></span></div>
-    <div class="proto-seg" style="width:2.5%;background:var(--green)" data-tip="Morpho: 2.5% · ~13M KAT"><span class="proto-seg-label"></span></div>
-    <div class="proto-seg" style="flex:1;background:var(--dim)" data-tip="Other / unclassified: ~0.8%"><span class="proto-seg-label"></span></div>
-  </div>
-  <div class="proto-legend">
-    <span class="proto-key" style="--c:var(--blue)">Katana Vaults 68.6%</span>
-    <span class="proto-key" style="--c:var(--amber)" data-tip="LP 52% + swap fees 48%">SushiSwap 19.9% ⓘ</span>
-    <span class="proto-key" style="--c:var(--violet)">ERC20 vault 5.6%</span>
-    <span class="proto-key" style="--c:var(--orange)">Charm 2.6%</span>
-    <span class="proto-key" style="--c:var(--green)">Morpho 2.5%</span>
-    <span class="proto-key" style="--c:var(--dim)">Other 0.8%</span>
-  </div>
-</div>
-
 <div id="error-msg" class="error-msg"></div>
 
 <div class="tab-nav">
-  <button class="tab-btn active" data-tab="dumpers">Airdrop Recipients</button>
+  <button class="tab-btn active" data-tab="dumpers">Pre-TGE Farmers</button>
   <button class="tab-btn" data-tab="buyers">New KAT Buyers</button>
+  <button class="tab-btn" data-tab="supply">Supply</button>
 </div>
 
 <div id="tab-dumpers" class="tab-pane active">
@@ -1056,6 +1013,51 @@
       <tr class="loading-row"><td colspan="9"><span class="spinner"></span> Loading…</td></tr>
     </tbody>
   </table>
+</div>
+</div>
+
+<div id="tab-supply" class="tab-pane">
+<div id="supply-section">
+  <div class="supply-top">
+    <div class="supply-headline">
+      <div class="supply-label">Total KAT in Circulation</div>
+      <div class="supply-value">568.8M <span class="supply-pct">5.69% of 10B total supply</span></div>
+    </div>
+    <div class="supply-breakdown">
+      <div class="supply-item">
+        <span class="supply-item-label">Merkl Rewards</span>
+        <span class="supply-item-val num-blue">528.8M</span>
+        <span class="supply-item-pct">5.29%</span>
+      </div>
+      <div class="supply-item">
+        <span class="supply-item-label">EtherFi Vault</span>
+        <span class="supply-item-val">20M</span>
+        <span class="supply-item-pct">0.20%</span>
+      </div>
+      <div class="supply-item">
+        <span class="supply-item-label">Lombard Vault</span>
+        <span class="supply-item-val">20M</span>
+        <span class="supply-item-pct">0.20%</span>
+      </div>
+    </div>
+  </div>
+  <div class="protocol-bar-label">Merkl Distribution by Protocol <span class="protocol-sub">(stratified sample · approx)</span></div>
+  <div class="protocol-bar">
+    <div class="proto-seg" style="width:68.6%;background:var(--blue)" data-tip="Katana Vaults: 68.6% · ~362M KAT · epoch-based vault rewards"><span class="proto-seg-label">Katana Vaults</span></div>
+    <div class="proto-seg" style="width:19.9%;background:var(--amber)" data-tip="SushiSwap: 19.9% · ~105M KAT · LP 52% + swap fees 48%"><span class="proto-seg-label">SushiSwap</span></div>
+    <div class="proto-seg" style="width:5.6%;background:var(--violet)" data-tip="ERC20 vault: 5.6% · ~30M KAT"><span class="proto-seg-label">ERC20</span></div>
+    <div class="proto-seg" style="width:2.6%;background:var(--orange)" data-tip="Charm: 2.6% · ~14M KAT"><span class="proto-seg-label"></span></div>
+    <div class="proto-seg" style="width:2.5%;background:var(--green)" data-tip="Morpho: 2.5% · ~13M KAT"><span class="proto-seg-label"></span></div>
+    <div class="proto-seg" style="flex:1;background:var(--dim)" data-tip="Other / unclassified: ~0.8%"><span class="proto-seg-label"></span></div>
+  </div>
+  <div class="proto-legend">
+    <span class="proto-key" style="--c:var(--blue)">Katana Vaults 68.6%</span>
+    <span class="proto-key" style="--c:var(--amber)" data-tip="LP 52% + swap fees 48%">SushiSwap 19.9% ⓘ</span>
+    <span class="proto-key" style="--c:var(--violet)">ERC20 vault 5.6%</span>
+    <span class="proto-key" style="--c:var(--orange)">Charm 2.6%</span>
+    <span class="proto-key" style="--c:var(--green)">Morpho 2.5%</span>
+    <span class="proto-key" style="--c:var(--dim)">Other 0.8%</span>
+  </div>
 </div>
 </div>
 
