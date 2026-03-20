@@ -1951,7 +1951,7 @@ function updateStakerStats() {
   document.getElementById('sstat-avkat').textContent        = fmtNum(dispAvkat, 0);
   const vPct = dispTotal > 0 ? (dispVkat / dispTotal * 100).toFixed(0) : 0;
   const aPct = dispTotal > 0 ? (dispAvkat / dispTotal * 100).toFixed(0) : 0;
-  document.getElementById('sstat-split').textContent        = `${vPct}/${aPct}`;
+  document.getElementById('sstat-split').textContent        = `${vPct}% / ${aPct}%`;
 }
 
 function renderStakersTable() {
