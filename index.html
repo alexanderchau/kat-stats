@@ -921,10 +921,10 @@
 <div id="error-msg" class="error-msg"></div>
 
 <div class="tab-nav">
-  <button class="tab-btn active" data-tab="dumpers">Pre-TGE Farmers</button>
-  <button class="tab-btn" data-tab="buyers">New KAT Buyers</button>
-  <button class="tab-btn" data-tab="supply">Supply</button>
-  <button class="tab-btn" data-tab="stakers">KAT Stakers</button>
+  <button class="tab-btn active" data-tab="dumpers" title="Wallets that claimed KAT via Merkl farming rewards">Pre-TGE Farmers</button>
+  <button class="tab-btn" data-tab="buyers" title="Wallets that bought KAT on DEX or received from CEX after TGE">New KAT Buyers</button>
+  <button class="tab-btn" data-tab="supply" title="KAT token circulation and supply breakdown">Supply</button>
+  <button class="tab-btn" data-tab="stakers" title="Wallets with vKAT or avKAT staking positions">KAT Stakers</button>
 </div>
 
 <div id="tab-dumpers" class="tab-pane active">
@@ -935,31 +935,31 @@
   <div class="progress-label" id="progress-label">Initializing...</div>
 </div>
 <div class="stats-grid">
-  <div class="stat-card" style="cursor:pointer" onclick="showAddressbook()">
+  <div class="stat-card" style="cursor:pointer" onclick="showAddressbook()" title="Custom address labels — click to view/edit">
     <div class="stat-label">Addressbook</div>
     <div class="stat-value" id="stat-addr-count" style="font-size:1.4rem">—</div>
     <div class="stat-sub" id="stat-snapshot-sub">loading…</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="Sum of all KAT claimed from Merkl rewards">
     <div class="stat-label">Total KAT Claimed</div>
     <div class="stat-value yellow" id="stat-claimed">—</div>
   </div>
-  <div class="stat-card" data-filter="partial">
+  <div class="stat-card" data-filter="partial" title="Sold or sent 5–50% of claimed KAT — click to filter">
     <div class="stat-label">Partial Dumpers</div>
     <div class="stat-value blue" id="stat-claimable">—</div>
     <div class="stat-sub" id="stat-claimable-sub"></div>
   </div>
-  <div class="stat-card" data-filter="hodler">
+  <div class="stat-card" data-filter="hodler" title="Sold or sent <5% of claimed KAT — click to filter">
     <div class="stat-label">Hodlers</div>
     <div class="stat-value green" id="stat-hodlers">—</div>
     <div class="stat-sub" id="stat-hodlers-sub"></div>
   </div>
-  <div class="stat-card" data-filter="staked">
+  <div class="stat-card" data-filter="staked" title="Has avKAT auto-compounding vault position — click to filter">
     <div class="stat-label">avKAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="stat-staked">—</div>
     <div class="stat-sub" id="stat-staked-sub"></div>
   </div>
-  <div class="stat-card" data-filter="inactive">
+  <div class="stat-card" data-filter="inactive" title="Never claimed Merkl rewards — click to filter">
     <div class="stat-label">Never Claimed</div>
     <div class="stat-value" id="stat-inactive">—</div>
     <div class="stat-sub" id="stat-inactive-sub"></div>
@@ -968,17 +968,17 @@
 <div class="controls">
   <input class="filter-input" id="filter-input" type="text" placeholder="Address… (/ to focus)">
   <div class="custom-select-wrap" id="status-filter-wrap">
-    <button class="btn custom-select-btn" type="button" id="status-filter-btn">
+    <button class="btn custom-select-btn" type="button" id="status-filter-btn" title="Filter by wallet dump status">
       <span class="custom-select-label">All statuses</span>
       <span class="custom-select-caret">▾</span>
     </button>
     <ul class="custom-select-menu" id="status-filter-menu">
-      <li data-value="">All statuses</li>
-      <li data-value="farmer">Dumpers (&gt;50%)</li>
-      <li data-value="partial">Partial (5–50%)</li>
-      <li data-value="hodler">Hodlers (&lt;5%)</li>
-      <li data-value="inactive">Inactive</li>
-      <li data-value="staked">avKAT Staked</li>
+      <li data-value="" title="Show all wallets">All statuses</li>
+      <li data-value="farmer" title="Sold or sent >50% of claimed KAT">Dumpers (&gt;50%)</li>
+      <li data-value="partial" title="Sold or sent 5–50% of claimed KAT">Partial (5–50%)</li>
+      <li data-value="hodler" title="Sold or sent <5% of claimed KAT">Hodlers (&lt;5%)</li>
+      <li data-value="inactive" title="Never claimed Merkl rewards">Inactive</li>
+      <li data-value="staked" title="Has avKAT auto-compounding vault position">avKAT Staked</li>
     </ul>
     <select id="status-filter" style="display:none">
       <option value="">All statuses</option>
@@ -990,7 +990,7 @@
     </select>
   </div>
   <div class="custom-select-wrap" id="min-filter-wrap">
-    <button class="btn custom-select-btn" type="button" id="min-filter-btn">
+    <button class="btn custom-select-btn" type="button" id="min-filter-btn" title="Filter by minimum KAT claimed">
       <span class="custom-select-label">All sizes</span>
       <span class="custom-select-caret">▾</span>
     </button>
@@ -1048,30 +1048,30 @@
 <div id="tab-buyers" class="tab-pane">
 
 <div class="stats-grid" id="buyer-stats-grid">
-  <div class="stat-card">
+  <div class="stat-card" title="Total unique wallets that bought KAT">
     <div class="stat-label">Total Buyers</div>
     <div class="stat-value" id="bstat-total">—</div>
   </div>
-  <div class="stat-card" id="bstat-pure-card" data-bfilter="pure_buyer">
+  <div class="stat-card" id="bstat-pure-card" data-bfilter="pure_buyer" title="No pre-TGE airdrop — pure market buyers. Click to filter">
     <div class="stat-label">Pure Buyers</div>
     <div class="stat-value blue" id="bstat-pure">—</div>
     <div class="stat-sub">no airdrop</div>
   </div>
-  <div class="stat-card" id="bstat-airdrop-card" data-bfilter="airdrop_buyer">
+  <div class="stat-card" id="bstat-airdrop-card" data-bfilter="airdrop_buyer" title="Also received pre-TGE farming rewards. Click to filter">
     <div class="stat-label">Airdrop + Buyers</div>
     <div class="stat-value yellow" id="bstat-airdrop">—</div>
     <div class="stat-sub">also received rewards</div>
   </div>
-  <div class="stat-card" id="bstat-staked-card" data-bfilter="staked">
+  <div class="stat-card" id="bstat-staked-card" data-bfilter="staked" title="Buyers with vKAT or avKAT staking positions. Click to filter">
     <div class="stat-label">Staked (any)</div>
     <div class="stat-value green" id="bstat-staked">—</div>
     <div class="stat-sub" id="bstat-staked-sub"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="Buyers who locked KAT in voting escrow">
     <div class="stat-label">Staked vKAT</div>
     <div class="stat-value" style="color:var(--violet)" id="bstat-vkat">—</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="Buyers who deposited KAT in auto-compounding vault">
     <div class="stat-label">Staked avKAT</div>
     <div class="stat-value" style="color:var(--violet)" id="bstat-avkat">—</div>
   </div>
@@ -1079,17 +1079,17 @@
 
 <div class="buyer-controls">
   <input class="filter-input" id="buyer-filter-input" type="text" placeholder="Address…" style="width:260px">
-  <button class="btn buyer-cat-btn active" data-cat="">All</button>
-  <button class="btn buyer-cat-btn" data-cat="pure_buyer">Pure Buyers</button>
-  <button class="btn buyer-cat-btn" data-cat="airdrop_buyer">Airdrop+</button>
+  <button class="btn buyer-cat-btn active" data-cat="" title="Show all buyer types">All</button>
+  <button class="btn buyer-cat-btn" data-cat="pure_buyer" title="Wallets with no pre-TGE airdrop — pure market buyers">Pure Buyers</button>
+  <button class="btn buyer-cat-btn" data-cat="airdrop_buyer" title="Wallets that also received pre-TGE farming rewards">Airdrop+</button>
   <span class="controls-sep">|</span>
-  <button class="btn buyer-stake-btn active" data-stake="">All</button>
-  <button class="btn buyer-stake-btn" data-stake="staked">Staked</button>
-  <button class="btn buyer-stake-btn" data-stake="unstaked">Unstaked</button>
+  <button class="btn buyer-stake-btn active" data-stake="" title="Show all staking statuses">All</button>
+  <button class="btn buyer-stake-btn" data-stake="staked" title="Only wallets with vKAT or avKAT positions">Staked</button>
+  <button class="btn buyer-stake-btn" data-stake="unstaked" title="Only wallets without any staking">Unstaked</button>
   <span class="controls-sep">|</span>
   <button class="btn active" id="buyer-bot-btn" title="Hide addresses with ≥100 transactions (bots, routers, contracts)">Hide Bots</button>
   <span class="controls-sep">|</span>
-  <button class="btn" id="buyer-export-btn">↓ Export CSV</button>
+  <button class="btn" id="buyer-export-btn" title="Download buyer table as CSV file">↓ Export CSV</button>
   <div class="controls-right" id="buyer-table-count"></div>
 </div>
 
@@ -1141,35 +1141,35 @@
 <div id="tab-stakers" class="tab-pane">
 
 <div class="stats-grid" id="staker-stats-grid">
-  <div class="stat-card">
+  <div class="stat-card" title="Total KAT locked in vKAT + avKAT contracts (on-chain)">
     <div class="stat-label">Total KAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
     <div class="stat-sub" id="sstat-total-sub">on-chain</div>
     <div class="stat-growth" id="sstat-total-staked-growth"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="Staked KAT as percentage of circulating supply">
     <div class="stat-label">% of Circ Supply</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-pct-circ">—</div>
     <div class="stat-sub" id="sstat-pct-circ-sub"></div>
     <div class="stat-growth" id="sstat-pct-circ-growth"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="Unique wallets with any staking position">
     <div class="stat-label"># Stakers</div>
     <div class="stat-value" id="sstat-count">—</div>
     <div class="stat-sub" id="sstat-count-sub">tracked</div>
     <div class="stat-growth" id="sstat-count-growth"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="KAT locked in voting escrow — long-term commitment">
     <div class="stat-label">vKAT Locked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
     <div class="stat-growth" id="sstat-vkat-growth"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="KAT deposited in auto-compounding vault">
     <div class="stat-label">avKAT Deposited</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-avkat">—</div>
     <div class="stat-growth" id="sstat-avkat-growth"></div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" title="Ratio of vKAT (voting escrow) to avKAT (auto-compounding)">
     <div class="stat-label">vKAT / avKAT Split</div>
     <div class="stat-value" id="sstat-split">—</div>
   </div>
@@ -1178,7 +1178,7 @@
 <div class="buyer-controls">
   <input class="filter-input" id="staker-filter-input" type="text" placeholder="Address…" style="width:260px">
   <span class="controls-sep">|</span>
-  <button class="btn" id="staker-export-btn">↓ Export CSV</button>
+  <button class="btn" id="staker-export-btn" title="Download staker table as CSV file">↓ Export CSV</button>
   <div class="controls-right" id="staker-table-count"></div>
 </div>
 
