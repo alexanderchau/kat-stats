@@ -1,51 +1,69 @@
 {
   "meta": {
-    "generatedAt": "2026-03-20T14:41:17.786153+00:00",
-    "katanaBlock": 27274865
+    "generatedAt": "2026-03-20T14:57:04.944011+00:00",
+    "katanaBlock": 27275811
   },
   "totalSupply": 10000000000,
-  "totalCirculating": 1511803522.2460494,
-  "circulatingPct": 15.118035222460495,
+  "totalCirculating": 1439315400.409361,
+  "circulatingPct": 14.39315400409361,
   "sources": {
     "merkl": {
       "label": "Merkl Rewards",
-      "amount": 561803522.2460495,
-      "pct": 5.618035222460495,
+      "amount": 561821226.409361,
+      "pct": 5.618212264093611,
       "type": "dynamic"
     },
     "etherfi_vault": {
       "label": "EtherFi vault",
-      "amount": 20000000.0,
-      "pct": 0.2,
+      "amount": 20574174,
+      "pct": 0.20574174,
       "type": "fixed"
     },
     "lombard_vault": {
       "label": "Lombard vault",
-      "amount": 20000000.0,
-      "pct": 0.2,
+      "amount": 15000000,
+      "pct": 0.15,
+      "type": "fixed"
+    },
+    "cex_deposits": {
+      "label": "CEX deposits",
+      "amount": 308000000,
+      "pct": 3.08,
+      "type": "fixed"
+    },
+    "market_makers": {
+      "label": "Market makers",
+      "amount": 207000000,
+      "pct": 2.07,
+      "type": "fixed"
+    },
+    "kol_payments": {
+      "label": "KOL payments",
+      "amount": 12550000,
+      "pct": 0.1255,
+      "type": "fixed"
+    },
+    "ecosystem_grants": {
+      "label": "Ecosystem grants",
+      "amount": 4370000,
+      "pct": 0.0437,
       "type": "fixed"
     },
     "krates_vkat": {
       "label": "Krates (vKAT)",
-      "amount": 70000000.0,
-      "pct": 0.7000000000000001,
-      "type": "fixed"
-    },
-    "ecosystem_liquidity": {
-      "label": "Ecosystem liquidity",
-      "amount": 600000000.0,
-      "pct": 6.0,
+      "amount": 70000000,
+      "pct": 0.7,
       "type": "fixed"
     },
     "pol_staker_airdrop": {
       "label": "POL staker airdrop",
-      "amount": 140000000.0,
-      "pct": 1.4000000000000001,
+      "amount": 140000000,
+      "pct": 1.4,
       "type": "fixed"
     },
-    "public_sale_binance": {
-      "label": "Public sale (Binance)",
-      "amount": 100000000.0,
+    "public_sale": {
+      "label": "Public sale",
+      "amount": 100000000,
       "pct": 1.0,
       "type": "fixed"
     }

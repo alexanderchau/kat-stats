@@ -54,21 +54,29 @@ KAT_TOKENS = {
 # Total KAT supply (base token, 10B)
 TOTAL_KAT_SUPPLY = 10_000_000_000
 
-# ── Fixed allocations (hardcoded — already distributed, % of total supply) ─────
-# Vault distributions
-VAULT_ALLOCATIONS = {
-    'EtherFi vault': 0.002,   # 0.2% of 10B = 20M KAT
-    'Lombard vault': 0.002,   # 0.2% of 10B = 20M KAT
-}
-
-# TGE distributions (unlocked at transferability, March 18 2026)
-# NOTE: TVL program allocation (KAT) went out through Merkl distributor,
-#       so it's already captured in the on-chain Merkl scan — not listed here.
-TGE_ALLOCATIONS = {
-    'Krates (vKAT)':              0.007,   # 0.7% of 10B = 70M vKAT
-    'Ecosystem liquidity':        0.06,    # 6% of 10B = 600M KAT
-    'POL staker airdrop':         0.014,   # 1.4% of 10B = 140M vKAT (immediate tranche)
-    'Public sale (Binance)':      0.01,    # 1% of 10B = 100M KAT
+# ── Fixed allocations (absolute amounts, already distributed) ──────────────────
+# Source of truth: #multisig-operations-requests Slack channel + tokenomics.
+# TVL program KAT went out via Merkl distributor — already in on-chain scan.
+# Spectra rewards go through Merkl campaigns — already in on-chain scan.
+# Employee/contributor tokens (~718M in nested SAFEs) are LOCKED per vesting.
+# vKAT DAO (186.9M) is protocol treasury, not circulating.
+# Ecosystem grants reserve (487M) still held by foundation.
+FIXED_ALLOCATIONS = {
+    # Protocol distributions (on-chain verified)
+    'EtherFi vault':          20_574_174,   # Sent to 0x607d... (Feb 24)
+    'Lombard vault':          15_000_000,   # Sent to IncentivesDistributor 0x4a61... (Feb 25)
+    # CEX deposits (from multisig ops Slack, to exchange hot wallets)
+    'CEX deposits':          308_000_000,   # Binance ~278M + Bitget 15M + Kraken 12M + KuCoin 1.75M + others
+    # Market makers (tokens for liquidity provision)
+    'Market makers':         207_000_000,   # GSR ~100M + Selini 55M + Lhava 50M + FlowDesk ~2M
+    # KOL & vendor payments
+    'KOL payments':           12_550_000,   # ARK Point 2.6M + Ethene Labs 3.5M + Nebula 3.45M + vendor 3M
+    # Ecosystem grants (distributed to protocols)
+    'Ecosystem grants':        4_370_000,   # Foresight 667K + Kensei 1M + Jumper 2.7M
+    # TGE distributions (unlocked at transferability, March 18 2026)
+    'Krates (vKAT)':          70_000_000,   # Pre-deposit Krates, unlocked at TGE
+    'POL staker airdrop':    140_000_000,   # Immediate tranche (1.4% of total supply)
+    'Public sale':           100_000_000,   # Binance Prime sale
 }
 
 # ── RPC ─────────────────────────────────────────────────────────────────────────
@@ -353,23 +361,19 @@ def main():
 
     print()
 
-    # Fixed allocations (hardcoded — already distributed)
-    vault_totals = {name: total_supply * pct for name, pct in VAULT_ALLOCATIONS.items()}
-    tge_totals   = {name: total_supply * pct for name, pct in TGE_ALLOCATIONS.items()}
+    # Fixed allocations (absolute amounts, already distributed)
+    fixed_totals = dict(FIXED_ALLOCATIONS)  # already absolute KAT amounts
 
     # Totals
-    total_circulating = merkl_claimed + sum(vault_totals.values()) + sum(tge_totals.values())
+    total_circulating = merkl_claimed + sum(fixed_totals.values())
     pct_total         = 100 * total_circulating / total_supply
 
     # ── Supply breakdown ────────────────────────────────────────────────────────
     col = 26
     print('── CIRCULATION BREAKDOWN ─────────────────────────────')
     print(f'  {"Merkl rewards":<{col}} {merkl_claimed:>14,.0f} KAT   {100*merkl_claimed/total_supply:>5.2f}%')
-    for name, amount in vault_totals.items():
-        pct = VAULT_ALLOCATIONS[name] * 100
-        print(f'  {name:<{col}} {amount:>14,.0f} KAT   {pct:>5.2f}%')
-    for name, amount in tge_totals.items():
-        pct = TGE_ALLOCATIONS[name] * 100
+    for name, amount in fixed_totals.items():
+        pct = 100 * amount / total_supply
         print(f'  {name:<{col}} {amount:>14,.0f} KAT   {pct:>5.2f}%')
     print('─' * 60)
     print(f'  {"TOTAL circulating":<{col}} {total_circulating:>14,.0f} KAT   {pct_total:>5.2f}%')
@@ -407,18 +411,14 @@ def main():
                 'type': 'dynamic',
             },
         }
-        for key_name, (alloc_dict, totals_dict) in [
-            ('vault', (VAULT_ALLOCATIONS, vault_totals)),
-            ('tge',   (TGE_ALLOCATIONS, tge_totals)),
-        ]:
-            for name, amount in totals_dict.items():
-                slug = name.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '')
-                sources[slug] = {
-                    'label': name,
-                    'amount': amount,
-                    'pct': alloc_dict[name] * 100,
-                    'type': 'fixed',
-                }
+        for name, amount in fixed_totals.items():
+            slug = name.lower().replace(' ', '_').replace('&', 'and').replace('(', '').replace(')', '')
+            sources[slug] = {
+                'label': name,
+                'amount': amount,
+                'pct': 100 * amount / total_supply,
+                'type': 'fixed',
+            }
 
         output = {
             'meta': {
