@@ -880,8 +880,8 @@
     <h1>KAT FARMERS</h1>
     <div class="subtitle">Who claimed their KAT rewards on <b>Katana Network</b> — and who sold them</div>
   </div>
-  <div class="header-count">
-    <div class="header-count-label">Addresses Scanned</div>
+  <div class="header-count" style="cursor:pointer" onclick="showAddressbook()" title="View addressbook">
+    <div class="header-count-label">Addressbook</div>
     <div class="header-count-value" id="stat-total">—</div>
   </div>
 </header>
@@ -1112,6 +1112,7 @@
   <div class="stat-card" style="background:var(--card-staked)">
     <div class="stat-label">Total KAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
+    <div class="stat-sub" id="sstat-total-sub">on-chain</div>
   </div>
   <div class="stat-card" style="background:var(--card-staked)">
     <div class="stat-label">% of Circ Supply</div>
@@ -1121,6 +1122,7 @@
   <div class="stat-card" style="background:var(--card-staked)">
     <div class="stat-label"># Stakers</div>
     <div class="stat-value" id="sstat-count">—</div>
+    <div class="stat-sub" id="sstat-count-sub">tracked</div>
   </div>
   <div class="stat-card" style="background:var(--card-staked)">
     <div class="stat-label">vKAT Locked</div>
@@ -1626,7 +1628,7 @@ function updateStats() {
   const hodlers        = all.filter(d => d.status === 'hodler').length;
   const partials       = all.filter(d => d.status === 'partial').length;
 
-  document.getElementById('stat-total').textContent        = `${(Object.keys(results).length).toLocaleString()} / ${n}`;
+  document.getElementById('stat-total').textContent        = `${Object.keys(CEX_LABELS).length + Object.keys(LABELS).length} labelled`;
   document.getElementById('stat-claimed').textContent  = fmtNum(totalClaimed, 0);
   document.getElementById('stat-claimable').textContent    = partials.toLocaleString();
   document.getElementById('stat-claimable-sub').textContent = n > 0 ? `${((partials / n) * 100).toFixed(1)}% of ${n}` : '';
@@ -1895,6 +1897,9 @@ let stakerFilterText = '';
 let stakerSortCol    = 'totalStaked';
 let stakerSortDir    = -1;
 let circSupply       = 0;
+let onChainVkat      = 0;
+let onChainAvkat     = 0;
+let onChainTotal     = 0;
 
 function getStakerFilteredRows() {
   let rows = stakerData.slice();
@@ -1922,16 +1927,22 @@ function updateStakerStats() {
   const totalStaked  = all.reduce((s, d) => s + d.totalStaked, 0);
   const totalVkat    = all.reduce((s, d) => s + d.vkatAmount, 0);
   const totalAvkat   = all.reduce((s, d) => s + d.avkatAmount, 0);
-  const pctCirc      = circSupply > 0 ? (totalStaked / circSupply * 100) : 0;
 
-  document.getElementById('sstat-total-staked').textContent = fmtNum(totalStaked, 0);
+  // Use on-chain contract totals for header stats (ground truth),
+  // fall back to tracked-address sums if on-chain data unavailable
+  const dispTotal = onChainTotal || totalStaked;
+  const dispVkat  = onChainVkat  || totalVkat;
+  const dispAvkat = onChainAvkat || totalAvkat;
+  const pctCirc   = circSupply > 0 ? (dispTotal / circSupply * 100) : 0;
+
+  document.getElementById('sstat-total-staked').textContent = fmtNum(dispTotal, 0);
   document.getElementById('sstat-pct-circ').textContent     = pctCirc > 0 ? pctCirc.toFixed(1) + '%' : '—';
   document.getElementById('sstat-pct-circ-sub').textContent = circSupply > 0 ? `of ${fmtNum(circSupply, 0)} circ` : '';
   document.getElementById('sstat-count').textContent        = all.length.toLocaleString();
-  document.getElementById('sstat-vkat').textContent         = fmtNum(totalVkat, 0);
-  document.getElementById('sstat-avkat').textContent        = fmtNum(totalAvkat, 0);
-  const vPct = totalStaked > 0 ? (totalVkat / totalStaked * 100).toFixed(0) : 0;
-  const aPct = totalStaked > 0 ? (totalAvkat / totalStaked * 100).toFixed(0) : 0;
+  document.getElementById('sstat-vkat').textContent         = fmtNum(dispVkat, 0);
+  document.getElementById('sstat-avkat').textContent        = fmtNum(dispAvkat, 0);
+  const vPct = dispTotal > 0 ? (dispVkat / dispTotal * 100).toFixed(0) : 0;
+  const aPct = dispTotal > 0 ? (dispAvkat / dispTotal * 100).toFixed(0) : 0;
   document.getElementById('sstat-split').textContent        = `${vPct}/${aPct}`;
 }
 
@@ -2361,8 +2372,11 @@ async function main() {
   });
 
   // ── Stakers section ────────────────────────────────────────────────────────
-  stakerData = data.stakers || [];
-  circSupply = data.meta?.circSupply || 0;
+  stakerData   = data.stakers || [];
+  circSupply   = data.meta?.circSupply   || 0;
+  onChainVkat  = data.meta?.onChainVkat  || 0;
+  onChainAvkat = data.meta?.onChainAvkat || 0;
+  onChainTotal = data.meta?.onChainTotal || 0;
   updateStakerStats();
   renderStakersTable();
 
