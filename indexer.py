@@ -173,14 +173,10 @@ def disposed(d):
 
 def classify(d):
     total_out = disposed(d)
-    # Only inactive if truly zero — no Merkl claim AND no KAT activity at all
-    if d['claimed'] == 0 and total_out == 0 and d.get('balance', 0) == 0:
+    # No Merkl claim = inactive (regardless of other activity)
+    if d['claimed'] == 0:
         return 'inactive'
-    # Use claimed as denominator; fall back to balance+outflows for non-Merkl wallets
-    denom = d['claimed'] if d['claimed'] > 0 else d.get('balance', 0) + total_out
-    if denom == 0:
-        return 'inactive'
-    ratio = min(1.0, total_out / denom)
+    ratio = min(1.0, total_out / d['claimed'])
     if ratio > 0.5:  return 'farmer'
     if ratio > 0.05: return 'partial'
     return 'hodler'
