@@ -1454,6 +1454,11 @@ function getLabel(addr) {
   const a = addr.toLowerCase();
   return LABELS[addr] || LABELS[a] || CEX_LABELS[a] || null;
 }
+function tinyAddrDisplay(addr) {
+  const label = getLabel(addr);
+  if (label) return `<span class="addr-label" title="${addr}">${label}</span>`;
+  return shortAddr(addr);
+}
 function addrDisplay(addr) {
   const label = getLabel(addr);
   const short = shortAddr(addr);
@@ -1501,12 +1506,12 @@ function renderTable() {
     const visibleAddrs = transferredTo.slice(0, 3);
     const extraAddrs   = transferredTo.slice(3);
     const sentChips = visibleAddrs.map(a =>
-      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a}">${shortAddr(a)}</a>`
+      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a}">${tinyAddrDisplay(a)}</a>`
     ).join(' ');
     const moreChip  = extraAddrs.length ? ` <span class="addr-more" title="${extraAddrs.join('\n')}">+${extraAddrs.length} more</span>` : '';
 
     const heldChips = sentHeldTo.slice(0, 2).map(a =>
-      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a} (still holding)">${shortAddr(a)}</a>`
+      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a} (still holding)">${tinyAddrDisplay(a)}</a>`
     ).join(' ');
     const heldMore = sentHeldTo.length > 2 ? ` <span class="addr-more">+${sentHeldTo.length - 2} more</span>` : '';
 
