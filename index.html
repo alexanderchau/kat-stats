@@ -1025,6 +1025,8 @@
   <button class="btn buyer-stake-btn" data-stake="staked">Staked</button>
   <button class="btn buyer-stake-btn" data-stake="unstaked">Unstaked</button>
   <span class="controls-sep">|</span>
+  <button class="btn active" id="buyer-bot-btn" title="Hide addresses with ≥100 transactions (bots, routers, contracts)">Hide Bots</button>
+  <span class="controls-sep">|</span>
   <button class="btn" id="buyer-export-btn">↓ Export CSV</button>
   <div class="controls-right" id="buyer-table-count"></div>
 </div>
@@ -1731,6 +1733,7 @@ let buyerData        = [];
 let buyerAddrs       = new Set();
 let buyerCatFilter   = '';
 let buyerStakeFilter = '';
+let buyerBotFilter   = true;   // hide bots by default
 let buyerFilterText  = '';
 let buyerSortCol     = 'katNet';
 let buyerSortDir     = -1;
@@ -1742,6 +1745,7 @@ function getBuyerFilteredRows() {
   if (buyerCatFilter === 'airdrop_buyer') rows = rows.filter(b => b.category === 'airdrop_buyer');
   if (buyerStakeFilter === 'staked')      rows = rows.filter(b => b.staked);
   if (buyerStakeFilter === 'unstaked')    rows = rows.filter(b => !b.staked);
+  if (buyerBotFilter)                     rows = rows.filter(b => (b.txCount || 0) < 100);
   rows.sort((a, b) => {
     let av = a[buyerSortCol], bv = b[buyerSortCol];
     if (typeof av === 'boolean') { av = av ? 1 : 0; bv = bv ? 1 : 0; }
@@ -1771,8 +1775,8 @@ function renderBuyersTable() {
   if (document.querySelector('.label-input')) return;
   const rows    = getBuyerFilteredRows();
   const countEl = document.getElementById('buyer-table-count');
-  countEl.textContent = (buyerFilterText || buyerCatFilter || buyerStakeFilter)
-    ? `${rows.length} / ${buyerData.length}`
+  countEl.textContent = (buyerFilterText || buyerCatFilter || buyerStakeFilter || buyerBotFilter)
+    ? `${rows.length} / ${buyerData.length} buyers`
     : `${buyerData.length.toLocaleString()} buyers`;
 
   const tbody = document.getElementById('buyer-table-body');
@@ -2279,6 +2283,12 @@ async function main() {
       }
       renderBuyersTable();
     });
+  });
+
+  document.getElementById('buyer-bot-btn').addEventListener('click', () => {
+    buyerBotFilter = !buyerBotFilter;
+    document.getElementById('buyer-bot-btn').classList.toggle('active', buyerBotFilter);
+    renderBuyersTable();
   });
 
   document.getElementById('buyer-export-btn').addEventListener('click', exportBuyerCSV);
