@@ -1915,7 +1915,8 @@ function renderSupplyTab(d) {
     const url = PROTO_URLS[name];
     const key = document.createElement('span');
     key.className = 'proto-key';
-    key.style.setProperty('--proto-color', `var(${color})`);
+    key.style.cssText = `--c: var(${color})`;
+
     if (url) {
       key.innerHTML = `<a class="ext-link" href="${url}" target="_blank" rel="noopener">${name}</a> ${pct}%`;
     } else {
