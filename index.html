@@ -1601,7 +1601,7 @@ function renderTable() {
             if (hasDumped || hasHeld || hasDefi) html += '<br>';
             const ethChip = '<span class="chain-badge chain-eth">◆ ETH</span>';
             if (cexSent > 0.01) {
-              const names = [...new Set(cexDests.map(d => CEX_LABELS[d.toLowerCase()]).filter(Boolean))];
+              const names = [...new Set(cexDests.map(d => { const e = CEX_LABELS[d.toLowerCase()]; return e ? (typeof e === 'string' ? e : e.label) : null; }).filter(Boolean))];
               const cexLabel = names.length === 1 ? names[0] : 'CEX';
               html += `<span class="num-red" title="Bridged via LayerZero to ETH mainnet, then deposited to ${cexLabel}">${ethChip}${fmtNum(bridged)} → ${cexLabel}</span>`;
             } else {
@@ -1681,7 +1681,9 @@ function copyAddr(cell, addr) {
 function editLabel(cell, addr) {
   if (cell.querySelector('.label-input')) return;
   let committed = false;
-  const current = LABELS[addr] || '';
+  const entry = getLabelEntry(addr);
+  const current = entry ? entry.label : '';
+  const chain = entry ? entry.chain : 'kat';
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'label-input';
@@ -1693,7 +1695,7 @@ function editLabel(cell, addr) {
     if (committed) return;
     committed = true;
     const val = input.value.trim();
-    if (val) LABELS[addr] = val;
+    if (val) LABELS[addr] = { label: val, chain };
     else delete LABELS[addr];
     saveLabels();
     input.remove();
@@ -1729,16 +1731,127 @@ function exportLabels() {
 }
 
 function showAddressbook() {
-  const entries = Object.entries(CEX_LABELS).concat(Object.entries(LABELS));
-  // Dedupe by address, prefer LABELS over CEX_LABELS
+  // Build merged map: addr → { addr, label, chain, source }
   const map = {};
-  entries.forEach(([addr, label]) => { map[addr.toLowerCase()] = { addr, label }; });
+  Object.entries(CEX_LABELS).forEach(([addr, entry]) => {
+    const a = addr.toLowerCase();
+    const label = typeof entry === 'string' ? entry : entry.label;
+    const chain = typeof entry === 'string' ? 'kat' : entry.chain;
+    map[a] = { addr: a, label, chain, source: 'cex' };
+  });
+  // LABELS override CEX_LABELS
+  Object.entries(LABELS).forEach(([addr, entry]) => {
+    const a = addr.toLowerCase();
+    const label = typeof entry === 'string' ? entry : entry.label;
+    const chain = typeof entry === 'string' ? 'kat' : (entry.chain || 'kat');
+    const isCexOverride = !!map[a];
+    map[a] = { addr: a, label, chain, source: isCexOverride ? 'override' : 'user' };
+  });
   const sorted = Object.values(map).sort((a, b) => a.label.localeCompare(b.label));
-  const rows = sorted.map(e =>
-    `<tr><td><b>${e.label}</b></td><td class="ab-addr"><a href="https://katanascan.com/address/${e.addr}" target="_blank" rel="noopener">${e.addr}</a></td></tr>`
-  ).join('');
+
+  function chainPill(chain) {
+    const cls = chain === 'eth' ? 'chain-pill-eth' : 'chain-pill-kat';
+    return `<span class="chain-pill ${cls}">${chain.toUpperCase()}</span>`;
+  }
+
+  const rows = sorted.map(e => {
+    const r = results[e.addr];
+    const bal = r ? fmtNum(r.balance) : '—';
+    const overrideTag = e.source === 'override' ? '<span class="ab-override" title="Custom override of CEX label">✎</span>' : '';
+    return `<tr data-addr="${e.addr}">` +
+      `<td class="ab-label"><b>${e.label}</b>${overrideTag}</td>` +
+      `<td class="ab-addr"><a href="https://katanascan.com/address/${e.addr}" target="_blank" rel="noopener">${e.addr}</a></td>` +
+      `<td class="ab-chain">${chainPill(e.chain)}</td>` +
+      `<td class="ab-bal">${bal}</td>` +
+      `</tr>`;
+  }).join('');
+
+  const addRow = `<tr class="ab-add-row">` +
+    `<td><input type="text" id="ab-new-label" placeholder="Label…"></td>` +
+    `<td><input type="text" id="ab-new-addr" placeholder="0x…" style="width:100%"></td>` +
+    `<td class="ab-chain"><span class="chain-pill chain-pill-kat" id="ab-new-chain" style="cursor:pointer">KAT</span></td>` +
+    `<td><button class="ab-add-btn" id="ab-add-btn">Add</button></td>` +
+    `</tr>`;
+
   document.getElementById('addressbook-body').innerHTML =
-    `<table><thead><tr><th>Label</th><th>Address</th></tr></thead><tbody>${rows}</tbody></table>`;
+    `<table><thead><tr><th>Label</th><th>Address</th><th>Chain</th><th style="text-align:right">KAT Balance</th></tr></thead>` +
+    `<tbody>${rows}${addRow}</tbody></table>`;
+
+  // Inline label editing
+  document.querySelectorAll('#addressbook-body .ab-label').forEach(td => {
+    td.addEventListener('click', () => {
+      if (td.querySelector('.label-input')) return;
+      const tr = td.closest('tr');
+      const addr = tr.dataset.addr;
+      const entry = getLabelEntry(addr);
+      const current = entry ? entry.label : '';
+      const chain = entry ? entry.chain : 'kat';
+      let committed = false;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'label-input';
+      input.value = current;
+      input.placeholder = 'label…';
+      function commit() {
+        if (committed) return;
+        committed = true;
+        const val = input.value.trim();
+        if (val) LABELS[addr] = { label: val, chain };
+        else delete LABELS[addr];
+        saveLabels();
+        showAddressbook();
+      }
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); committed = true; showAddressbook(); }
+      });
+      input.addEventListener('blur', commit);
+      td.innerHTML = '';
+      td.appendChild(input);
+      input.focus();
+      input.select();
+    });
+  });
+
+  // Chain toggle
+  document.querySelectorAll('#addressbook-body tr[data-addr] .chain-pill').forEach(pill => {
+    pill.style.cursor = 'pointer';
+    pill.addEventListener('click', () => {
+      const tr = pill.closest('tr');
+      const addr = tr.dataset.addr;
+      const entry = getLabelEntry(addr);
+      if (!entry) return;
+      const newChain = entry.chain === 'eth' ? 'kat' : 'eth';
+      LABELS[addr] = { label: entry.label, chain: newChain };
+      saveLabels();
+      showAddressbook();
+    });
+  });
+
+  // Add new entry
+  const newChainPill = document.getElementById('ab-new-chain');
+  let newChain = 'kat';
+  newChainPill.addEventListener('click', () => {
+    newChain = newChain === 'kat' ? 'eth' : 'kat';
+    newChainPill.textContent = newChain.toUpperCase();
+    newChainPill.className = `chain-pill chain-pill-${newChain}`;
+  });
+  document.getElementById('ab-add-btn').addEventListener('click', () => {
+    const label = document.getElementById('ab-new-label').value.trim();
+    const addr = document.getElementById('ab-new-addr').value.trim().toLowerCase();
+    if (!label || !addr || !addr.startsWith('0x')) return;
+    LABELS[addr] = { label, chain: newChain };
+    saveLabels();
+    showAddressbook();
+    scheduleRender();
+  });
+  // Submit on Enter in the add row inputs
+  ['ab-new-label', 'ab-new-addr'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ab-add-btn').click(); }
+    });
+  });
+
   document.getElementById('addressbook-modal').classList.add('open');
 }
 
