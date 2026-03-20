@@ -161,7 +161,7 @@ def _classify_reason(key):
     if 'STEER' in k:    return ('Steer', None)
     if 'CHARM' in k:    return ('Charm', None)
     if 'ICHI' in k:     return ('Ichi', None)
-    if 'ERC20' in k:    return ('ERC20 vault', None)
+    if 'ERC20' in k:    return ('Yearn', None)
     if 'EPOCH' in k:    return ('Katana Vaults', None)
     if 'BONUS' in k or 'TOPUP' in k: return ('bonus/topup', None)
     if 'COMP' in k or 'MISSING' in k: return ('compensation', None)
@@ -253,7 +253,7 @@ def print_protocol_breakdown(protocol_mix, merkl_total):
     sep = col - 1
     print(f'  {"─"*sep} {"─"*14}  {"─"*7}')
 
-    ORDER = ['Katana Vaults', 'SushiSwap', 'Morpho', 'ERC20 vault',
+    ORDER = ['Katana Vaults', 'SushiSwap', 'Morpho', 'Yearn',
              'Steer', 'Charm', 'Ichi', 'bonus/topup', 'compensation', 'other']
     shown = set()
 
