@@ -963,8 +963,8 @@
     <div class="stat-value green" id="stat-hodlers">—</div>
     <div class="stat-sub" id="stat-hodlers-sub"></div>
   </div>
-  <div class="stat-card" data-filter="staked" title="Has avKAT auto-compounding vault position — click to filter">
-    <div class="stat-label">avKAT Staked</div>
+  <div class="stat-card" data-filter="staked" title="Has vKAT or avKAT staking position — click to filter">
+    <div class="stat-label">Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="stat-staked">—</div>
     <div class="stat-sub" id="stat-staked-sub"></div>
   </div>
@@ -1040,8 +1040,8 @@
         <th data-col="transferred" class="num" data-tip="KAT sent to addresses that no longer hold it · ⛓ bridged via LayerZero OFT to ETH mainnet (⛓ → CEX = confirmed exchange deposit) · Green held transfers excluded from Dump %">KAT Sent<span class="sort-arrow"></span></th>
         <th data-col="moved" class="num" data-tip="KAT swapped on Sushi V2/V3 — detected via Swap event in tx receipt">KAT Sold<span class="sort-arrow"></span></th>
         <th data-col="balance" class="num" data-tip="Current on-chain KAT balance across all KAT token variants">KAT Balance<span class="sort-arrow"></span></th>
-        <th data-col="avkat" class="num" data-tip="Current on-chain avKAT balance (auto-compounding staking vault)">avKAT<span class="sort-arrow"></span></th>
-        <th data-col="dumpPct" class="num" data-tip="100% − (KAT Balance + avKAT) ÷ KAT Claimed. Measures what fraction of the airdrop is no longer held.">Dump %<span class="sort-arrow"></span></th>
+        <th data-col="staked" class="num" data-tip="Total KAT staked: vKAT (vote-locked) + avKAT (auto-compounding vault)">Staked<span class="sort-arrow"></span></th>
+        <th data-col="dumpPct" class="num" data-tip="100% − (KAT Balance + Staked) ÷ KAT Claimed. Measures what fraction of the airdrop is no longer held.">Dump %<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
     </thead>
@@ -1278,10 +1278,11 @@ async function triggerPipeline() {
                 const ts = new Date(nd.meta.generatedAt);
                 if (!lastGeneratedAt || ts > lastGeneratedAt) {
                   ADDRESSES = nd.addresses.map(d => d.address);
-                  for (const d of nd.addresses) { d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
                   buyerData = nd.buyers || [];
                   buyerAddrs = new Set(buyerData.map(b => b.address));
                   stakerData = nd.stakers || [];
+                  stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
+                  for (const d of nd.addresses) { const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
                   lastGeneratedAt = ts;
                   updateStats(); updateBuyerStats(); updateStakerStats();
                   scheduleRender(); updateFreshnessIndicator();
@@ -1577,9 +1578,9 @@ function disposed(d) {
 
 function retainedPct(d) {
   // Balance-based: what fraction of claimed tokens are still held?
-  // Immune to double-counting from bridge hops or non-Merkl KAT flows
+  // Includes KAT balance + all staked positions (vKAT + avKAT)
   if (d.claimed === 0) return 100;
-  const held = (d.balance || 0) + (d.avkat || 0);
+  const held = (d.balance || 0) + (d.staked || d.avkat || 0);
   return Math.max(0, Math.min(100, (held / d.claimed) * 100));
 }
 
@@ -1600,7 +1601,7 @@ function dumpPct(d) {
 function getFilteredRows() {
   let rows = Object.values(results).filter(d => !d._loading);
   if (filterText)   rows = rows.filter(d => d.address.includes(filterText.toLowerCase()));
-  if (filterStatus === 'staked') rows = rows.filter(d => d.avkat > 0);
+  if (filterStatus === 'staked') rows = rows.filter(d => (d.staked || d.avkat || 0) > 0);
   else if (filterStatus) rows = rows.filter(d => d.status === filterStatus);
   else rows = rows.filter(d => d.status !== 'inactive'); // hidden by default — click "Never Claimed" card to show
   if (minAmount > 0) rows = rows.filter(d => (d.claimed || 0) >= minAmount);
@@ -1766,7 +1767,7 @@ function renderTable() {
       <td class="num num-detail">${sentCell}</td>
       <td class="num">${d._loading ? pending : (moved > 0.01 ? `<span class="num-red">${fmtNum(moved)}</span>` : '—')}</td>
       <td class="num">${d._loading ? pending : (d.balance > 0.01 ? `<span class="num-green">${fmtNum(d.balance)}</span>` : '—')}</td>
-      <td class="num">${d._loading ? pending : (d.avkat > 0.01 ? `<span class="num-blue">${fmtNum(d.avkat)}</span>` : '—')}</td>
+      <td class="num">${d._loading ? pending : (() => { const sk = stakerMap[d.address]; const vk = sk ? (sk.vkatAmount || 0) : 0; const ak = sk ? (sk.avkatAmount || 0) : (d.avkat || 0); const total = vk + ak; if (total < 0.01) return '—'; let parts = []; if (vk > 0.01) parts.push(fmtNum(vk) + ' vKAT'); if (ak > 0.01) parts.push(fmtNum(ak) + ' avKAT'); return `<span class="num-blue" title="${parts.join(' + ')}">${fmtNum(total)}</span>`; })()}</td>
       <td class="num">${d._loading ? pending : pctCell}</td>
       <td>
         <div class="ext-links">
@@ -1801,8 +1802,8 @@ function updateStats() {
   document.getElementById('stat-claimable-sub').textContent = n > 0 ? `${((partials / n) * 100).toFixed(1)}% of ${n}` : '';
   document.getElementById('stat-hodlers').textContent      = hodlers.toLocaleString();
   document.getElementById('stat-hodlers-sub').textContent  = n > 0 ? `${((hodlers / n) * 100).toFixed(1)}% of ${n}` : '';
-  const stakerCount  = all.filter(d => d.avkat > 0).length;
-  const totalStaked  = all.reduce((s, d) => s + (d.avkat || 0), 0);
+  const stakerCount  = all.filter(d => (d.staked || d.avkat || 0) > 0).length;
+  const totalStaked  = all.reduce((s, d) => s + (d.staked || d.avkat || 0), 0);
   document.getElementById('stat-staked').textContent      = fmtNum(totalStaked, 0);
   document.getElementById('stat-staked-sub').textContent  = stakerCount > 0 ? `${stakerCount} stakers` : '';
   document.getElementById('stat-inactive').textContent    = inactiveCount.toLocaleString();
@@ -2180,6 +2181,7 @@ function exportBuyerCSV() {
 
 // ── STAKERS STATE ─────────────────────────────────────────────────────────────
 let stakerData       = [];
+let stakerMap        = {};
 let stakerFilterText = '';
 let stakerSortCol    = 'totalStaked';
 let stakerSortDir    = -1;
@@ -2641,7 +2643,7 @@ async function main() {
 
   ADDRESSES = data.addresses.map(d => d.address);
   for (const d of data.addresses) {
-    d.status = classify(d); results[d.address] = { ...d, _loading: false };
+    const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false };
   }
 
   const generatedAt = data.meta?.generatedAt ? new Date(data.meta.generatedAt) : null;
@@ -2680,10 +2682,11 @@ async function main() {
       if (isNaN(newTs.getTime())) return;
       if (!lastGeneratedAt || newTs > lastGeneratedAt) {
         ADDRESSES = newData.addresses.map(d => d.address);
-        for (const d of newData.addresses) { d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
         buyerData = newData.buyers || [];
         buyerAddrs = new Set(buyerData.map(b => b.address));
         stakerData = newData.stakers || [];
+        stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
+        for (const d of newData.addresses) { const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
         lastGeneratedAt = newTs;
         updateStats();
         updateBuyerStats();
@@ -2766,6 +2769,8 @@ async function main() {
 
   // ── Stakers section ────────────────────────────────────────────────────────
   stakerData   = data.stakers || [];
+  stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
+  for (const addr in results) { const d = results[addr]; const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); }
   circSupply   = data.meta?.circSupply   || 0;
   onChainVkat  = data.meta?.onChainVkat  || 0;
   onChainAvkat = data.meta?.onChainAvkat || 0;
