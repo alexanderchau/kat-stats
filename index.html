@@ -801,6 +801,7 @@
       margin-right: 3px;
     }
     .chain-eth { color: #627EEA; }
+    .chain-kat { color: #E8A838; }
     .badge-source-dex   { background: #b3d9ff; color: #000; }
     .badge-source-cex   { background: #ffd9b3; color: #000; }
     .badge-source-both  { background: #d9b3ff; color: #000; }
@@ -1766,7 +1767,7 @@ function renderTable() {
       <td class="num">${d._loading ? pending : (d.claimed > 0 ? `<span class="num-yellow">${fmtNum(d.claimed)}</span>` : '—')}</td>
       <td class="num num-detail">${sentCell}</td>
       <td class="num">${d._loading ? pending : (moved > 0.01 ? `<span class="num-red">${fmtNum(moved)}</span>` : '—')}</td>
-      <td class="num">${d._loading ? pending : (d.balance > 0.01 ? `<span class="num-green">${fmtNum(d.balance)}</span>` : '—')}</td>
+      <td class="num">${d._loading ? pending : (d.balance > 0.01 ? `<span class="num-green"><span class="chain-badge chain-kat">⬡</span>${fmtNum(d.balance)}</span>` : '—')}</td>
       <td class="num">${d._loading ? pending : (() => { const sk = stakerMap[d.address]; const vk = sk ? (sk.vkatAmount || 0) : 0; const ak = sk ? (sk.avkatAmount || 0) : (d.avkat || 0); const total = vk + ak; if (total < 0.01) return '—'; let parts = []; if (vk > 0.01) parts.push(fmtNum(vk) + ' vKAT'); if (ak > 0.01) parts.push(fmtNum(ak) + ' avKAT'); return `<span class="num-blue" title="${parts.join(' + ')}">${fmtNum(total)}</span>`; })()}</td>
       <td class="num">${d._loading ? pending : pctCell}</td>
       <td>
