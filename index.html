@@ -463,13 +463,6 @@
     .cell-pending { color: #bbb; letter-spacing: 0.15em; }
     th:last-child { cursor: default; }
 
-    .anomaly-flag {
-      color: var(--violet);
-      font-size: 0.6rem;
-      vertical-align: middle;
-      cursor: help;
-      opacity: 0.8;
-    }
 
     /* ── TOOLTIPS ── */
     th[data-tip] { cursor: help; position: relative; }
@@ -801,7 +794,7 @@
       margin-right: 3px;
     }
     .chain-eth { color: #627EEA; }
-    .chain-kat { color: #E8A838; }
+    .chain-kat { color: #4A9B5A; }
     .badge-source-dex   { background: #b3d9ff; color: #000; }
     .badge-source-cex   { background: #ffd9b3; color: #000; }
     .badge-source-both  { background: #d9b3ff; color: #000; }
@@ -1217,7 +1210,7 @@
     <span><b>KAT Sold</b> — swapped on Sushi V2/V3 (Swap event detected in tx receipt)</span>
     <span><b>KAT Sent</b> — transfers to addresses that no longer hold the KAT (orange) · transfers to holders (green, excluded from Dump %)</span>
     <span><b>⛓ bridged</b> — burned via LayerZero OFT bridge to Ethereum mainnet · <b>⛓ → CEX</b> = confirmed deposit to exchange hot wallet on ETH mainnet</span>
-    <span><b>Dump %</b> — (KAT Sold + KAT Sent to non-holders + KAT Bridged out) ÷ KAT Claimed, capped at 100%</span>
+    <span><b>Dump %</b> — 100% − (KAT Balance + Staked + Held DeFi) ÷ KAT Claimed. Measures what fraction of the airdrop is no longer held.</span>
   </div>
   <div class="footer-sources">
     Data: <a href="https://rpc.katana.network" target="_blank">Katana RPC</a> (on-chain claimed amounts via Merkl Distributor · pending/claimable unavailable while Merkl API is down) ·
@@ -1283,7 +1276,7 @@ async function triggerPipeline() {
                   buyerAddrs = new Set(buyerData.map(b => b.address));
                   stakerData = nd.stakers || [];
                   stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
-                  for (const d of nd.addresses) { const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
+                  for (const d of nd.addresses) { ingestAddress(d); }
                   lastGeneratedAt = ts;
                   updateStats(); updateBuyerStats(); updateStakerStats();
                   scheduleRender(); updateFreshnessIndicator();
@@ -1571,12 +1564,6 @@ function fmtNum(n, dp = 2) {
 
 
 // ── CLASSIFICATION ────────────────────────────────────────────────────────────
-function disposed(d) {
-  // sold + sent-to-non-holders + OFT-bridged-out
-  // cexSent is a confirmed-CEX annotation for what happened to bridged KAT on ETH mainnet
-  return (d.moved || 0) + (d.transferred || 0) + (d.bridged || 0);
-}
-
 function retainedPct(d) {
   // Balance-based: what fraction of claimed tokens are still held?
   // Includes KAT balance + staked (vKAT + avKAT) + DeFi positions still holding
@@ -1597,6 +1584,13 @@ function classify(d) {
 function dumpPct(d) {
   if (d.claimed === 0) return 0;
   return 100 - retainedPct(d);
+}
+
+function ingestAddress(d) {
+  const sk = stakerMap[d.address];
+  d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0);
+  d.status = classify(d);
+  results[d.address] = { ...d, _loading: false };
 }
 
 // ── FILTER / SORT ─────────────────────────────────────────────────────────────
@@ -1664,6 +1658,82 @@ function addrDisplay(addr) {
   return `<span title="${addr}">${short}<span class="addr-sep">·</span><span class="addr-label">${escapeHtml(truncated)}</span></span>`;
 }
 
+// ── CELL RENDER HELPERS ────────────────────────────────────────────────────────
+function renderSentCell(d) {
+  if (d._loading) return '<span class="cell-pending">…</span>';
+  const transferred = d.transferred || 0;
+  const transferredTo = d.transferredTo || [];
+  const sentHeld = d.sentHeld || 0;
+  const sentHeldTo = d.sentHeldTo || [];
+  const bridged = d.bridged || 0;
+  const cexSent = d.cexSent || 0;
+  const cexDests = d.cexDests || [];
+
+  const visibleAddrs = transferredTo.slice(0, 3);
+  const extraAddrs   = transferredTo.slice(3);
+  const sentChips = visibleAddrs.map(a =>
+    `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a}">${tinyAddrDisplay(a)}</a>`
+  ).join(' ');
+  const moreChip  = extraAddrs.length ? ` <span class="addr-more" title="${extraAddrs.join('\n')}">+${extraAddrs.length} more</span>` : '';
+
+  const heldChips = sentHeldTo.slice(0, 2).map(a =>
+    `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a} (still holding)">${tinyAddrDisplay(a)}</a>`
+  ).join(' ');
+  const heldMore = sentHeldTo.length > 2 ? ` <span class="addr-more">+${sentHeldTo.length - 2} more</span>` : '';
+
+  const hasDumped  = d.claimed > 0 && transferred > 0.01;
+  const hasHeld    = d.claimed > 0 && sentHeld > 0.01;
+  const hasBridged = bridged > 0.01;
+  if (!hasDumped && !hasHeld && !hasBridged) return '—';
+  let html = '';
+  if (hasDumped) {
+    html += `<span class="num-orange">${fmtNum(transferred)}</span>`;
+    if (sentChips) html += `<br>${sentChips}${moreChip}`;
+  }
+  if (hasHeld) {
+    if (hasDumped) html += ' ';
+    html += `<span class="num-green" title="Sent to wallets still holding the KAT — excluded from Dump %">${fmtNum(sentHeld)} held</span>`;
+    if (heldChips) html += `<br>${heldChips}${heldMore}`;
+  }
+  if (hasBridged) {
+    if (hasDumped || hasHeld) html += '<br>';
+    const ethChip = '<span class="chain-badge chain-eth">◆ ETH</span>';
+    if (cexSent > 0.01) {
+      const names = [...new Set(cexDests.map(d => { const e = CEX_LABELS[d.toLowerCase()]; return e ? (typeof e === 'string' ? e : e.label) : null; }).filter(Boolean))];
+      const cexLabel = names.length === 1 ? names[0] : 'CEX';
+      html += `<span class="num-red" title="Bridged via LayerZero to ETH mainnet, then deposited to ${cexLabel}">${ethChip}${fmtNum(bridged)} → ${cexLabel}</span>`;
+    } else {
+      html += `<span class="num-orange" title="Bridged via LayerZero OFT to Ethereum mainnet">${ethChip}${fmtNum(bridged)} bridged</span>`;
+    }
+  }
+  return html;
+}
+
+function renderBalanceCell(d) {
+  if (d._loading) return '<span class="cell-pending">…</span>';
+  return d.balance > 0.01 ? `<span class="num-green"><span class="chain-badge chain-kat">⬡</span>${fmtNum(d.balance)}</span>` : '—';
+}
+
+function renderStakedCell(d) {
+  if (d._loading) return '<span class="cell-pending">…</span>';
+  const sk = stakerMap[d.address];
+  const vk = sk ? (sk.vkatAmount || 0) : 0;
+  const ak = sk ? (sk.avkatAmount || 0) : (d.avkat || 0);
+  const total = vk + ak;
+  if (total < 0.01) return '—';
+  let parts = [];
+  if (vk > 0.01) parts.push(fmtNum(vk) + ' vKAT');
+  if (ak > 0.01) parts.push(fmtNum(ak) + ' avKAT');
+  return `<span class="num-blue" title="${parts.join(' + ')}">${fmtNum(total)}</span>`;
+}
+
+function renderPctCell(d) {
+  if (d._loading) return '<span class="cell-pending">…</span>';
+  if (d.claimed <= 0) return '—';
+  const pct = dumpPct(d);
+  return `<span class="${pct > 50 ? 'num-red' : pct > 5 ? 'num-yellow' : pct > 0 ? 'num-green' : 'num-dim'}">${pct.toFixed(1)}%</span>`;
+}
+
 function renderTable() {
   if (document.querySelector('.label-input')) return;
   renderPending = false;
@@ -1684,86 +1754,27 @@ function renderTable() {
   if (allRows.length === 0) return;
 
   tbody.innerHTML = filtered.map((d, i) => {
-    const pct  = dumpPct(d);
     const moved = d.moved || 0;
-    const transferred = d.transferred || 0;
-    const transferredTo = d.transferredTo || [];
     const rowCls = d.status === 'farmer'   ? 'row-farmer'
                  : d.status === 'hodler'   ? 'row-hodler'
                  : d.status === 'inactive' ? 'row-inactive'
                  : '';
 
-    const pctCell = d.claimed > 0
-      ? `<span class="${pct > 50 ? 'num-red' : pct > 5 ? 'num-yellow' : pct > 0 ? 'num-green' : 'num-dim'}">${pct.toFixed(1)}%</span>`
-      : '—';
-
-    const sentHeld = d.sentHeld || 0;
-    const sentHeldTo = d.sentHeldTo || [];
-    const defiPositions = d.defiPositions || [];
-    const visibleAddrs = transferredTo.slice(0, 3);
-    const extraAddrs   = transferredTo.slice(3);
-    const sentChips = visibleAddrs.map(a =>
-      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a}">${tinyAddrDisplay(a)}</a>`
-    ).join(' ');
-    const moreChip  = extraAddrs.length ? ` <span class="addr-more" title="${extraAddrs.join('\n')}">+${extraAddrs.length} more</span>` : '';
-
-    const heldChips = sentHeldTo.slice(0, 2).map(a =>
-      `<a class="addr-tiny" href="https://katanascan.com/address/${a}" target="_blank" rel="noopener" title="${a} (still holding)">${tinyAddrDisplay(a)}</a>`
-    ).join(' ');
-    const heldMore = sentHeldTo.length > 2 ? ` <span class="addr-more">+${sentHeldTo.length - 2} more</span>` : '';
-
-    const bridged = d.bridged || 0;
-    const cexSent = d.cexSent || 0;
-    const cexDests = d.cexDests || [];
-    const sentCell = d._loading
-      ? '<span class="cell-pending">…</span>'
-      : (() => {
-          const hasDumped  = d.claimed > 0 && transferred > 0.01;
-          const hasHeld    = d.claimed > 0 && sentHeld > 0.01;
-          const hasBridged = bridged > 0.01;
-          if (!hasDumped && !hasHeld && !hasBridged) return '—';
-          let html = '';
-          if (hasDumped) {
-            html += `<span class="num-orange">${fmtNum(transferred)}</span>`;
-            if (sentChips) html += `<br>${sentChips}${moreChip}`;
-          }
-          if (hasHeld) {
-            if (hasDumped) html += ' ';
-            html += `<span class="num-green" title="Sent to wallets still holding the KAT — excluded from Dump %">${fmtNum(sentHeld)} held</span>`;
-            if (heldChips) html += `<br>${heldChips}${heldMore}`;
-          }
-          if (hasBridged) {
-            if (hasDumped || hasHeld) html += '<br>';
-            const ethChip = '<span class="chain-badge chain-eth">◆ ETH</span>';
-            if (cexSent > 0.01) {
-              const names = [...new Set(cexDests.map(d => { const e = CEX_LABELS[d.toLowerCase()]; return e ? (typeof e === 'string' ? e : e.label) : null; }).filter(Boolean))];
-              const cexLabel = names.length === 1 ? names[0] : 'CEX';
-              html += `<span class="num-red" title="Bridged via LayerZero to ETH mainnet, then deposited to ${cexLabel}">${ethChip}${fmtNum(bridged)} → ${cexLabel}</span>`;
-            } else {
-              html += `<span class="num-orange" title="Bridged via LayerZero OFT to Ethereum mainnet">${ethChip}${fmtNum(bridged)} bridged</span>`;
-            }
-          }
-          return html;
-        })();
-
     const pending = d._loading ? '<span class="cell-pending">…</span>' : '—';
     const errIcon = d._error ? ' <span title="RPC fetch failed for this address" style="color:var(--yellow);font-size:0.65rem">⚠</span>' : '';
-    const anomalyFlag = (!d._loading && d.claimed > 0 && disposed(d) > d.claimed * 2)
-      ? ` <span class="anomaly-flag" title="Disposed exceeds claimed — may include non-Merkl KAT">◈</span>`
-      : '';
 
     return `<tr class="${rowCls}">
       <td>${i + 1}</td>
       <td class="addr-cell" onclick="editLabel(this,'${d.address}')" title="Click to label">
-        ${addrDisplay(d.address)}${errIcon}${anomalyFlag}${buyerAddrs.has(d.address) ? '<span class="badge-bought" data-tip="Also bought KAT on DEX or CEX">bought</span>' : ''}
+        ${addrDisplay(d.address)}${errIcon}${buyerAddrs.has(d.address) ? '<span class="badge-bought" data-tip="Also bought KAT on DEX or CEX">bought</span>' : ''}
       </td>
       <td>${d._loading ? '' : badge(d.status, d.avkat)}</td>
       <td class="num">${d._loading ? pending : (d.claimed > 0 ? `<span class="num-yellow">${fmtNum(d.claimed)}</span>` : '—')}</td>
-      <td class="num num-detail">${sentCell}</td>
+      <td class="num num-detail">${renderSentCell(d)}</td>
       <td class="num">${d._loading ? pending : (moved > 0.01 ? `<span class="num-red">${fmtNum(moved)}</span>` : '—')}</td>
-      <td class="num">${d._loading ? pending : (d.balance > 0.01 ? `<span class="num-green"><span class="chain-badge chain-kat">⬡</span>${fmtNum(d.balance)}</span>` : '—')}</td>
-      <td class="num">${d._loading ? pending : (() => { const sk = stakerMap[d.address]; const vk = sk ? (sk.vkatAmount || 0) : 0; const ak = sk ? (sk.avkatAmount || 0) : (d.avkat || 0); const total = vk + ak; if (total < 0.01) return '—'; let parts = []; if (vk > 0.01) parts.push(fmtNum(vk) + ' vKAT'); if (ak > 0.01) parts.push(fmtNum(ak) + ' avKAT'); return `<span class="num-blue" title="${parts.join(' + ')}">${fmtNum(total)}</span>`; })()}</td>
-      <td class="num">${d._loading ? pending : pctCell}</td>
+      <td class="num">${renderBalanceCell(d)}</td>
+      <td class="num">${renderStakedCell(d)}</td>
+      <td class="num">${renderPctCell(d)}</td>
       <td>
         <div class="ext-links">
           <a class="ext-link" href="https://katanascan.com/address/${d.address}" target="_blank" rel="noopener">explr</a>
@@ -2642,7 +2653,7 @@ async function main() {
 
   ADDRESSES = data.addresses.map(d => d.address);
   for (const d of data.addresses) {
-    const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false };
+    ingestAddress(d);
   }
 
   const generatedAt = data.meta?.generatedAt ? new Date(data.meta.generatedAt) : null;
@@ -2685,7 +2696,7 @@ async function main() {
         buyerAddrs = new Set(buyerData.map(b => b.address));
         stakerData = newData.stakers || [];
         stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
-        for (const d of newData.addresses) { const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
+        for (const d of newData.addresses) { ingestAddress(d); }
         lastGeneratedAt = newTs;
         updateStats();
         updateBuyerStats();

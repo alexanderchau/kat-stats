@@ -20,53 +20,43 @@ SCRIPT_DIR = Path(__file__).parent
 STATE_PATH = SCRIPT_DIR / 'state.json'
 DATA_PATH  = SCRIPT_DIR / 'data.json'
 INDEX_PATH = SCRIPT_DIR / 'index.html'
+CONFIG_PATH = SCRIPT_DIR / 'config.json'
+
+# ── Load config ───────────────────────────────────────────────────────────────
+_cfg = json.loads(CONFIG_PATH.read_text())
 
 # ── Chain config ───────────────────────────────────────────────────────────────
-KATANA_RPC    = 'https://rpc.katana.network/'
-ETH_RPC       = 'https://ethereum.publicnode.com'
+KATANA_RPC    = _cfg['katanaRpc']
+ETH_RPC       = _cfg['ethRpc']
 LOG_CHUNK     = 29_999    # Katana max getLogs range (30k fails)
 ETH_LOG_CHUNK = 50_000    # ETH mainnet (~7 days per chunk, RPC limit)
 
-# ── Contracts ──────────────────────────────────────────────────────────────────
-DISTRIBUTOR_ADDR = '0x3ef3d8ba38ebe18db133cec108f4d14ce00dd9ae'
-CLAIMED_TOPIC    = '0xf7a40077ff7a04c7e61f6f26fb13774259ddf1b6bce9ecf26a8276cdd3992683'
-TRANSFER_TOPIC   = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-SWAP_V3_TOPIC    = '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'
-SWAP_V2_TOPIC    = '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822'
+# ── Contracts (loaded from config.json) ───────────────────────────────────────
+DISTRIBUTOR_ADDR = _cfg['distributorAddr']
+CLAIMED_TOPIC    = _cfg['claimedTopic']
+TRANSFER_TOPIC   = _cfg['transferTopic']
+SWAP_V3_TOPIC    = _cfg['swapV3Topic']
+SWAP_V2_TOPIC    = _cfg['swapV2Topic']
 
-DEPLOY_BLOCK  = 2_808_000
-KAT_ADDR      = '0x6e9c1f88a960fe63387eb4b71bc525a9313d8461'
-AVKAT_ADDR    = '0x7231dbaCdFc968E07656D12389AB20De82FbfCeB'.lower()
-KAT_DECIMALS  = 18
+DEPLOY_BLOCK  = _cfg['deployBlock']
+KAT_ADDR      = _cfg['katAddr']
+AVKAT_ADDR    = _cfg['avkatAddr']
+KAT_DECIMALS  = _cfg['katDecimals']
 
-KAT_TOKENS = {
-    '0x6e9c1f88a960fe63387eb4b71bc525a9313d8461',  # KAT wrapped v2 (primary Merkl-distributed)
-    '0x3ba1fbc4c3aea775d335b31fb53778f46fd3a330',  # KAT wrapped
-    '0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d',  # KAT base
-}
+KAT_TOKENS     = set(_cfg['katTokens'])
+KAT_POOL_ADDRS = set(_cfg['poolAddresses'])
 
-KAT_POOL_ADDRS = {
-    '0x1d1f00a79bcd17e4ca05c0204a84a806c4417ced',  # V3 KAT/USDC 0.01%
-    '0x10045367e619caae6f60cc80046c43c6cd55f629',  # V3 KAT/USDC 0.05%
-    '0x6d8a30f4b2501de8f0b443cb11eb512f12d5355f',  # V3 KAT/USDC 0.3%
-    '0xaa7bb0c80a30b61a5bb20a804f6cc96651bad37a',  # V3 KAT/USDC 1%
-    '0x358004bf9ecd5128821bcd385e8018c403038f51',  # V3 KAT/USDT 1%
-    '0xeb638f16ab412705fce43572cb5d0d251051ed32',  # V3 KAT/WETH 0.01%
-    '0xfe4e52ccf659705141e6fa5dee01432a3e637904',  # V3 KAT/WETH 0.05%
-    '0x74dde0376f6cb5633cc2a7f83b1d8c56161f59e5',  # V2 USDC/KAT
-}
+BRIDGE       = _cfg['bridges'][0]
+BRIDGE2      = _cfg['bridges'][1]
+BRIDGE_DESTS = set(_cfg['bridges'])
+ZERO_ADDR    = _cfg['zeroAddress']
 
-BRIDGE      = '0x2a3dd3eb832af982ec71669e178424b10dca2ede'
-BRIDGE2     = '0x64b20eb25aed030fd510ef93b9125278b152f6a6'
-BRIDGE_DESTS = {BRIDGE, BRIDGE2}
-ZERO_ADDR   = '0x0000000000000000000000000000000000000000'
+VOTING_ESCROW = _cfg['votingEscrow']
+LOCK_NFT      = _cfg['lockNft']
+STAKE_DESTS   = {VOTING_ESCROW, AVKAT_ADDR}
 
-VOTING_ESCROW = '0x4d6fc15ca6258b168225d283262743c623c13ead'  # vKAT lock
-LOCK_NFT      = '0x106f7d67ea25cb9eff5064cf604ebf6259ff296d'  # vKAT ERC-721 (Lock NFT)
-STAKE_DESTS   = {VOTING_ESCROW, AVKAT_ADDR}                   # vKAT + avKAT vault
-
-KAT_ETH_ADDR  = '0x8f051ca72a3440d83b18e71c3e59676203ab8f91'
-ETH_KAT_START = 21_900_000
+KAT_ETH_ADDR  = _cfg['katEthAddr']
+ETH_KAT_START = _cfg['ethKatStart']
 
 # ── Thread-safe RPC ────────────────────────────────────────────────────────────
 _seq_lock = threading.Lock()
@@ -229,14 +219,23 @@ def save_state(state):
 
 # ── Classification ─────────────────────────────────────────────────────────────
 def disposed(d):
+    """Legacy helper — only used for backward compat, not for classification."""
     return d.get('moved', 0) + d.get('transferred', 0) + d.get('bridged', 0)
 
-def classify(d):
+def classify(d, stake_raw=None):
+    """Classify address status. Matches frontend retainedPct() logic:
+    held = balance + avkat + staker vKAT/avKAT + held defi positions."""
     # No Merkl claim = inactive (regardless of other activity)
     if d['claimed'] == 0:
         return 'inactive'
     # Balance-based: what fraction of claimed tokens are still held?
     held = d.get('balance', 0) + d.get('avkat', 0)
+    # Add staker amounts (vKAT + avKAT from staker data)
+    if stake_raw:
+        staker = stake_raw.get(d['address'], {})
+        held += staker.get('vkatAmount', 0) + staker.get('avkatAmount', 0)
+    # Add held defi positions
+    held += sum(p['amount'] for p in d.get('defiPositions', []) if p.get('held'))
     retained = max(0.0, min(1.0, held / d['claimed']))
     if retained < 0.5:  return 'farmer'
     if retained < 0.95: return 'partial'
@@ -610,7 +609,7 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs=None):
     return addr_balances, dest_balances, dest_types
 
 # ── Build output ───────────────────────────────────────────────────────────────
-def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types):
+def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types, stake_raw=None):
     out = []
     for addr in addresses:
         claimed = claimed_by_addr.get(addr, 0.0)
@@ -656,7 +655,7 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balance
             'cexSent':        round(xchain['cexSent'], 6),
             'cexDests':       xchain['cexDests'],
         }
-        d['status'] = classify(d)
+        d['status'] = classify(d, stake_raw=stake_raw)
         out.append(d)
     return out
 
@@ -798,7 +797,7 @@ def main():
 
     print('6/6 Building data.json…')
     vkat_locks    = enumerate_vkat_locks()
-    address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types)
+    address_data  = build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr, addr_balances, dest_balances, dest_types, stake_raw=stake_raw)
     buyers_data   = build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances, vkat_locks)
     stakers_data  = build_stakers_output(stake_raw, addr_balances, vkat_locks)
 

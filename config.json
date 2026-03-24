@@ -1,0 +1,37 @@
+{
+  "katanaRpc": "https://rpc.katana.network/",
+  "ethRpc": "https://ethereum.publicnode.com",
+  "distributorAddr": "0x3ef3d8ba38ebe18db133cec108f4d14ce00dd9ae",
+  "claimedTopic": "0xf7a40077ff7a04c7e61f6f26fb13774259ddf1b6bce9ecf26a8276cdd3992683",
+  "transferTopic": "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+  "swapV3Topic": "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67",
+  "swapV2Topic": "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822",
+  "deployBlock": 2808000,
+  "katAddr": "0x6e9c1f88a960fe63387eb4b71bc525a9313d8461",
+  "avkatAddr": "0x7231dbacdfce68e07656d12389ab20de82fbfceb",
+  "katDecimals": 18,
+  "katTokens": [
+    "0x6e9c1f88a960fe63387eb4b71bc525a9313d8461",
+    "0x3ba1fbc4c3aea775d335b31fb53778f46fd3a330",
+    "0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d"
+  ],
+  "poolAddresses": [
+    "0x1d1f00a79bcd17e4ca05c0204a84a806c4417ced",
+    "0x10045367e619caae6f60cc80046c43c6cd55f629",
+    "0x6d8a30f4b2501de8f0b443cb11eb512f12d5355f",
+    "0xaa7bb0c80a30b61a5bb20a804f6cc96651bad37a",
+    "0x358004bf9ecd5128821bcd385e8018c403038f51",
+    "0xeb638f16ab412705fce43572cb5d0d251051ed32",
+    "0xfe4e52ccf659705141e6fa5dee01432a3e637904",
+    "0x74dde0376f6cb5633cc2a7f83b1d8c56161f59e5"
+  ],
+  "bridges": [
+    "0x2a3dd3eb832af982ec71669e178424b10dca2ede",
+    "0x64b20eb25aed030fd510ef93b9125278b152f6a6"
+  ],
+  "votingEscrow": "0x4d6fc15ca6258b168225d283262743c623c13ead",
+  "lockNft": "0x106f7d67ea25cb9eff5064cf604ebf6259ff296d",
+  "katEthAddr": "0x8f051ca72a3440d83b18e71c3e59676203ab8f91",
+  "ethKatStart": 21900000,
+  "zeroAddress": "0x0000000000000000000000000000000000000000"
+}
