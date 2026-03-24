@@ -232,13 +232,14 @@ def disposed(d):
     return d.get('moved', 0) + d.get('transferred', 0) + d.get('bridged', 0)
 
 def classify(d):
-    total_out = disposed(d)
     # No Merkl claim = inactive (regardless of other activity)
     if d['claimed'] == 0:
         return 'inactive'
-    ratio = min(1.0, total_out / d['claimed'])
-    if ratio > 0.5:  return 'farmer'
-    if ratio > 0.05: return 'partial'
+    # Balance-based: what fraction of claimed tokens are still held?
+    held = d.get('balance', 0) + d.get('avkat', 0)
+    retained = max(0.0, min(1.0, held / d['claimed']))
+    if retained < 0.5:  return 'farmer'
+    if retained < 0.95: return 'partial'
     return 'hodler'
 
 # ── Scan: Claimed events ───────────────────────────────────────────────────────

@@ -1041,7 +1041,7 @@
         <th data-col="moved" class="num" data-tip="KAT swapped on Sushi V2/V3 — detected via Swap event in tx receipt">KAT Sold<span class="sort-arrow"></span></th>
         <th data-col="balance" class="num" data-tip="Current on-chain KAT balance across all KAT token variants">KAT Balance<span class="sort-arrow"></span></th>
         <th data-col="avkat" class="num" data-tip="Current on-chain avKAT balance (auto-compounding staking vault)">avKAT<span class="sort-arrow"></span></th>
-        <th data-col="dumpPct" class="num" data-tip="(KAT Sold + KAT Sent to non-holders) ÷ KAT Claimed, capped at 100%. Transfers to wallets still holding ≥95% (KAT+avKAT) are excluded.">Dump %<span class="sort-arrow"></span></th>
+        <th data-col="dumpPct" class="num" data-tip="100% − (KAT Balance + avKAT) ÷ KAT Claimed. Measures what fraction of the airdrop is no longer held.">Dump %<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
     </thead>
@@ -1575,17 +1575,25 @@ function disposed(d) {
   return (d.moved || 0) + (d.transferred || 0) + (d.bridged || 0);
 }
 
+function retainedPct(d) {
+  // Balance-based: what fraction of claimed tokens are still held?
+  // Immune to double-counting from bridge hops or non-Merkl KAT flows
+  if (d.claimed === 0) return 100;
+  const held = (d.balance || 0) + (d.avkat || 0);
+  return Math.max(0, Math.min(100, (held / d.claimed) * 100));
+}
+
 function classify(d) {
   if (d.claimed === 0) return 'inactive';
-  const dumpRatio = Math.min(1, disposed(d) / d.claimed);
-  if (dumpRatio > 0.5)  return 'farmer';
-  if (dumpRatio > 0.05) return 'partial';
+  const retained = retainedPct(d);
+  if (retained < 50)  return 'farmer';
+  if (retained < 95)  return 'partial';
   return 'hodler';
 }
 
 function dumpPct(d) {
   if (d.claimed === 0) return 0;
-  return Math.min(100, (disposed(d) / d.claimed) * 100);
+  return 100 - retainedPct(d);
 }
 
 // ── FILTER / SORT ─────────────────────────────────────────────────────────────
