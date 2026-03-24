@@ -276,12 +276,15 @@ function renderSentCell(d) {
   if (hasBridged) {
     if (hasDumped || hasHeld) html += '<br>';
     const ethChip = '<span class="chain-badge chain-eth">◆ ETH</span>';
+    const ethBal = d.ethBalance || 0;
     if (cexSent > 0.01) {
       const names = [...new Set(cexDests.map(d => { const e = CEX_LABELS_MAP[d.toLowerCase()]; return e ? (typeof e === 'string' ? e : e.label) : null; }).filter(Boolean))];
       const cexLabel = names.length === 1 ? names[0] : 'CEX';
       html += `<span class="num-red" title="Bridged via LayerZero to ETH mainnet, then deposited to ${cexLabel}">${ethChip}${fmtNum(bridged)} → ${cexLabel}</span>`;
+    } else if (ethBal > 0.01) {
+      html += `<span class="num-green" title="Bridged ${fmtNum(bridged)} KAT to ETH mainnet — still holding ${fmtNum(ethBal)} on ETH">${ethChip}${fmtNum(ethBal)} held on ETH</span>`;
     } else {
-      html += `<span class="num-orange" title="Bridged via LayerZero OFT to Ethereum mainnet">${ethChip}${fmtNum(bridged)} bridged</span>`;
+      html += `<span class="num-red" title="Bridged ${fmtNum(bridged)} KAT to ETH mainnet — no longer holding on ETH">${ethChip}${fmtNum(bridged)} bridged → sold</span>`;
     }
   }
   return html;
