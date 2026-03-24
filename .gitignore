@@ -1,5 +1,6 @@
 state.json
 supply_state.json
 __pycache__/
+tests/__pycache__/
 .wrangler/
 screenshot-*.png

@@ -9,12 +9,13 @@ Layers (cheapest first):
 Outputs labels.json for the kat-farmer dashboard.
 """
 
-import json
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
+import json
+import fileio
 
 SCRIPT_DIR = Path(__file__).parent
 DATA_FILE = SCRIPT_DIR / "data.json"
@@ -28,8 +29,7 @@ ENS_TIMEOUT = 5   # seconds per request
 
 
 def load_addresses():
-    with open(DATA_FILE) as f:
-        data = json.load(f)
+    data = fileio.load_json(DATA_FILE, {})
     addrs = set()
     for entry in data.get("addresses", []):
         addrs.add(entry["address"].lower())
@@ -116,8 +116,7 @@ def enrich():
     print(f"  ENS: {ens_hits}", flush=True)
     print(f"Unlabeled: {len(addresses) - len(labels)}", flush=True)
 
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(labels, f, indent=2)
+    fileio.save_json(OUTPUT_FILE, labels, compact=False)
     print(f"\nWrote {OUTPUT_FILE}", flush=True)
 
 

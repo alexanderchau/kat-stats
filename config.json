@@ -33,5 +33,13 @@
   "lockNft": "0x106f7d67ea25cb9eff5064cf604ebf6259ff296d",
   "katEthAddr": "0x8f051ca72a3440d83b18e71c3e59676203ab8f91",
   "ethKatStart": 21900000,
-  "zeroAddress": "0x0000000000000000000000000000000000000000"
+  "zeroAddress": "0x0000000000000000000000000000000000000000",
+  "chainId": 747474,
+  "katBaseAddr": "0x7f1f4b4b29f5058fa32cc7a97141b8d7e5abdc2d",
+  "supplyKatTokens": [
+    "0x6e9c1f88a960fe63387eb4b71bc525a9313d8461",
+    "0x3ba1fbc4c3aea775d335b31fb53778f46fd3a330"
+  ],
+  "buyerMinKat": 1000,
+  "stakerMinKat": 100
 }
