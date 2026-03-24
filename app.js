@@ -301,7 +301,7 @@ function renderStakedCell(d) {
   let parts = [];
   if (vk > 0.01) parts.push(fmtNum(vk) + ' vKAT');
   if (ak > 0.01) parts.push(fmtNum(ak) + ' avKAT');
-  return `<span class="num-blue" title="${parts.join(' + ')}">${fmtNum(total)}</span>`;
+  return `<span class="num-blue">${parts.join(' + ')}</span>`;
 }
 
 function renderPctCell(d) {
