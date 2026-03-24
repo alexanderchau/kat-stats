@@ -947,7 +947,7 @@
     <div class="stat-label">Addressbook</div>
     <div class="stat-value" id="stat-addr-count" style="font-size:1.4rem">—</div>
     <div class="stat-sub" id="stat-snapshot-sub">loading…</div>
-    <div class="stat-sub"><span id="freshness-indicator" class="stale-fresh"></span></div>
+    <div class="stat-sub"><span id="freshness-indicator" class="stale-fresh"></span> <button id="refresh-pipeline-btn" onclick="triggerPipeline()" title="Trigger fresh data scan from chain" style="background:none;border:1px solid var(--dim);color:var(--dim);padding:1px 6px;border-radius:3px;cursor:pointer;font-size:0.7rem;vertical-align:middle">&#x21bb;</button></div>
   </div>
   <div class="stat-card" title="Sum of all KAT claimed from Merkl rewards">
     <div class="stat-label">Total KAT Claimed</div>
@@ -1244,6 +1244,68 @@ function updateFreshnessIndicator() {
   el.className = cls;
 }
 setInterval(updateFreshnessIndicator, 60000);
+
+const PIPELINE_API = 'https://kat-stats-api.chau.org';
+const PIPELINE_TOKEN = 'kat-stats-refresh-2026';
+
+async function triggerPipeline() {
+  const btn = document.getElementById('refresh-pipeline-btn');
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const resp = await fetch(PIPELINE_API + '/trigger', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + PIPELINE_TOKEN }
+    });
+    const data = await resp.json();
+    if (resp.status === 202) {
+      btn.textContent = '\u23F3';
+      btn.title = 'Pipeline running — data will refresh in ~5 min';
+      // Poll for completion, then auto-refresh data
+      const poll = setInterval(async () => {
+        try {
+          const s = await fetch(PIPELINE_API + '/status').then(r => r.json());
+          if (!s.running) {
+            clearInterval(poll);
+            btn.textContent = '\u21BB';
+            btn.disabled = false;
+            btn.title = 'Trigger fresh data scan from chain';
+            // Force immediate data refresh
+            const dr = await fetch('data.json?' + Date.now());
+            if (dr.ok) {
+              const nd = await dr.json();
+              if (nd.meta?.generatedAt) {
+                const ts = new Date(nd.meta.generatedAt);
+                if (!lastGeneratedAt || ts > lastGeneratedAt) {
+                  ADDRESSES = nd.addresses.map(d => d.address);
+                  for (const d of nd.addresses) results[d.address] = { ...d, _loading: false };
+                  buyerData = nd.buyers || [];
+                  buyerAddrs = new Set(buyerData.map(b => b.address));
+                  stakerData = nd.stakers || [];
+                  lastGeneratedAt = ts;
+                  updateStats(); updateBuyerStats(); updateStakerStats();
+                  scheduleRender(); updateFreshnessIndicator();
+                }
+              }
+            }
+          }
+        } catch(e) {}
+      }, 15000);
+    } else if (resp.status === 409) {
+      btn.textContent = '\u23F3';
+      btn.title = 'Pipeline already running';
+      setTimeout(() => { btn.textContent = '\u21BB'; btn.disabled = false; }, 5000);
+    } else if (resp.status === 429) {
+      btn.textContent = '\u21BB';
+      btn.disabled = false;
+      btn.title = `Cooldown: retry in ${data.retry_after}s`;
+    }
+  } catch(e) {
+    btn.textContent = '\u21BB';
+    btn.disabled = false;
+    btn.title = 'Trigger failed — check connection';
+  }
+}
 
 // CEX hot wallet addresses — read by indexer.py for cross-chain deposit detection
 const CEX_WALLETS = new Set([
