@@ -144,10 +144,10 @@ function fmtNum(n, dp = 2) {
 // ── CLASSIFICATION ────────────────────────────────────────────────────────────
 function retainedPct(d) {
   // Balance-based: what fraction of claimed tokens are still held?
-  // Includes KAT balance + staked (vKAT + avKAT) + DeFi positions still holding
+  // Includes KAT balance + staked (vKAT + avKAT) + bridged to ETH + DeFi positions still holding
   if (d.claimed === 0) return 100;
   const defiHeld = (d.defiPositions || []).filter(p => p.held).reduce((s, p) => s + p.amount, 0);
-  const held = (d.balance || 0) + (d.staked || d.avkat || 0) + defiHeld;
+  const held = (d.balance || 0) + (d.staked || d.avkat || 0) + (d.bridged || 0) + defiHeld;
   return Math.max(0, Math.min(100, (held / d.claimed) * 100));
 }
 
@@ -167,6 +167,7 @@ function dumpPct(d) {
 function ingestAddress(d) {
   const sk = stakerMap[d.address];
   d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0);
+  d.status = classify(d);
   results[d.address] = { ...d, _loading: false };
 }
 
