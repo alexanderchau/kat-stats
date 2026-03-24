@@ -1278,7 +1278,7 @@ async function triggerPipeline() {
                 const ts = new Date(nd.meta.generatedAt);
                 if (!lastGeneratedAt || ts > lastGeneratedAt) {
                   ADDRESSES = nd.addresses.map(d => d.address);
-                  for (const d of nd.addresses) results[d.address] = { ...d, _loading: false };
+                  for (const d of nd.addresses) { d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
                   buyerData = nd.buyers || [];
                   buyerAddrs = new Set(buyerData.map(b => b.address));
                   stakerData = nd.stakers || [];
@@ -2641,7 +2641,7 @@ async function main() {
 
   ADDRESSES = data.addresses.map(d => d.address);
   for (const d of data.addresses) {
-    results[d.address] = { ...d, _loading: false };
+    d.status = classify(d); results[d.address] = { ...d, _loading: false };
   }
 
   const generatedAt = data.meta?.generatedAt ? new Date(data.meta.generatedAt) : null;
@@ -2680,7 +2680,7 @@ async function main() {
       if (isNaN(newTs.getTime())) return;
       if (!lastGeneratedAt || newTs > lastGeneratedAt) {
         ADDRESSES = newData.addresses.map(d => d.address);
-        for (const d of newData.addresses) results[d.address] = { ...d, _loading: false };
+        for (const d of newData.addresses) { d.status = classify(d); results[d.address] = { ...d, _loading: false }; }
         buyerData = newData.buyers || [];
         buyerAddrs = new Set(buyerData.map(b => b.address));
         stakerData = newData.stakers || [];
