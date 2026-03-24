@@ -1579,9 +1579,10 @@ function disposed(d) {
 
 function retainedPct(d) {
   // Balance-based: what fraction of claimed tokens are still held?
-  // Includes KAT balance + all staked positions (vKAT + avKAT)
+  // Includes KAT balance + staked (vKAT + avKAT) + DeFi positions still holding
   if (d.claimed === 0) return 100;
-  const held = (d.balance || 0) + (d.staked || d.avkat || 0);
+  const defiHeld = (d.defiPositions || []).filter(p => p.held).reduce((s, p) => s + p.amount, 0);
+  const held = (d.balance || 0) + (d.staked || d.avkat || 0) + defiHeld;
   return Math.max(0, Math.min(100, (held / d.claimed) * 100));
 }
 
@@ -1720,8 +1721,7 @@ function renderTable() {
           const hasDumped  = d.claimed > 0 && transferred > 0.01;
           const hasHeld    = d.claimed > 0 && sentHeld > 0.01;
           const hasBridged = bridged > 0.01;
-          const hasDefi    = defiPositions.length > 0;
-          if (!hasDumped && !hasHeld && !hasBridged && !hasDefi) return '—';
+          if (!hasDumped && !hasHeld && !hasBridged) return '—';
           let html = '';
           if (hasDumped) {
             html += `<span class="num-orange">${fmtNum(transferred)}</span>`;
@@ -1732,14 +1732,8 @@ function renderTable() {
             html += `<span class="num-green" title="Sent to wallets still holding the KAT — excluded from Dump %">${fmtNum(sentHeld)} held</span>`;
             if (heldChips) html += `<br>${heldChips}${heldMore}`;
           }
-          if (hasDefi) {
-            if (hasDumped || hasHeld) html += '<br>';
-            html += defiPositions.map(p =>
-              `<a class="addr-tiny" href="https://katanascan.com/address/${p.address}" target="_blank" rel="noopener" title="${p.address} (${p.type})"><span class="num-blue">${fmtNum(p.amount)} ${p.type}</span></a>`
-            ).join(' ');
-          }
           if (hasBridged) {
-            if (hasDumped || hasHeld || hasDefi) html += '<br>';
+            if (hasDumped || hasHeld) html += '<br>';
             const ethChip = '<span class="chain-badge chain-eth">◆ ETH</span>';
             if (cexSent > 0.01) {
               const names = [...new Set(cexDests.map(d => { const e = CEX_LABELS[d.toLowerCase()]; return e ? (typeof e === 'string' ? e : e.label) : null; }).filter(Boolean))];
