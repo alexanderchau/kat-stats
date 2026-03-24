@@ -29,7 +29,7 @@ import fileio
 from scanners import (
     scan_claimed, scan_transfers, scan_avkat_holders, scan_cex,
 )
-from balances import get_fresh_balances, enumerate_vkat_locks
+from balances import get_fresh_balances, get_eth_balances, enumerate_vkat_locks
 from builders import build_output, build_buyers_output, build_stakers_output
 
 SCRIPT_DIR = Path(__file__).parent
@@ -135,6 +135,8 @@ def main():
         KAT_TOKENS, AVKAT_ADDR, KAT_POOL_ADDRS, STAKE_DESTS,
         BRIDGE_DESTS, DISTRIBUTOR_ADDR,
     )
+    bridged_addrs = [a for a in addresses if dump_raw.get(a, {}).get('bridged', 0) > 0]
+    eth_balances = get_eth_balances(bridged_addrs, ETH_RPC, KAT_ETH_ADDR)
     print()
 
     fileio.save_json(STATE_PATH, state, compact=True)
@@ -146,6 +148,7 @@ def main():
     address_data  = build_output(
         addresses, claimed_by_addr, dump_raw, cex_by_addr,
         addr_balances, dest_balances, dest_types, stake_raw=stake_raw,
+        eth_balances=eth_balances,
     )
     buyers_data   = build_buyers_output(
         buy_raw, stake_raw, addr_set, addr_balances, vkat_locks, BUYER_MIN_KAT,

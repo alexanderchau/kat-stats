@@ -5,11 +5,13 @@ from classify import classify
 
 
 def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr,
-                 addr_balances, dest_balances, dest_types, stake_raw=None):
+                 addr_balances, dest_balances, dest_types, stake_raw=None,
+                 eth_balances=None):
     """Build the 'addresses' list for data.json.
 
     Returns sorted list matching original address order.
     """
+    eth_balances = eth_balances or {}
     out = []
     for addr in addresses:
         claimed = claimed_by_addr.get(addr, 0.0)
@@ -51,6 +53,7 @@ def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr,
             'sentHeldTo':     sent_held_to,
             'defiPositions':  defi_positions,
             'bridged':        round(r['bridged'], 6),
+            'ethBalance':     round(eth_balances.get(addr, 0.0), 6),
             'cexSent':        round(xchain['cexSent'], 6),
             'cexDests':       xchain['cexDests'],
         }

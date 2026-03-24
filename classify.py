@@ -19,7 +19,7 @@ def classify(d, stake_raw=None):
     """
     if d['claimed'] == 0:
         return 'inactive'
-    held = d.get('balance', 0) + d.get('avkat', 0) + d.get('bridged', 0)
+    held = d.get('balance', 0) + d.get('avkat', 0) + d.get('ethBalance', 0)
     if stake_raw:
         staker = stake_raw.get(d['address'], {})
         held += staker.get('vkatAmount', 0) + staker.get('avkatAmount', 0)
@@ -37,7 +37,7 @@ def retained_pct(d, stake_raw=None):
     """
     if d['claimed'] == 0:
         return 0.0
-    held = d.get('balance', 0) + d.get('avkat', 0) + d.get('bridged', 0)
+    held = d.get('balance', 0) + d.get('avkat', 0) + d.get('ethBalance', 0)
     if stake_raw:
         staker = stake_raw.get(d['address'], {})
         held += staker.get('vkatAmount', 0) + staker.get('avkatAmount', 0)

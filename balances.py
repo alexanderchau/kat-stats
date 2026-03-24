@@ -106,6 +106,40 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs, rpc_url, kat_tokens,
     return addr_balances, dest_balances, dest_types
 
 
+def get_eth_balances(bridged_addrs, eth_rpc, kat_eth_addr):
+    """Fetch KAT balance on ETH mainnet for addresses that bridged tokens.
+
+    Returns: {addr: float} — ETH-side KAT balance for each address.
+    """
+    if not bridged_addrs:
+        return {}
+    print(f'  ETH balances: fetching {len(bridged_addrs):,} bridged addresses…')
+    eth_balances = {}
+    done_count = 0
+    lock = threading.Lock()
+
+    def fetch(addr):
+        return addr, rpc.balance_of(kat_eth_addr, addr, eth_rpc)
+
+    with ThreadPoolExecutor(max_workers=16) as ex:
+        futs = {ex.submit(fetch, a): a for a in bridged_addrs}
+        for fut in as_completed(futs):
+            with lock:
+                done_count += 1
+                n = done_count
+            if n % 50 == 0 or n == len(bridged_addrs):
+                print(f'    {n}/{len(bridged_addrs)} ETH balance fetches done…', end='\r')
+            try:
+                addr, bal = fut.result()
+                eth_balances[addr] = bal
+            except Exception:
+                eth_balances[futs[fut]] = 0.0
+    print()
+    total = sum(eth_balances.values())
+    print(f'  ETH balances: {rpc.fmtM(total)} KAT held on ETH across {len(bridged_addrs)} addresses')
+    return eth_balances
+
+
 def enumerate_vkat_locks(rpc_url, lock_nft, voting_escrow, kat_decimals):
     """Enumerate all vKAT Lock NFTs → {owner: {amount, endTime}}."""
     r = rpc.rpc_call(rpc_url, 'eth_call', [{'to': lock_nft, 'data': '0x18160ddd'}, 'latest'])
