@@ -2636,6 +2636,10 @@ async function main() {
     return;
   }
 
+  // Build stakerMap before processing addresses so d.staked is correct
+  stakerData = data.stakers || [];
+  stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
+
   ADDRESSES = data.addresses.map(d => d.address);
   for (const d of data.addresses) {
     const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); d.status = classify(d); results[d.address] = { ...d, _loading: false };
