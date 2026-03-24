@@ -20,18 +20,12 @@ function updateFreshnessIndicator() {
 }
 setInterval(updateFreshnessIndicator, 60000);
 
-const PIPELINE_API = 'https://kat-stats-api.chau.org';
-const PIPELINE_TOKEN = 'kat-stats-refresh-2026';
-
 async function triggerPipeline() {
   const btn = document.getElementById('refresh-pipeline-btn');
   btn.disabled = true;
   btn.textContent = '...';
   try {
-    const resp = await fetch(PIPELINE_API + '/trigger', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + PIPELINE_TOKEN }
-    });
+    const resp = await fetch('/api/trigger', { method: 'POST' });
     const data = await resp.json();
     if (resp.status === 202) {
       btn.textContent = '\u23F3';
@@ -39,7 +33,7 @@ async function triggerPipeline() {
       // Poll for completion, then auto-refresh data
       const poll = setInterval(async () => {
         try {
-          const s = await fetch(PIPELINE_API + '/status').then(r => r.json());
+          const s = await fetch('/api/status').then(r => r.json());
           if (!s.running) {
             clearInterval(poll);
             btn.textContent = '\u21BB';
