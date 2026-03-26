@@ -8,7 +8,7 @@
   "swapV2Topic": "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822",
   "deployBlock": 2808000,
   "katAddr": "0x6e9c1f88a960fe63387eb4b71bc525a9313d8461",
-  "avkatAddr": "0x7231dbacdfce68e07656d12389ab20de82fbfceb",
+  "avkatAddr": "0x7231dbaCdFc968E07656D12389AB20De82FbfCeB",
   "katDecimals": 18,
   "katTokens": [
     "0x6e9c1f88a960fe63387eb4b71bc525a9313d8461",
@@ -41,5 +41,8 @@
     "0x3ba1fbc4c3aea775d335b31fb53778f46fd3a330"
   ],
   "buyerMinKat": 1000,
-  "stakerMinKat": 100
+  "stakerMinKat": 100,
+  "excludeStakers": [
+    "0x60233d1c150f9c08d886906d597aa79a205b0463"
+  ]
 }

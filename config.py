@@ -38,7 +38,13 @@ ZERO_ADDR = _cfg['zeroAddress']   # str
 
 VOTING_ESCROW = _cfg['votingEscrow']   # str
 LOCK_NFT      = _cfg['lockNft']        # str
-STAKE_DESTS   = {VOTING_ESCROW, AVKAT_ADDR}   # set[str] — derived
+
+# Comparison sets: lowercased because log-derived addresses are always lowercase.
+# Config addresses preserve original casing for RPC calls (Katana RPC is case-sensitive).
+def _lower_set(*addrs):
+    return {a.lower() for a in addrs}
+
+STAKE_DESTS   = _lower_set(VOTING_ESCROW, AVKAT_ADDR)
 
 KAT_ETH_ADDR  = _cfg['katEthAddr']    # str — KAT token on ETH mainnet
 ETH_KAT_START = _cfg['ethKatStart']   # int — block where ETH KAT scanning begins
@@ -53,3 +59,6 @@ SUPPLY_KAT_TOKENS = set(_cfg['supplyKatTokens'])   # set[str]
 
 BUYER_MIN_KAT  = _cfg['buyerMinKat']   # int — 1000
 STAKER_MIN_KAT = _cfg['stakerMinKat']  # int — 100
+
+# Protocol addresses to exclude from staker counts (e.g. avKAT vault contract)
+EXCLUDE_STAKERS = _lower_set(*_cfg.get('excludeStakers', []))

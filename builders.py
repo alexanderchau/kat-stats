@@ -2,6 +2,7 @@
 KAT Farmer — output builders for data.json sections.
 """
 from classify import classify
+from config import EXCLUDE_STAKERS
 
 
 def build_output(addresses, claimed_by_addr, dump_raw, cex_by_addr,
@@ -123,6 +124,8 @@ def build_stakers_output(stake_raw, addr_balances, vkat_locks, staker_min_kat=10
 
     out = []
     for addr, s in stake_raw.items():
+        if addr.lower() in EXCLUDE_STAKERS:
+            continue
         bals      = addr_balances.get(addr, {'kat': 0.0, 'avkat': 0.0})
         avkat_bal = bals['avkat']
         lock_info = vkat_locks.get(addr, {'amount': 0.0, 'endTime': 0})
