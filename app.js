@@ -885,6 +885,160 @@ function _showGrowthFromSnaps(current, snaps) {
   renderGrowth('sstat-avkat-growth', current.avkat, old.avkat, fmtK);
 }
 
+// ---- Stakers history chart modal ----
+const STAKER_METRIC_META = {
+  totalStaked: { title: 'Total KAT Staked',  suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
+  pctCirc:     { title: '% of Circ Supply',  suffix: '%',  fmt: v => v.toFixed(2) + '%',           yPad: 0 },
+  count:       { title: '# Stakers',          suffix: '',   fmt: v => Math.round(v).toLocaleString(), yPad: 0 },
+  vkat:        { title: 'vKAT Locked',        suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
+  avkat:       { title: 'avKAT Deposited',    suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
+  split:       { title: 'vKAT / avKAT Split', suffix: '%',  fmt: v => v.toFixed(1) + '%',           yPad: 0 },
+};
+function showStakerChart(metric) {
+  const modal = document.getElementById('chart-modal');
+  const titleEl = document.getElementById('chart-modal-title');
+  const body = document.getElementById('chart-modal-body');
+  const meta = STAKER_METRIC_META[metric];
+  if (!meta) return;
+  titleEl.textContent = meta.title;
+  body.innerHTML = '<div class="chart-empty">Loading…</div>';
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const render = (snaps) => {
+    const dates = Object.keys(snaps).sort();
+    if (dates.length < 2) {
+      body.innerHTML = '<div class="chart-empty">Not enough history yet (need ≥ 2 daily snapshots).</div>';
+      return;
+    }
+    if (metric === 'split') {
+      // Two series: vKAT % and avKAT % of totalStaked
+      const vSeries = [], aSeries = [];
+      dates.forEach(d => {
+        const s = snaps[d]; if (!s) return;
+        const total = (s.vkat || 0) + (s.avkat || 0);
+        if (total <= 0) return;
+        vSeries.push({ date: d, value: (s.vkat  / total) * 100 });
+        aSeries.push({ date: d, value: (s.avkat / total) * 100 });
+      });
+      if (vSeries.length < 2) { body.innerHTML = '<div class="chart-empty">Not enough valid data points.</div>'; return; }
+      body.innerHTML = buildChartSVG([
+        { name: 'vKAT',  points: vSeries, cls: 'c-line',   dotCls: 'c-dot'   },
+        { name: 'avKAT', points: aSeries, cls: 'c-line-2', dotCls: 'c-dot-2' },
+      ], { fmt: meta.fmt, yMin: 0, yMax: 100 })
+      + '<div class="chart-legend">'
+      +   '<span><span class="sw" style="background:var(--violet)"></span>vKAT %</span>'
+      +   '<span><span class="sw" style="background:var(--accent,#e8a832)"></span>avKAT %</span>'
+      + '</div>'
+      + `<div class="chart-meta">${vSeries.length} snapshots · ${vSeries[0].date} → ${vSeries[vSeries.length-1].date}</div>`;
+      return;
+    }
+    const pts = [];
+    dates.forEach(d => {
+      const s = snaps[d]; if (!s) return;
+      const v = s[metric];
+      if (v === null || v === undefined || isNaN(v)) return;
+      pts.push({ date: d, value: v });
+    });
+    if (pts.length < 2) { body.innerHTML = '<div class="chart-empty">Not enough valid data points.</div>'; return; }
+    body.innerHTML = buildChartSVG([
+      { name: meta.title, points: pts, cls: 'c-line', dotCls: 'c-dot', area: true },
+    ], { fmt: meta.fmt })
+    + `<div class="chart-meta">${pts.length} snapshots · ${pts[0].date} → ${pts[pts.length-1].date} · latest ${meta.fmt(pts[pts.length-1].value)}</div>`;
+  };
+
+  if (_stakerSnapshots) { render(_stakerSnapshots); return; }
+  loadStakerSnapshots().then(fileSnaps => {
+    try {
+      const ls = JSON.parse(localStorage.getItem('kat_farmer_staker_snapshots')) || {};
+      Object.keys(ls).forEach(k => { if (!fileSnaps[k]) fileSnaps[k] = ls[k]; });
+    } catch(e) {}
+    _stakerSnapshots = fileSnaps;
+    render(fileSnaps);
+  });
+}
+
+function buildChartSVG(series, opts) {
+  // Viewbox
+  const W = 680, H = 320;
+  const pad = { l: 56, r: 16, t: 16, b: 32 };
+  const innerW = W - pad.l - pad.r;
+  const innerH = H - pad.t - pad.b;
+
+  // Collect all dates (union, sorted). All series should share the date axis.
+  const dateSet = new Set();
+  series.forEach(s => s.points.forEach(p => dateSet.add(p.date)));
+  const allDates = Array.from(dateSet).sort();
+  const xIdx = Object.fromEntries(allDates.map((d, i) => [d, i]));
+  const n = allDates.length;
+
+  let yMin = opts.yMin, yMax = opts.yMax;
+  if (yMin === undefined || yMax === undefined) {
+    let lo = Infinity, hi = -Infinity;
+    series.forEach(s => s.points.forEach(p => { if (p.value < lo) lo = p.value; if (p.value > hi) hi = p.value; }));
+    if (lo === hi) { lo = lo - 1; hi = hi + 1; }
+    const span = hi - lo;
+    yMin = yMin !== undefined ? yMin : Math.max(0, lo - span * 0.08);
+    yMax = yMax !== undefined ? yMax : hi + span * 0.08;
+  }
+  const x = i => pad.l + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+  const y = v => pad.t + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
+
+  // Y-axis ticks (5)
+  const yTicks = [];
+  for (let i = 0; i <= 4; i++) {
+    const v = yMin + (yMax - yMin) * (i / 4);
+    yTicks.push({ v, y: y(v) });
+  }
+  // X-axis ticks (~6)
+  const tickCount = Math.min(6, n);
+  const xTicks = [];
+  for (let i = 0; i < tickCount; i++) {
+    const idx = Math.round((i / (tickCount - 1)) * (n - 1));
+    xTicks.push({ i: idx, label: allDates[idx].slice(5) }); // MM-DD
+  }
+
+  let svg = `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  // Grid + y ticks
+  yTicks.forEach(t => {
+    svg += `<line class="c-grid" x1="${pad.l}" y1="${t.y}" x2="${W - pad.r}" y2="${t.y}"/>`;
+    svg += `<text class="c-tick" x="${pad.l - 6}" y="${t.y + 3}" text-anchor="end">${opts.fmt(t.v)}</text>`;
+  });
+  // Axes
+  svg += `<line class="c-axis" x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}"/>`;
+  svg += `<line class="c-axis" x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}"/>`;
+  // X ticks
+  xTicks.forEach(t => {
+    const xp = x(t.i);
+    svg += `<text class="c-tick" x="${xp}" y="${H - pad.b + 14}" text-anchor="middle">${t.label}</text>`;
+  });
+
+  // Series lines + area + dots
+  series.forEach(s => {
+    const path = s.points.map((p, i) => {
+      const xp = x(xIdx[p.date]);
+      const yp = y(p.value);
+      return (i === 0 ? 'M' : 'L') + xp.toFixed(1) + ' ' + yp.toFixed(1);
+    }).join(' ');
+    if (s.area) {
+      const first = s.points[0], last = s.points[s.points.length - 1];
+      const areaPath = path
+        + ` L ${x(xIdx[last.date]).toFixed(1)} ${(H - pad.b).toFixed(1)}`
+        + ` L ${x(xIdx[first.date]).toFixed(1)} ${(H - pad.b).toFixed(1)} Z`;
+      svg += `<path class="c-area" d="${areaPath}"/>`;
+    }
+    svg += `<path class="${s.cls}" d="${path}"/>`;
+    s.points.forEach(p => {
+      const xp = x(xIdx[p.date]);
+      const yp = y(p.value);
+      svg += `<circle class="${s.dotCls}" cx="${xp.toFixed(1)}" cy="${yp.toFixed(1)}" r="3"><title>${p.date}: ${opts.fmt(p.value)}</title></circle>`;
+    });
+  });
+
+  svg += `</svg></div>`;
+  return svg;
+}
+
 function renderStakersTable() {
   if (document.querySelector('.label-input')) return;
   const rows    = getStakerFilteredRows();

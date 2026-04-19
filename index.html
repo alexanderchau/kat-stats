@@ -894,6 +894,24 @@
     tr.supply-child.visible { display:table-row; }
     tr.supply-child td { padding-left:2.5rem; color:var(--dim); font-size:0.85rem; }
     tr.supply-child td:first-child { font-weight:400; }
+    /* Chart modal */
+    #chart-modal .modal-box { max-width:760px; }
+    #chart-modal .modal-body { padding:1.25rem 1.5rem; }
+    .chart-wrap { position:relative; }
+    .chart-wrap svg { display:block; width:100%; height:auto; font-family:var(--mono); }
+    .chart-wrap .c-axis { stroke:#c8bfab; stroke-width:1; }
+    .chart-wrap .c-grid { stroke:#e0d8c8; stroke-width:1; }
+    .chart-wrap .c-tick { fill:var(--dim); font-size:10px; }
+    .chart-wrap .c-line { fill:none; stroke:var(--violet); stroke-width:2; }
+    .chart-wrap .c-line-2 { fill:none; stroke:var(--accent,#e8a832); stroke-width:2; }
+    .chart-wrap .c-area { fill:var(--violet); opacity:0.08; }
+    .chart-wrap .c-dot { fill:var(--violet); stroke:var(--cream); stroke-width:1.5; }
+    .chart-wrap .c-dot-2 { fill:var(--accent,#e8a832); stroke:var(--cream); stroke-width:1.5; }
+    .chart-wrap .c-hover { fill:transparent; cursor:pointer; }
+    .chart-legend { display:flex; gap:1.25rem; margin-top:0.75rem; font-family:var(--ui); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); }
+    .chart-legend .sw { display:inline-block; width:14px; height:3px; margin-right:0.45rem; vertical-align:middle; }
+    .chart-meta { margin-top:0.75rem; font-family:var(--mono); font-size:0.75rem; color:var(--dim); }
+    .chart-empty { padding:2rem 0; text-align:center; color:var(--dim); font-family:var(--ui); font-size:0.85rem; }
   </style>
 </head>
 <body>
@@ -906,6 +924,17 @@
       <button class="modal-close" onclick="document.getElementById('addressbook-modal').classList.remove('open');document.body.style.overflow=''">&times;</button>
     </div>
     <div class="modal-body" id="addressbook-body"></div>
+  </div>
+</div>
+
+<!-- Stakers Chart Modal -->
+<div class="modal-overlay" id="chart-modal" onclick="if(event.target===this){this.classList.remove('open');document.body.style.overflow=''}">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="chart-modal-title">Metric</h2>
+      <button class="modal-close" onclick="document.getElementById('chart-modal').classList.remove('open');document.body.style.overflow=''">&times;</button>
+    </div>
+    <div class="modal-body" id="chart-modal-body"></div>
   </div>
 </div>
 
@@ -1144,35 +1173,35 @@
 <div id="tab-stakers" class="tab-pane">
 
 <div class="stats-grid" id="staker-stats-grid">
-  <div class="stat-card" title="Total KAT locked in vKAT + avKAT contracts (on-chain)">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('totalStaked')" title="Total KAT locked in vKAT + avKAT contracts (on-chain) — click for history">
     <div class="stat-label">Total KAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
     <div class="stat-sub" id="sstat-total-sub">on-chain</div>
     <div class="stat-growth" id="sstat-total-staked-growth"></div>
   </div>
-  <div class="stat-card" title="Staked KAT as percentage of circulating supply">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('pctCirc')" title="Staked KAT as percentage of circulating supply — click for history">
     <div class="stat-label">% of Circ Supply</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-pct-circ">—</div>
     <div class="stat-sub" id="sstat-pct-circ-sub"></div>
     <div class="stat-growth" id="sstat-pct-circ-growth"></div>
   </div>
-  <div class="stat-card" title="Unique wallets with any staking position">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('count')" title="Unique wallets with any staking position — click for history">
     <div class="stat-label"># Stakers</div>
     <div class="stat-value" id="sstat-count">—</div>
     <div class="stat-sub" id="sstat-count-sub">tracked</div>
     <div class="stat-growth" id="sstat-count-growth"></div>
   </div>
-  <div class="stat-card" title="KAT locked in voting escrow — long-term commitment">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('vkat')" title="KAT locked in voting escrow — long-term commitment. Click for history.">
     <div class="stat-label">vKAT Locked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
     <div class="stat-growth" id="sstat-vkat-growth"></div>
   </div>
-  <div class="stat-card" title="KAT deposited in auto-compounding vault">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('avkat')" title="KAT deposited in auto-compounding vault — click for history">
     <div class="stat-label">avKAT Deposited</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-avkat">—</div>
     <div class="stat-growth" id="sstat-avkat-growth"></div>
   </div>
-  <div class="stat-card" title="Ratio of vKAT (voting escrow) to avKAT (auto-compounding)">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('split')" title="Ratio of vKAT (voting escrow) to avKAT (auto-compounding) — click for history">
     <div class="stat-label">vKAT / avKAT Split</div>
     <div class="stat-value" id="sstat-split">—</div>
   </div>
