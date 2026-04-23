@@ -4,6 +4,9 @@ set -eo pipefail
 cd /Users/helm/Projects/kat-farmer || exit 1
 export PATH="/Users/helm/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 
+# Source API keys for wrangler (CLOUDFLARE_API_TOKEN) — launchd does not inherit shell env
+[ -f /Users/helm/.api-keys ] && source /Users/helm/.api-keys
+
 PYTHON="/Users/helm/.claude/venv/bin/python3"
 
 # Supply runs FIRST — indexer reads supply_data.json for circSupply

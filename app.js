@@ -1031,12 +1031,115 @@ function buildChartSVG(series, opts) {
     s.points.forEach(p => {
       const xp = x(xIdx[p.date]);
       const yp = y(p.value);
-      svg += `<circle class="${s.dotCls}" cx="${xp.toFixed(1)}" cy="${yp.toFixed(1)}" r="3"><title>${p.date}: ${opts.fmt(p.value)}</title></circle>`;
+      svg += `<circle class="${s.dotCls}" cx="${xp.toFixed(1)}" cy="${yp.toFixed(1)}" r="3"/>`;
     });
   });
 
-  svg += `</svg></div>`;
+  // Hover layer: crosshair + enlarged dot per series + transparent hit area
+  svg += `<line class="c-crosshair" x1="0" y1="${pad.t}" x2="0" y2="${H - pad.b}" style="display:none"/>`;
+  series.forEach((s, i) => {
+    svg += `<circle class="c-hover-dot ${s.dotCls}" data-sidx="${i}" cx="0" cy="0" r="5" style="display:none"/>`;
+  });
+  svg += `<rect class="c-hover-area" x="${pad.l}" y="${pad.t}" width="${innerW}" height="${innerH}" fill="transparent"/>`;
+  svg += `</svg><div class="c-tooltip" style="display:none"></div></div>`;
+
+  // Stash data for attachChartHover (called on next tick, after innerHTML assignment).
+  const xByDate = {};
+  allDates.forEach(d => xByDate[d] = x(xIdx[d]));
+  const ptsByDate = {};
+  allDates.forEach(d => ptsByDate[d] = []);
+  series.forEach(s => {
+    s.points.forEach(p => {
+      ptsByDate[p.date].push({ series: s.name, value: p.value, y: y(p.value) });
+    });
+  });
+  window._chartHoverData = {
+    allDates, xByDate, ptsByDate,
+    W, H, pad,
+    seriesMeta: series.map(s => ({ name: s.name, cls: s.dotCls })),
+    fmt: opts.fmt,
+  };
+  setTimeout(attachChartHover, 0);
+
   return svg;
+}
+
+function attachChartHover() {
+  const wrap = document.querySelector('#chart-modal .chart-wrap');
+  const data = window._chartHoverData;
+  if (!wrap || !data) return;
+  const svg   = wrap.querySelector('svg');
+  const area  = wrap.querySelector('.c-hover-area');
+  const cross = wrap.querySelector('.c-crosshair');
+  const dots  = wrap.querySelectorAll('.c-hover-dot');
+  const tip   = wrap.querySelector('.c-tooltip');
+  if (!area || !svg || !cross || !tip) return;
+
+  const multi = data.seriesMeta.length > 1;
+
+  const move = (ev) => {
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const vbX = ((ev.clientX - rect.left) / rect.width) * data.W;
+    // nearest date by x-distance
+    let nearest = null, best = Infinity;
+    for (const d of data.allDates) {
+      const dx = Math.abs(vbX - data.xByDate[d]);
+      if (dx < best) { best = dx; nearest = d; }
+    }
+    if (!nearest) return;
+
+    const xp  = data.xByDate[nearest];
+    const pts = data.ptsByDate[nearest];
+    cross.setAttribute('x1', xp);
+    cross.setAttribute('x2', xp);
+    cross.style.display = '';
+
+    dots.forEach((dot, i) => {
+      const p = pts[i];
+      if (!p) { dot.style.display = 'none'; return; }
+      dot.setAttribute('cx', xp);
+      dot.setAttribute('cy', p.y);
+      dot.style.display = '';
+    });
+
+    const rows = pts.map(p => {
+      const label = multi ? `<span class="t-ser">${p.series}</span> ` : '';
+      return `<div>${label}<b>${data.fmt(p.value)}</b></div>`;
+    }).join('');
+    tip.innerHTML = `<div class="t-date">${nearest}</div>${rows}`;
+
+    // position tooltip: above highest dot for this date, centered on xp
+    const topY = Math.min(...pts.map(p => p.y));
+    const scale = rect.width / data.W;
+    const pxX   = xp * scale;
+    const pxY   = topY * scale;
+    const wrapRect = wrap.getBoundingClientRect();
+    const baseLeft = rect.left - wrapRect.left;
+    const baseTop  = rect.top  - wrapRect.top;
+    tip.style.display = '';
+    // After first render, we know tooltip size → reposition to center above
+    const tw = tip.offsetWidth;
+    const th = tip.offsetHeight;
+    let left = baseLeft + pxX - tw / 2;
+    let top  = baseTop + pxY - th - 10;
+    // clamp horizontally within chart-wrap
+    const maxLeft = wrap.clientWidth - tw - 4;
+    if (left < 4) left = 4;
+    if (left > maxLeft) left = maxLeft;
+    if (top < 4) top = baseTop + pxY + 14; // flip below if not enough room above
+    tip.style.left = left + 'px';
+    tip.style.top  = top  + 'px';
+  };
+
+  const leave = () => {
+    cross.style.display = 'none';
+    dots.forEach(d => d.style.display = 'none');
+    tip.style.display = 'none';
+  };
+
+  area.addEventListener('pointermove', move);
+  area.addEventListener('pointerleave', leave);
 }
 
 function renderStakersTable() {

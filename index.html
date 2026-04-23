@@ -908,6 +908,27 @@
     .chart-wrap .c-dot { fill:var(--violet); stroke:var(--cream); stroke-width:1.5; }
     .chart-wrap .c-dot-2 { fill:var(--accent,#e8a832); stroke:var(--cream); stroke-width:1.5; }
     .chart-wrap .c-hover { fill:transparent; cursor:pointer; }
+    .chart-wrap .c-hover-area { cursor:crosshair; }
+    .chart-wrap .c-crosshair { stroke:var(--dim); stroke-width:1; stroke-dasharray:3,3; opacity:0.6; pointer-events:none; }
+    .chart-wrap .c-hover-dot { fill:var(--violet); stroke:var(--cream); stroke-width:2; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+    .chart-wrap .c-hover-dot.c-dot-2 { fill:var(--accent,#e8a832); }
+    .chart-wrap .c-tooltip {
+      position:absolute;
+      background:var(--cream);
+      border:1px solid var(--dim);
+      border-radius:3px;
+      padding:0.35rem 0.55rem;
+      font-family:var(--mono);
+      font-size:0.72rem;
+      line-height:1.3;
+      color:var(--ink,#2a241c);
+      pointer-events:none;
+      white-space:nowrap;
+      box-shadow:0 2px 10px rgba(0,0,0,0.12);
+      z-index:5;
+    }
+    .chart-wrap .c-tooltip .t-date { font-size:0.65rem; color:var(--dim); margin-bottom:2px; letter-spacing:0.04em; }
+    .chart-wrap .c-tooltip .t-ser  { color:var(--dim); font-size:0.65rem; text-transform:uppercase; letter-spacing:0.04em; margin-right:0.3rem; }
     .chart-legend { display:flex; gap:1.25rem; margin-top:0.75rem; font-family:var(--ui); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--dim); }
     .chart-legend .sw { display:inline-block; width:14px; height:3px; margin-right:0.45rem; vertical-align:middle; }
     .chart-meta { margin-top:0.75rem; font-family:var(--mono); font-size:0.75rem; color:var(--dim); }
@@ -1063,7 +1084,7 @@
         <th data-col="transferred" class="num" data-tip="KAT sent to addresses that no longer hold it · ⛓ bridged via LayerZero OFT to ETH mainnet (⛓ → CEX = confirmed exchange deposit) · Green held transfers excluded from Dump %">KAT Sent<span class="sort-arrow"></span></th>
         <th data-col="moved" class="num" data-tip="KAT swapped on Sushi V2/V3 — detected via Swap event in tx receipt">KAT Sold<span class="sort-arrow"></span></th>
         <th data-col="balance" class="num" data-tip="Current on-chain KAT balance across all KAT token variants">KAT Balance<span class="sort-arrow"></span></th>
-        <th data-col="staked" class="num" data-tip="Total KAT staked: vKAT (vote-locked) + avKAT (auto-compounding vault)">Staked<span class="sort-arrow"></span></th>
+        <th data-col="staked" class="num" data-tip="Total KAT locked in the voting escrow (direct vKAT + avKAT vault's share, no double count)">Staked<span class="sort-arrow"></span></th>
         <th data-col="dumpPct" class="num" data-tip="100% − (KAT Balance + Staked) ÷ KAT Claimed. Measures what fraction of the airdrop is no longer held.">Dump %<span class="sort-arrow"></span></th>
         <th>Links</th>
       </tr>
@@ -1173,7 +1194,7 @@
 <div id="tab-stakers" class="tab-pane">
 
 <div class="stats-grid" id="staker-stats-grid">
-  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('totalStaked')" title="Total KAT locked in vKAT + avKAT contracts (on-chain) — click for history">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('totalStaked')" title="Total KAT locked in the voting escrow (on-chain). avKAT deposits are a subset of this, not additive. Click for history.">
     <div class="stat-label">Total KAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
     <div class="stat-sub" id="sstat-total-sub">on-chain</div>
@@ -1191,7 +1212,7 @@
     <div class="stat-sub" id="sstat-count-sub">tracked</div>
     <div class="stat-growth" id="sstat-count-growth"></div>
   </div>
-  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('vkat')" title="KAT locked in voting escrow — long-term commitment. Click for history.">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('vkat')" title="KAT locked directly by vKAT stakers (excludes avKAT vault's share of the voting escrow). Click for history.">
     <div class="stat-label">vKAT Locked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
     <div class="stat-growth" id="sstat-vkat-growth"></div>
@@ -1220,7 +1241,7 @@
       <tr>
         <th data-scol="rank">#<span class="sort-arrow"></span></th>
         <th data-scol="address">Address<span class="sort-arrow"></span></th>
-        <th data-scol="vkatAmount" class="num" data-tip="KAT sent to vKAT voting escrow (0x4d6f…)">vKAT Amount<span class="sort-arrow"></span></th>
+        <th data-scol="vkatAmount" class="num" data-tip="KAT this address locked directly in the voting escrow (0x4d6f…). Excludes any avKAT holdings.">vKAT Amount<span class="sort-arrow"></span></th>
         <th data-scol="avkatAmount" class="num" data-tip="KAT sent to avKAT auto-compounding vault (0x7231…)">avKAT Amount<span class="sort-arrow"></span></th>
         <th data-scol="totalStaked" class="num sorted" data-tip="Total KAT staked (vKAT + avKAT)">Total Staked<span class="sort-arrow">↓</span></th>
         <th data-scol="type" data-tip="vKAT = voting escrow only, avKAT = vault only, Both = both">Type<span class="sort-arrow"></span></th>

@@ -184,17 +184,22 @@ def main():
         except Exception:
             pass
 
-    on_chain_vkat  = rpc.balance_of(KAT_BASE_ADDR, VOTING_ESCROW, KATANA_RPC)
+    # avKAT auto-compounds by locking its deposited KAT into the voting escrow
+    # under its own contract address, so avKAT.totalAssets() is a subset of
+    # VE.balanceOf(KAT). Treat VE balance as the staked total and break it down
+    # into direct-vKAT (everyone who isn't avKAT) + avKAT.
+    ve_kat_total   = rpc.balance_of(KAT_BASE_ADDR, VOTING_ESCROW, KATANA_RPC)
     on_chain_avkat = rpc.total_assets(AVKAT_ADDR, KATANA_RPC)
-    on_chain_total = on_chain_vkat + on_chain_avkat
-    print(f'  On-chain: vKAT={rpc.fmtM(on_chain_vkat)}, aVKAT={rpc.fmtM(on_chain_avkat)}, total={rpc.fmtM(on_chain_total)}')
+    on_chain_vkat  = ve_kat_total - on_chain_avkat
+    on_chain_total = ve_kat_total
+    print(f'  On-chain: vKAT(direct)={rpc.fmtM(on_chain_vkat)}, aVKAT={rpc.fmtM(on_chain_avkat)}, total={rpc.fmtM(on_chain_total)}')
 
     enumerated_vkat = sum(v['amount'] for v in vkat_locks.values())
-    drift_pct = abs(enumerated_vkat - on_chain_vkat) / on_chain_vkat * 100 if on_chain_vkat > 0 else 0
+    drift_pct = abs(enumerated_vkat - ve_kat_total) / ve_kat_total * 100 if ve_kat_total > 0 else 0
     if drift_pct > 0.1:
-        print(f'  ⚠ vKAT drift: enumerated={rpc.fmtM(enumerated_vkat)} vs on-chain={rpc.fmtM(on_chain_vkat)} ({drift_pct:.2f}%)')
+        print(f'  ⚠ vKAT drift: enumerated={rpc.fmtM(enumerated_vkat)} vs VE balance={rpc.fmtM(ve_kat_total)} ({drift_pct:.2f}%)')
     else:
-        print(f'  ✓ vKAT cross-check OK: enumerated={rpc.fmtM(enumerated_vkat)} ≈ on-chain={rpc.fmtM(on_chain_vkat)}')
+        print(f'  ✓ vKAT cross-check OK: enumerated={rpc.fmtM(enumerated_vkat)} ≈ VE balance={rpc.fmtM(ve_kat_total)}')
 
     output = {
         'meta': {
