@@ -114,6 +114,7 @@
       border-bottom: 2px solid var(--black);
     }
     #tab-dumpers .stats-grid { grid-template-columns: repeat(6, 1fr); }
+    #tab-stakers .stats-grid { grid-template-columns: repeat(8, 1fr); }
     @media (max-width: 960px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
@@ -996,6 +997,7 @@
   <div class="stat-card" title="Sum of all KAT claimed from Merkl rewards">
     <div class="stat-label">Total KAT Claimed</div>
     <div class="stat-value yellow" id="stat-claimed">—</div>
+    <div class="stat-sub" id="stat-claimed-sub"></div>
   </div>
   <div class="stat-card" data-filter="partial" title="Sold or sent 5–50% of claimed KAT — click to filter">
     <div class="stat-label">Partial Dumpers</div>
@@ -1206,20 +1208,34 @@
     <div class="stat-sub" id="sstat-pct-circ-sub"></div>
     <div class="stat-growth" id="sstat-pct-circ-growth"></div>
   </div>
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('pctTotal')" title="Staked KAT as percentage of 10B total supply — click for history">
+    <div class="stat-label">% of Total Supply</div>
+    <div class="stat-value" style="color:var(--violet)" id="sstat-pct-total">—</div>
+    <div class="stat-sub" id="sstat-pct-total-sub">of 10B</div>
+    <div class="stat-growth" id="sstat-pct-total-growth"></div>
+  </div>
   <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('count')" title="Unique wallets with any staking position — click for history">
     <div class="stat-label"># Stakers</div>
     <div class="stat-value" id="sstat-count">—</div>
     <div class="stat-sub" id="sstat-count-sub">tracked</div>
     <div class="stat-growth" id="sstat-count-growth"></div>
   </div>
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerHistogram()" title="Median KAT staked across tracked wallets — click for distribution">
+    <div class="stat-label">Median Stake</div>
+    <div class="stat-value" style="color:var(--violet)" id="sstat-median-stake">—</div>
+    <div class="stat-sub" id="sstat-median-stake-sub">KAT</div>
+    <div class="stat-growth" id="sstat-median-stake-growth"></div>
+  </div>
   <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('vkat')" title="KAT locked directly by vKAT stakers (excludes avKAT vault's share of the voting escrow). Click for history.">
     <div class="stat-label">vKAT Locked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
+    <div class="stat-sub" id="sstat-vkat-sub"></div>
     <div class="stat-growth" id="sstat-vkat-growth"></div>
   </div>
   <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('avkat')" title="KAT deposited in auto-compounding vault — click for history">
     <div class="stat-label">avKAT Deposited</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-avkat">—</div>
+    <div class="stat-sub" id="sstat-avkat-sub"></div>
     <div class="stat-growth" id="sstat-avkat-growth"></div>
   </div>
   <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('split')" title="Ratio of vKAT (voting escrow) to avKAT (auto-compounding) — click for history">

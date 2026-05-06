@@ -129,6 +129,75 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, c => map[c]);
 }
 
+
+// ---- KAT → USD annotation ----
+let katPriceUsd = null;
+const _katCache = {}; // id -> { kat, baseSub, prefix? }
+const KAT_USD_SUBS = {
+  'stat-claimed':         'stat-claimed-sub',
+  'stat-staked':          'stat-staked-sub',
+  'sstat-total-staked':   'sstat-total-sub',
+  'sstat-vkat':           'sstat-vkat-sub',
+  'sstat-avkat':          'sstat-avkat-sub',
+  'sstat-median-stake':   'sstat-median-stake-sub',
+};
+function fmtUsd(v) {
+  if (!(v > 0)) return '';
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+  if (v >= 1)   return '$' + v.toFixed(2);
+  return '$' + v.toFixed(4);
+}
+function setKatStatSub(valueId, subId, kat, baseSub) {
+  _katCache[valueId] = { kat, baseSub: baseSub || '' };
+  refreshOneKatSub(valueId);
+}
+function refreshOneKatSub(valueId) {
+  const c = _katCache[valueId];
+  if (!c) return;
+  const subId = KAT_USD_SUBS[valueId] || (valueId === 'supply-hero-total' ? 'supply-hero-total' : null);
+  const el = subId ? document.getElementById(subId) : null;
+  if (!el) return;
+  const usd = katPriceUsd ? fmtUsd(c.kat * katPriceUsd) : '';
+  if (valueId === 'supply-hero-total') {
+    const parts = [];
+    if (c.prefix) parts.push(c.prefix);
+    if (usd) parts.push(usd);
+    if (c.baseSub) parts.push(c.baseSub);
+    el.textContent = parts.join(' · ');
+    return;
+  }
+  const parts = [];
+  if (usd) parts.push(usd);
+  if (c.baseSub) parts.push(c.baseSub);
+  el.textContent = parts.join(' · ');
+}
+function refreshAllKatSubs() {
+  Object.keys(_katCache).forEach(refreshOneKatSub);
+}
+async function fetchKatPrice() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('kat_price_usd') || 'null');
+    if (cached && typeof cached.usd === 'number' && cached.usd > 0) {
+      katPriceUsd = cached.usd;
+      refreshAllKatSubs();
+      if (Date.now() - (cached.ts || 0) < 600000) return; // fresh; skip refetch
+    }
+    const resp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=katana-network-token&vs_currencies=usd');
+    if (!resp.ok) return;
+    const j = await resp.json();
+    const usd = j && j['katana-network-token'] && j['katana-network-token'].usd;
+    if (typeof usd === 'number' && usd > 0) {
+      katPriceUsd = usd;
+      try { localStorage.setItem('kat_price_usd', JSON.stringify({ usd, ts: Date.now() })); } catch(e) {}
+      refreshAllKatSubs();
+    }
+  } catch (e) {
+    console.warn('KAT price fetch failed:', e && e.message);
+  }
+}
+
 function fmtNum(n, dp = 2) {
   if (n === null || n === undefined || isNaN(n)) return '—';
   if (n === 0) return '—';
@@ -385,6 +454,7 @@ function updateStats() {
 
   document.getElementById('stat-total').textContent        = `${Object.keys(CEX_LABELS_MAP).length + Object.keys(LABELS).length} labelled`;
   document.getElementById('stat-claimed').textContent  = fmtNum(totalClaimed, 0);
+  setKatStatSub('stat-claimed', 'stat-claimed-sub', totalClaimed, '');
   document.getElementById('stat-claimable').textContent    = partials.toLocaleString();
   document.getElementById('stat-claimable-sub').textContent = n > 0 ? `${((partials / n) * 100).toFixed(1)}% of ${n}` : '';
   document.getElementById('stat-hodlers').textContent      = hodlers.toLocaleString();
@@ -392,7 +462,7 @@ function updateStats() {
   const stakerCount  = all.filter(d => (d.staked || d.avkat || 0) > 0).length;
   const totalStaked  = all.reduce((s, d) => s + (d.staked || d.avkat || 0), 0);
   document.getElementById('stat-staked').textContent      = fmtNum(totalStaked, 0);
-  document.getElementById('stat-staked-sub').textContent  = stakerCount > 0 ? `${stakerCount} stakers` : '';
+  setKatStatSub('stat-staked', 'stat-staked-sub', totalStaked, stakerCount > 0 ? `${stakerCount} stakers` : '');
   document.getElementById('stat-inactive').textContent    = inactiveCount.toLocaleString();
   document.getElementById('stat-inactive-sub').textContent = inactiveCount > 0 ? `never claimed` : '';
 }
@@ -812,19 +882,33 @@ function updateStakerStats() {
   const dispVkat  = onChainVkat  || totalVkat;
   const dispAvkat = onChainAvkat || totalAvkat;
   const pctCirc   = circSupply > 0 ? (dispTotal / circSupply * 100) : 0;
+  const TOTAL_SUPPLY = 1e10;
+  const pctTotal  = dispTotal > 0 ? (dispTotal / TOTAL_SUPPLY * 100) : 0;
 
   document.getElementById('sstat-total-staked').textContent = fmtNum(dispTotal, 0);
+  setKatStatSub('sstat-total-staked', 'sstat-total-sub', dispTotal, 'on-chain');
   document.getElementById('sstat-pct-circ').textContent     = pctCirc > 0 ? pctCirc.toFixed(1) + '%' : '—';
   document.getElementById('sstat-pct-circ-sub').textContent = circSupply > 0 ? `of ${fmtNum(circSupply, 0)} circ` : '';
+  document.getElementById('sstat-pct-total').textContent    = pctTotal > 0 ? pctTotal.toFixed(2) + '%' : '—';
   document.getElementById('sstat-count').textContent        = all.length.toLocaleString();
   document.getElementById('sstat-vkat').textContent         = fmtNum(dispVkat, 0);
+  setKatStatSub('sstat-vkat', 'sstat-vkat-sub', dispVkat, '');
   document.getElementById('sstat-avkat').textContent        = fmtNum(dispAvkat, 0);
+  setKatStatSub('sstat-avkat', 'sstat-avkat-sub', dispAvkat, '');
   const vPct = dispTotal > 0 ? (dispVkat / dispTotal * 100).toFixed(0) : 0;
   const aPct = dispTotal > 0 ? (dispAvkat / dispTotal * 100).toFixed(0) : 0;
   document.getElementById('sstat-split').textContent        = `${vPct}% / ${aPct}%`;
+  let medianStake = 0;
+  if (all.length > 0) {
+    const sorted = all.map(d => d.totalStaked).filter(v => v > 0).sort((a, b) => a - b);
+    const m = sorted.length;
+    if (m > 0) medianStake = m % 2 === 1 ? sorted[(m - 1) / 2] : (sorted[m / 2 - 1] + sorted[m / 2]) / 2;
+  }
+  document.getElementById('sstat-median-stake').textContent = medianStake > 0 ? fmtNum(medianStake, 0) : '—';
+  setKatStatSub('sstat-median-stake', 'sstat-median-stake-sub', medianStake, '');
 
   // 30d growth (loads snapshots.json, falls back to localStorage)
-  showStakerGrowth({ totalStaked: dispTotal, pctCirc, count: all.length, vkat: dispVkat, avkat: dispAvkat });
+  showStakerGrowth({ totalStaked: dispTotal, pctCirc, pctTotal, count: all.length, vkat: dispVkat, avkat: dispAvkat });
 }
 
 let _stakerSnapshots = null;
@@ -880,6 +964,8 @@ function _showGrowthFromSnaps(current, snaps) {
 
   renderGrowth('sstat-total-staked-growth', current.totalStaked, old.totalStaked, fmtK);
   renderGrowth('sstat-pct-circ-growth', current.pctCirc, old.pctCirc, fmtPct);
+  const oldPctTotal = old.totalStaked ? (old.totalStaked / 1e10 * 100) : null;
+  renderGrowth('sstat-pct-total-growth', current.pctTotal, oldPctTotal, fmtPct);
   renderGrowth('sstat-count-growth', current.count, old.count, fmtInt);
   renderGrowth('sstat-vkat-growth', current.vkat, old.vkat, fmtK);
   renderGrowth('sstat-avkat-growth', current.avkat, old.avkat, fmtK);
@@ -889,6 +975,7 @@ function _showGrowthFromSnaps(current, snaps) {
 const STAKER_METRIC_META = {
   totalStaked: { title: 'Total KAT Staked',  suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
   pctCirc:     { title: '% of Circ Supply',  suffix: '%',  fmt: v => v.toFixed(2) + '%',           yPad: 0 },
+  pctTotal:    { title: '% of Total Supply', suffix: '%',  fmt: v => v.toFixed(2) + '%',           yPad: 0 },
   count:       { title: '# Stakers',          suffix: '',   fmt: v => Math.round(v).toLocaleString(), yPad: 0 },
   vkat:        { title: 'vKAT Locked',        suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
   avkat:       { title: 'avKAT Deposited',    suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
@@ -936,7 +1023,12 @@ function showStakerChart(metric) {
     const pts = [];
     dates.forEach(d => {
       const s = snaps[d]; if (!s) return;
-      const v = s[metric];
+      let v;
+      if (metric === 'pctTotal') {
+        v = (s.totalStaked > 0) ? (s.totalStaked / 1e10 * 100) : null;
+      } else {
+        v = s[metric];
+      }
       if (v === null || v === undefined || isNaN(v)) return;
       pts.push({ date: d, value: v });
     });
@@ -1061,6 +1153,97 @@ function buildChartSVG(series, opts) {
   };
   setTimeout(attachChartHover, 0);
 
+  return svg;
+}
+
+
+// ---- Stakers distribution histogram ----
+const STAKE_BUCKETS = [
+  { lo: 100,  hi: 500,       label: '100–500'    },
+  { lo: 500,  hi: 1e3,       label: '500–1K'     },
+  { lo: 1e3,  hi: 5e3,       label: '1K–5K'      },
+  { lo: 5e3,  hi: 1e4,       label: '5K–10K'     },
+  { lo: 1e4,  hi: 5e4,       label: '10K–50K'    },
+  { lo: 5e4,  hi: 1e5,       label: '50K–100K'   },
+  { lo: 1e5,  hi: 5e5,       label: '100K–500K'  },
+  { lo: 5e5,  hi: 1e6,       label: '500K–1M'    },
+  { lo: 1e6,  hi: Infinity,  label: '1M+'        },
+];
+function showStakerHistogram() {
+  const modal = document.getElementById('chart-modal');
+  const titleEl = document.getElementById('chart-modal-title');
+  const body = document.getElementById('chart-modal-body');
+  titleEl.textContent = 'Stake Distribution';
+  if (!stakerData || stakerData.length === 0) {
+    body.innerHTML = '<div class="chart-empty">No staker data loaded.</div>';
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    return;
+  }
+  const buckets = STAKE_BUCKETS.map(b => ({ ...b, count: 0 }));
+  stakerData.forEach(d => {
+    const v = d.totalStaked;
+    if (!(v > 0)) return;
+    for (const b of buckets) {
+      if (v >= b.lo && v < b.hi) { b.count += 1; break; }
+    }
+  });
+  const total = stakerData.filter(d => d.totalStaked > 0).length;
+  body.innerHTML = buildHistogramSVG(buckets, total);
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function buildHistogramSVG(buckets, total) {
+  const W = 680, H = 320;
+  const pad = { l: 56, r: 16, t: 24, b: 48 };
+  const innerW = W - pad.l - pad.r;
+  const innerH = H - pad.t - pad.b;
+  const n = buckets.length;
+  const maxCount = Math.max(1, ...buckets.map(b => b.count));
+  // Round yMax up to a nice number.
+  const niceMax = (v) => {
+    if (v <= 10) return Math.ceil(v / 2) * 2;
+    const exp = Math.pow(10, Math.floor(Math.log10(v)));
+    return Math.ceil(v / exp) * exp;
+  };
+  const yMax = niceMax(maxCount * 1.1);
+  const barGap = 0.18;
+  const bandW = innerW / n;
+  const barW = bandW * (1 - barGap);
+  const y = v => pad.t + innerH - (v / yMax) * innerH;
+
+  const yTicks = [];
+  for (let i = 0; i <= 4; i++) {
+    const v = Math.round(yMax * i / 4);
+    yTicks.push({ v, y: y(v) });
+  }
+
+  let svg = `<div class="chart-wrap"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+  yTicks.forEach(t => {
+    svg += `<line class="c-grid" x1="${pad.l}" y1="${t.y}" x2="${W - pad.r}" y2="${t.y}"/>`;
+    svg += `<text class="c-tick" x="${pad.l - 6}" y="${t.y + 3}" text-anchor="end">${t.v.toLocaleString()}</text>`;
+  });
+  svg += `<line class="c-axis" x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}"/>`;
+  svg += `<line class="c-axis" x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}"/>`;
+
+  buckets.forEach((b, i) => {
+    const cx = pad.l + bandW * i + bandW / 2;
+    const x0 = cx - barW / 2;
+    const yTop = y(b.count);
+    const hBar = (H - pad.b) - yTop;
+    svg += `<rect x="${x0.toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${hBar.toFixed(1)}" fill="var(--violet)" stroke="var(--black)" stroke-width="1"/>`;
+    if (b.count > 0) {
+      const pct = total > 0 ? ((b.count / total) * 100).toFixed(1) : '0';
+      svg += `<text class="c-tick" x="${cx}" y="${(yTop - 6).toFixed(1)}" text-anchor="middle" style="font-weight:700">${b.count.toLocaleString()}</text>`;
+      svg += `<text class="c-tick" x="${cx}" y="${(yTop - 6 + 12).toFixed(1)}" text-anchor="middle" style="opacity:0.65">${pct}%</text>`;
+    }
+    svg += `<text class="c-tick" x="${cx}" y="${(H - pad.b + 16).toFixed(1)}" text-anchor="middle">${b.label}</text>`;
+    svg += `<text class="c-tick" x="${cx}" y="${(H - pad.b + 30).toFixed(1)}" text-anchor="middle" style="opacity:0.6">KAT</text>`;
+  });
+
+  svg += `</svg></div>`;
+  svg += `<div class="chart-meta">${total.toLocaleString()} wallets · buckets are KAT staked (vKAT + avKAT)</div>`;
   return svg;
 }
 
@@ -1224,7 +1407,10 @@ function fmtM(n) {
 function renderSupplyTab(d) {
   // Hero
   document.getElementById('supply-hero-pct').textContent = d.circulatingPct.toFixed(2) + '%';
-  document.getElementById('supply-hero-total').textContent = fmtM(d.totalCirculating) + ' KAT in circulation';
+  const _heroEl = document.getElementById('supply-hero-total');
+  _heroEl.textContent = fmtM(d.totalCirculating) + ' KAT in circulation';
+  _katCache['supply-hero-total'] = { kat: d.totalCirculating, baseSub: 'in circulation', prefix: fmtM(d.totalCirculating) + ' KAT' };
+  refreshOneKatSub('supply-hero-total');
 
   const s = d.sources;
   const mix = d.protocolMix || {};
@@ -1325,6 +1511,7 @@ async function loadSupplyData() {
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
+  fetchKatPrice();
   // Restore UI from URL state
   const filterInput  = document.getElementById('filter-input');
   const statusSelect = document.getElementById('status-filter');
