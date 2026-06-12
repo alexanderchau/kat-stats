@@ -846,6 +846,9 @@ let circSupply       = 0;
 let onChainVkat      = 0;
 let onChainAvkat     = 0;
 let onChainTotal     = 0;
+let vkatHolders      = 0;   // meta.vkatHolders — addresses holding a vKAT lock
+let avkatHolders     = 0;   // meta.avkatHolders — addresses with avKAT balance > 0
+let stakerCountMeta  = 0;   // meta.stakerCount — unique vKAT∪avKAT holders
 
 function getStakerFilteredRows() {
   let rows = stakerData.slice();
@@ -890,11 +893,11 @@ function updateStakerStats() {
   document.getElementById('sstat-pct-circ').textContent     = pctCirc > 0 ? pctCirc.toFixed(1) + '%' : '—';
   document.getElementById('sstat-pct-circ-sub').textContent = circSupply > 0 ? `of ${fmtNum(circSupply, 0)} circ` : '';
   document.getElementById('sstat-pct-total').textContent    = pctTotal > 0 ? pctTotal.toFixed(2) + '%' : '—';
-  document.getElementById('sstat-count').textContent        = all.length.toLocaleString();
+  document.getElementById('sstat-count').textContent        = (stakerCountMeta || all.length).toLocaleString();
   document.getElementById('sstat-vkat').textContent         = fmtNum(dispVkat, 0);
-  setKatStatSub('sstat-vkat', 'sstat-vkat-sub', dispVkat, '');
+  setKatStatSub('sstat-vkat', 'sstat-vkat-sub', dispVkat, vkatHolders ? `${vkatHolders.toLocaleString()} holders` : '');
   document.getElementById('sstat-avkat').textContent        = fmtNum(dispAvkat, 0);
-  setKatStatSub('sstat-avkat', 'sstat-avkat-sub', dispAvkat, '');
+  setKatStatSub('sstat-avkat', 'sstat-avkat-sub', dispAvkat, avkatHolders ? `${avkatHolders.toLocaleString()} holders` : '');
   const vPct = dispTotal > 0 ? (dispVkat / dispTotal * 100).toFixed(0) : 0;
   const aPct = dispTotal > 0 ? (dispAvkat / dispTotal * 100).toFixed(0) : 0;
   document.getElementById('sstat-split').textContent        = `${vPct}% / ${aPct}%`;
@@ -1819,6 +1822,9 @@ async function main() {
   onChainVkat  = data.meta?.onChainVkat  || 0;
   onChainAvkat = data.meta?.onChainAvkat || 0;
   onChainTotal = data.meta?.onChainTotal || 0;
+  vkatHolders     = data.meta?.vkatHolders  || 0;
+  avkatHolders    = data.meta?.avkatHolders || 0;
+  stakerCountMeta = data.meta?.stakerCount  || 0;
   updateStakerStats();
   renderStakersTable();
 

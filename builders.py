@@ -108,10 +108,14 @@ def build_buyers_output(buy_raw, stake_raw, addr_set, addr_balances, vkat_locks,
     return out
 
 
-def build_stakers_output(stake_raw, addr_balances, vkat_locks, staker_min_kat=100):
+def build_stakers_output(stake_raw, addr_balances, vkat_locks, staker_min_kat=0):
     """Build the 'stakers' list for data.json.
 
-    Only includes stakers with totalStaked >= staker_min_kat.
+    Includes EVERY current vKAT/avKAT holder (positive balance) so the list and
+    any count derived from it match on-chain reality. `staker_min_kat` is an
+    OPTIONAL display floor (default 0 = show all holders) to hide dust rows from
+    the table; it must NOT be used as a holder-count definition — the accurate
+    holder counts live in meta.vkatHolders / meta.avkatHolders (see indexer.py).
     Returns list sorted by totalStaked descending.
     """
     # Merge vKAT NFT holders into stake_raw so they appear even if they
@@ -131,8 +135,10 @@ def build_stakers_output(stake_raw, addr_balances, vkat_locks, staker_min_kat=10
         lock_info = vkat_locks.get(addr, {'amount': 0.0, 'endTime': 0})
         vkat_amt  = lock_info['amount']
         total     = vkat_amt + avkat_bal
+        if total <= 0:
+            continue                      # not a current holder (former/zero balance)
         if total < staker_min_kat:
-            continue
+            continue                      # optional display floor (default 0 = keep all)
         out.append({
             'address':     addr,
             'vkatAmount':  round(vkat_amt, 6),

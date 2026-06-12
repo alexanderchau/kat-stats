@@ -22,7 +22,7 @@ from config import (
     KAT_TOKENS, KAT_POOL_ADDRS, BRIDGE_DESTS, ZERO_ADDR,
     VOTING_ESCROW, LOCK_NFT, STAKE_DESTS,
     KAT_ETH_ADDR, ETH_KAT_START,
-    KAT_BASE_ADDR, BUYER_MIN_KAT, STAKER_MIN_KAT,
+    KAT_BASE_ADDR, BUYER_MIN_KAT, STAKER_MIN_KAT, EXCLUDE_STAKERS,
 )
 import rpc
 import fileio
@@ -172,7 +172,23 @@ def main():
 
     s_total        = len(stakers_data)
     s_total_staked = sum(s['totalStaked'] for s in stakers_data)
-    print(f'  {s_total:,} stakers (≥100 KAT): {rpc.fmtM(s_total_staked)} KAT total staked')
+
+    # ── Accurate per-token holder counts (ALL positive balances) ──────────────
+    # Independent of the stakers-table display floor (STAKER_MIN_KAT). vKAT comes
+    # from the full Lock-NFT enumeration; avKAT from every balance-fetched holder.
+    # Both exclude protocol contracts in EXCLUDE_STAKERS (e.g. the avKAT vault
+    # strategy, whose depositors are already counted as avKAT holders).
+    vkat_holder_set  = {o.lower() for o, v in vkat_locks.items() if v['amount'] > 0}
+    avkat_holder_set = {a.lower() for a, b in addr_balances.items() if b.get('avkat', 0) > 0}
+    vkat_holder_set  -= EXCLUDE_STAKERS
+    avkat_holder_set -= EXCLUDE_STAKERS
+    vkat_holders     = len(vkat_holder_set)
+    avkat_holders    = len(avkat_holder_set)
+    total_holders    = len(vkat_holder_set | avkat_holder_set)
+
+    floor_note = f' (table ≥{STAKER_MIN_KAT:g} KAT)' if STAKER_MIN_KAT else ''
+    print(f'  {s_total:,} stakers{floor_note}: {rpc.fmtM(s_total_staked)} KAT total staked')
+    print(f'  Holders (any balance): {vkat_holders:,} vKAT · {avkat_holders:,} avKAT · {total_holders:,} unique')
 
     # Read circulating supply from supply_data.json
     circ_supply      = 0.0
@@ -208,7 +224,10 @@ def main():
             'ethBlock':     latest_eth,
             'addressCount': total,
             'buyerCount':   b_total,
-            'stakerCount':  s_total,
+            'stakerCount':  total_holders,   # unique vKAT∪avKAT holders (all balances)
+            'vkatHolders':  vkat_holders,    # addresses holding a vKAT lock
+            'avkatHolders': avkat_holders,   # addresses with avKAT balance > 0
+            'stakerRows':   s_total,          # rows in the stakers table (after display floor)
             'circSupply':   round(circ_supply, 6),
             'onChainVkat':  round(on_chain_vkat, 6),
             'onChainAvkat': round(on_chain_avkat, 6),
