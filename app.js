@@ -1556,10 +1556,43 @@ function renderHolderActivity(d) {
     `<div class="ha-track"><div class="ha-fill comp" style="width:${(c.count / maxC * 100).toFixed(1)}%"></div></div>` +
     `<div class="ha-rv">${intf(c.count)}</div></div>`).join('');
 
+  // ── Katana-wide context (funnel + users-without-KAT split) ──
+  const ctx = d.katanaContext;
+  const ctxEl = document.getElementById('ha-context-section');
+  if (ctx) {
+    ctxEl.style.display = '';
+    document.getElementById('ha-ctx-nokat').textContent = intf(ctx.usersNoKat);
+    document.getElementById('ha-ctx-nokat-lbl').textContent =
+      `transacting Katana users hold no KAT — ${(100 - ctx.holderShareOfUsers).toFixed(1)}% of the ${intf(ctx.transactingUsers)} accounts that have sent a tx`;
+
+    // funnel: widths proportional to all addresses ever seen
+    const F = [
+      { label: 'All addresses', cls: 'addr',  count: ctx.totalAddresses,   sub: 'ever seen on-chain' },
+      { label: 'Transacting users', cls: 'user2', count: ctx.transactingUsers, sub: '≥1 tx' },
+      { label: '…that hold KAT', cls: 'kat', count: ctx.holdersTransacted, sub: '≥1 tx & hold KAT' },
+    ];
+    document.getElementById('ha-funnel').innerHTML = F.map(f => {
+      const w = (f.count / ctx.totalAddresses * 100).toFixed(2);
+      const p = (f.count / ctx.totalAddresses * 100).toFixed(1);
+      return `<div class="ha-row"><div class="ha-rl">${f.label}</div>` +
+        `<div class="ha-track"><div class="ha-fill ${f.cls}" style="width:${Math.max(w, 0.4)}%"></div></div>` +
+        `<div class="ha-rv">${intf(f.count)}<span class="ha-pct">${p}%</span></div></div>`;
+    }).join('');
+
+    // split bar: of transacting users, who holds KAT vs not
+    document.getElementById('ha-ctx-splitbar').innerHTML =
+      `<div class="seg seg-users" style="flex:${ctx.holdersTransacted}"><div class="seg-pct">${ctx.holderShareOfUsers}%</div>` +
+        `<div class="seg-lbl">Hold KAT · ${intf(ctx.holdersTransacted)}</div></div>` +
+      `<div class="seg seg-neutral" style="flex:${ctx.usersNoKat}"><div class="seg-pct">${(100 - ctx.holderShareOfUsers).toFixed(1)}%</div>` +
+        `<div class="seg-lbl">No KAT · ${intf(ctx.usersNoKat)}</div></div>`;
+  } else {
+    ctxEl.style.display = 'none';
+  }
+
   const chain = d.chainAddresses ? intf(d.chainAddresses) : '—';
   document.getElementById('ha-method').innerHTML =
     `<b>KAT holder</b> = unique wallet (beneficial EOA) with KAT exposure in any form — liquid KAT, locked vKAT, or avKAT held directly or unwrapped from Morpho collateral, a Sushi/Uni LP, or Spectra PT. ` +
-    `<b>Katana user</b> = wallet that has originated ≥${d.userTxMin} transactions on Katana (account nonce ≥ ${d.userTxMin}). ` +
+    `<b>Active user</b> (top of page) = wallet that has originated ≥${d.userTxMin} transactions on Katana (account nonce ≥ ${d.userTxMin}); the <b>Katana-wide context</b> uses the looser ≥1-tx definition to match the chain's published account count. ` +
     `Infrastructure contracts (treasury, voting-escrow, DEX pools, bridges, distributors) are excluded — they custody KAT on behalf of users counted elsewhere. ` +
     `For scale, Katana has ${chain} total addresses on-chain. Snapshot at block ${intf(d.katanaBlock)}.`;
 }

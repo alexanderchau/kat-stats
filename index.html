@@ -956,7 +956,16 @@
     .ha-rv .ha-pct { color:var(--dim); font-weight:400; font-size:0.72rem; margin-left:7px; }
     .ha-method { padding:1.5rem 2rem 2.5rem; color:var(--dim); font-size:0.75rem; line-height:1.65; font-family:var(--ui); max-width:1000px; }
     .ha-method b { color:var(--label); }
-    @media (max-width:640px){ .ha-row { grid-template-columns:96px 1fr 96px; } .ha-splitbar { margin:0; } }
+    .ha-context { border-top:2px solid var(--black); margin-top:1.8rem; padding-top:0.4rem; }
+    .ha-callout { display:flex; align-items:baseline; gap:0.7rem; flex-wrap:wrap; margin:0.2rem 2rem 1.3rem; }
+    .ha-callout .cn { font-family:var(--mono); font-size:2.7rem; font-weight:800; line-height:1; color:var(--text); }
+    .ha-callout .cl { font-family:var(--ui); font-size:0.85rem; font-weight:600; color:var(--label); }
+    .ha-subnote { font-family:var(--ui); font-size:0.72rem; color:var(--dim); margin:-0.4rem 2rem 1.1rem; line-height:1.5; }
+    .ha-fill.addr  { background:var(--dim); }
+    .ha-fill.user2 { background:var(--blue); }
+    .ha-fill.kat   { background:var(--green); }
+    .ha-splitbar .seg-neutral { background:#8a8a8a; border-left:2px solid var(--black); }
+    @media (max-width:640px){ .ha-row { grid-template-columns:96px 1fr 96px; } .ha-splitbar { margin:0; } .ha-callout,.ha-subnote{margin-left:0;margin-right:0;} }
   </style>
 </head>
 <body>
@@ -1335,6 +1344,17 @@
   <div class="ha-section">
     <div class="ha-section-title">Where holders hold KAT <span class="ha-note">— sets overlap; one wallet can appear in several</span></div>
     <div class="ha-spectrum" id="ha-components"></div>
+  </div>
+
+  <div class="ha-section ha-context" id="ha-context-section" style="display:none">
+    <div class="ha-section-title">Katana-wide context — KAT holders within the whole chain</div>
+    <div class="ha-callout">
+      <span class="cn" id="ha-ctx-nokat">—</span>
+      <span class="cl" id="ha-ctx-nokat-lbl"></span>
+    </div>
+    <div class="ha-subnote">“User” here = any address that has sent ≥1 transaction (Katana’s own <b>Total accounts</b> metric) — a looser bar than the ≥2-tx “active user” cut used above. Both sides of this comparison use the ≥1-tx definition.</div>
+    <div class="ha-spectrum" id="ha-funnel" style="margin-bottom:1.3rem"></div>
+    <div class="ha-splitbar" id="ha-ctx-splitbar"></div>
   </div>
 
   <div class="ha-method" id="ha-method"></div>

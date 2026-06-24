@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-06-24T14:36:05.002371+00:00",
-  "katanaBlock": 35568903,
+  "generatedAt": "2026-06-24T18:44:00.361092+00:00",
+  "katanaBlock": 35583778,
   "userTxMin": 2,
-  "totalHolders": 20673,
-  "users": 16539,
-  "nonUsers": 4134,
+  "totalHolders": 20667,
+  "users": 16534,
+  "nonUsers": 4133,
   "usersPct": 80.0,
   "nonUsersPct": 20.0,
   "buckets": [
@@ -14,23 +14,23 @@
     },
     {
       "label": "1",
-      "count": 973
+      "count": 972
     },
     {
       "label": "2-4",
-      "count": 1856
+      "count": 1855
     },
     {
       "label": "5-9",
-      "count": 4882
+      "count": 4883
     },
     {
       "label": "10-49",
-      "count": 6008
+      "count": 6006
     },
     {
       "label": "50+",
-      "count": 3793
+      "count": 3790
     }
   ],
   "components": [
@@ -43,17 +43,31 @@
       "count": 2556
     },
     {
-      "label": "avKAT",
+      "label": "avKAT (direct)",
       "count": 2852
     },
     {
       "label": "Morpho avKAT collateral",
-      "count": 19
+      "count": 42
     },
     {
       "label": "Sushi/Uni LP + Spectra",
-      "count": 26
+      "count": 12
     }
   ],
-  "chainAddresses": 978063
+  "chainAddresses": 978196,
+  "katanaContext": {
+    "userDef": ">=1 tx (EOA that has sent at least one transaction; Blockscout 'Total accounts')",
+    "totalAddresses": 978196,
+    "transactingUsers": 133250,
+    "holdersTransacted": 17506,
+    "usersNoKat": 115744,
+    "holderShareOfUsers": 13.1,
+    "holderShareOfAddresses": 2.1
+  },
+  "diagnostics": {
+    "unwrapNewEoas": 13,
+    "getCodeErrors": 0,
+    "nonceErrors": 0
+  }
 }

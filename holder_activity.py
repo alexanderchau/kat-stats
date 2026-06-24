@@ -22,7 +22,8 @@ AVKAT_DEPLOY  = 23368834
 MORPHO_DEPLOY = 23368834   # avKAT markets can't predate avKAT
 T_TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
 T_CREATE   = "0xac4b2400f169220b0c0afdde7a0b32e775ba727ea1cb30b35f935cdaab8683ac"
-T_SUPCOL   = "0xa3b9472a1399e17e123f3c2e6586c23e504184d504de59cdaa2b375e880c6184"
+T_SUPCOL   = "0xa3b9472a1399e17e123f3c2e6586c23e504184d504de59cdaa2b375e880c6184"  # SupplyCollateral
+T_WDCOL    = "0xe80ebd7cc9223d7382aab2e0d1d6155c65651f83d53c8b9b06901d167e321142"  # WithdrawCollateral
 ZERO = "0x0000000000000000000000000000000000000000"
 USER_TX_MIN = 2
 
@@ -126,26 +127,42 @@ WRAPPERS = {  # avKAT held on behalf of users → unwrap to funders (verified EO
 def build_avkat_unwrap():
     print("replaying avKAT transfers…", file=sys.stderr)
     logs = get_logs(AVKAT, [T_TRANSFER], AVKAT_DEPLOY)
-    funders = {w: set() for w in WRAPPERS}
+    from collections import defaultdict
+    # NET flow per (wrapper, funder): deposits in − withdrawals out. Keeping only
+    # net-positive funders drops anyone who later fully exited the LP/PT position.
+    net = {w: defaultdict(int) for w in WRAPPERS}
     for lg in logs:
         frm = topic_addr(lg["topics"][1]); to = topic_addr(lg["topics"][2])
-        if to in WRAPPERS and frm != ZERO and frm not in WRAPPERS:
-            funders[to].add(frm)
-    return {"wrapper_funders": {WRAPPERS[w]: sorted(s) for w, s in funders.items()}}
+        amt = int(lg["data"], 16) if lg.get("data") not in (None, "0x", "") else 0
+        if to in WRAPPERS and frm not in WRAPPERS and frm != ZERO:
+            net[to][frm] += amt
+        elif frm in WRAPPERS and to not in WRAPPERS and to != ZERO:
+            net[frm][to] -= amt
+    return {"wrapper_funders": {WRAPPERS[w]: sorted(a for a, v in net[w].items() if v > 0)
+                                for w in WRAPPERS}}
+
+def _dword(data, i):  # i-th 32-byte word of log data as int
+    h = data[2:][i*64:(i+1)*64]
+    return int(h, 16) if h else 0
 
 def build_morpho():
-    print("scanning Morpho avKAT-collateral suppliers…", file=sys.stderr)
+    print("scanning Morpho avKAT collateral (supply − withdraw)…", file=sys.stderr)
     cm = get_logs(MORPHO, [T_CREATE], MORPHO_DEPLOY)
     avkat_mkts = []
     for lg in cm:
         words = [lg["data"][2:][i:i+64] for i in range(0, len(lg["data"][2:]), 64)]
         if len(words) >= 2 and "0x"+words[1][-40:].lower() == AVKAT:
             avkat_mkts.append(lg["topics"][1])
-    suppliers = set()
+    # net collateral per onBehalf; keep only positions still open (net > 0).
+    from collections import defaultdict
+    net = defaultdict(int)
     if avkat_mkts:
         for lg in get_logs(MORPHO, [T_SUPCOL, avkat_mkts], MORPHO_DEPLOY):
-            suppliers.add(topic_addr(lg["topics"][3]))
-    return {"avkat_markets": avkat_mkts, "avkat_collateral_suppliers": sorted(suppliers)}
+            net[topic_addr(lg["topics"][3])] += _dword(lg["data"], 0)   # +assets, onBehalf=topics[3]
+        for lg in get_logs(MORPHO, [T_WDCOL, avkat_mkts], MORPHO_DEPLOY):
+            net[topic_addr(lg["topics"][2])] -= _dword(lg["data"], 1)   # −assets, onBehalf=topics[2]
+    return {"avkat_markets": avkat_mkts,
+            "avkat_collateral_suppliers": sorted(a for a, v in net.items() if v > 0)}
 
 # ── build universe ───────────────────────────────────────────────────────────
 liquid = cached("kat_liquid_holders.json", lambda: fetch_holders(KAT))
@@ -154,8 +171,8 @@ avkat  = cached("avkat_holders.json",      lambda: fetch_holders(AVKAT))
 unwrap = cached("avkat_unwrap.json",       build_avkat_unwrap)
 morpho = cached("morpho_suppliers.json",   build_morpho)
 
-def eoas(d):  return {h for h, v in d.items() if not v.get("is_contract")}
-def conts(d): return {h for h, v in d.items() if v.get("is_contract")}
+def eoas(d):  return {h for h, v in d.items() if v.get("is_contract") is False}  # strict: drop unknown(None)
+def conts(d): return {h for h, v in d.items() if v.get("is_contract") is True}
 known_contracts = conts(liquid) | conts(vkat) | conts(avkat)
 
 liquid_eoa, vkat_eoa, avkat_eoa = eoas(liquid), eoas(vkat), eoas(avkat)
@@ -167,18 +184,23 @@ spectra = {a.lower() for a in unwrap["wrapper_funders"].get("Spectra-PT", [])} |
           {a.lower() for a in unwrap["wrapper_funders"].get("Spectra-PT/IBT", [])}
 unwrapped = (morpho_sup | lp | spectra) - known_contracts
 
-# verify the not-in-core unwrapped beneficiaries are actually EOAs (drop routers)
+# verify the not-in-core unwrapped beneficiaries are actually EOAs (drop routers).
+# A None result = RPC error → treat as UNKNOWN and exclude (never count as EOA).
 cand = sorted(unwrapped - core)
 codes = batch("eth_getCode", [[a, "latest"] for a in cand], "code") if cand else []
-new_eoa = {a for a, c in zip(cand, codes) if c in (None, "0x", "0x0", "")}
+new_eoa  = {a for a, c in zip(cand, codes) if c in ("0x", "0x0", "")}
+code_errs = sum(1 for c in codes if c is None)
 
 universe = sorted(core | new_eoa)
-print(f"universe = {len(universe)} beneficial EOA holders", file=sys.stderr)
+print(f"universe = {len(universe)} beneficial EOA holders ({len(new_eoa)} via unwrap)", file=sys.stderr)
 
 # ── classify by tx count (nonce) ─────────────────────────────────────────────
 latest_block = int(rpc("eth_blockNumber", [])["result"], 16)
 nonces = batch("eth_getTransactionCount", [[a, "latest"] for a in universe], "nonce")
-counts = [int(x, 16) if x else 0 for x in nonces]
+def _nonce(x):  # "0x" (some nodes' zero), "", None(error) → 0; else hex int
+    return int(x, 16) if (x and x not in ("0x", "")) else 0
+counts = [_nonce(x) for x in nonces]
+nonce_errs = sum(1 for x in nonces if x is None)
 
 def bucket(n):
     if n == 0:  return "0"
@@ -191,9 +213,36 @@ order = ["0", "1", "2-4", "5-9", "10-49", "50+"]
 b = {k: 0 for k in order}
 for n in counts: b[bucket(n)] += 1
 
-users    = sum(1 for n in counts if n >= USER_TX_MIN)
+users    = sum(1 for n in counts if n >= USER_TX_MIN)   # >=2 tx ("active user")
 nonusers = len(counts) - users
 total    = len(counts)
+nonce0   = b["0"]
+holders_transacted = total - nonce0                     # holders with >=1 tx
+
+# component venue sets — GROSS beneficial-EOA participation per venue (a wallet
+# can appear in several). EOA-clean: a venue address counts only if it's already
+# a core EOA holder OR a verified-EOA unwrap beneficiary (contracts dropped).
+def eoa_clean(s): return (s & core) | (s & new_eoa)
+morpho_eoa = eoa_clean(morpho_sup)
+lpspec_eoa = eoa_clean(lp | spectra)
+
+# ── Katana-wide context (>=1 tx definition, matches Blockscout "Total accounts") ─
+ctx = None
+try:
+    cn = {x["id"]: x["value"] for x in _get("https://explorer.katanarpc.com/api/v1/counters")["counters"]}
+    total_addresses   = int(cn["totalAddresses"])      # all addresses ever seen
+    transacting_users = int(cn["totalAccounts"])       # EOAs that sent >=1 tx
+    ctx = {
+        "userDef": ">=1 tx (EOA that has sent at least one transaction; Blockscout 'Total accounts')",
+        "totalAddresses":    total_addresses,
+        "transactingUsers":  transacting_users,
+        "holdersTransacted": holders_transacted,                            # KAT holders with >=1 tx
+        "usersNoKat":        max(0, transacting_users - holders_transacted), # users that hold no KAT (clamped)
+        "holderShareOfUsers":     round(min(100.0, 100*holders_transacted/transacting_users), 1),
+        "holderShareOfAddresses": round(100*total/total_addresses, 1),
+    }
+except Exception as e:
+    print("counters fetch failed:", e, file=sys.stderr)
 
 out = {
     "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -208,18 +257,16 @@ out = {
     "components": [
         {"label": "Liquid KAT",              "count": len(liquid_eoa)},
         {"label": "Staked · vKAT (locked)",  "count": len(vkat_eoa)},
-        {"label": "avKAT",                   "count": len(avkat_eoa)},
-        {"label": "Morpho avKAT collateral", "count": len(morpho_sup - core)},
-        {"label": "Sushi/Uni LP + Spectra",  "count": len((lp | spectra) - core - known_contracts)},
+        {"label": "avKAT (direct)",          "count": len(avkat_eoa)},
+        {"label": "Morpho avKAT collateral", "count": len(morpho_eoa)},
+        {"label": "Sushi/Uni LP + Spectra",  "count": len(lpspec_eoa)},
     ],
-    "chainAddresses": None,  # filled below if reachable
+    "chainAddresses": (ctx or {}).get("totalAddresses"),
+    "katanaContext": ctx,
+    "diagnostics": {"unwrapNewEoas": len(new_eoa), "getCodeErrors": code_errs, "nonceErrors": nonce_errs},
 }
-# chain-wide address count for scale
-try:
-    stats = _get(f"{BS}/stats")
-    out["chainAddresses"] = int(stats.get("total_addresses")) if stats.get("total_addresses") else None
-except Exception:
-    pass
+if code_errs or nonce_errs:
+    print(f"WARNING: {code_errs} getCode + {nonce_errs} nonce RPC errors (excluded, not miscounted)", file=sys.stderr)
 
 json.dump(out, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "holder_activity.json"), "w"), indent=2)
 print(json.dumps({k: v for k, v in out.items() if k not in ("buckets", "components")}, indent=2))
