@@ -934,6 +934,29 @@
     .chart-legend .sw { display:inline-block; width:14px; height:3px; margin-right:0.45rem; vertical-align:middle; }
     .chart-meta { margin-top:0.75rem; font-family:var(--mono); font-size:0.75rem; color:var(--dim); }
     .chart-empty { padding:2rem 0; text-align:center; color:var(--dim); font-family:var(--ui); font-size:0.85rem; }
+    /* ── HOLDERS vs USERS TAB ─────────────────────────────────────────────── */
+    .ha-splitbar { display:flex; height:70px; border:2px solid var(--black); margin:0 2rem; font-family:var(--mono); }
+    .ha-splitbar .seg { display:flex; flex-direction:column; justify-content:center; padding:0 1.1rem; color:#fff; overflow:hidden; white-space:nowrap; min-width:0; }
+    .ha-splitbar .seg-users { background:var(--green); }
+    .ha-splitbar .seg-non   { background:var(--red); border-left:2px solid var(--black); }
+    .ha-splitbar .seg-pct { font-size:1.5rem; font-weight:800; line-height:1; }
+    .ha-splitbar .seg-lbl { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.07em; font-weight:700; opacity:0.9; margin-top:4px; text-overflow:ellipsis; overflow:hidden; }
+    .ha-section { padding:1.7rem 2rem 0.3rem; }
+    .ha-section-title { font-family:var(--ui); font-size:0.78rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:700; color:var(--label); margin-bottom:1rem; }
+    .ha-note { text-transform:none; letter-spacing:0; font-weight:400; color:var(--dim); font-size:0.72rem; }
+    .ha-spectrum { display:flex; flex-direction:column; gap:7px; }
+    .ha-row { display:grid; grid-template-columns:140px 1fr 130px; align-items:center; gap:12px; font-family:var(--mono); font-size:0.82rem; }
+    .ha-row .ha-rl { color:var(--label); text-align:right; font-family:var(--ui); font-weight:600; font-size:0.75rem; }
+    .ha-track { background:var(--cream2); border:1.5px solid var(--black); height:28px; position:relative; overflow:hidden; }
+    .ha-fill { height:100%; background:var(--black); transition:width .4s ease; }
+    .ha-fill.nonuser { background:var(--red); }
+    .ha-fill.user { background:var(--green); }
+    .ha-fill.comp { background:var(--violet); }
+    .ha-rv { color:var(--text); font-weight:700; }
+    .ha-rv .ha-pct { color:var(--dim); font-weight:400; font-size:0.72rem; margin-left:7px; }
+    .ha-method { padding:1.5rem 2rem 2.5rem; color:var(--dim); font-size:0.75rem; line-height:1.65; font-family:var(--ui); max-width:1000px; }
+    .ha-method b { color:var(--label); }
+    @media (max-width:640px){ .ha-row { grid-template-columns:96px 1fr 96px; } .ha-splitbar { margin:0; } }
   </style>
 </head>
 <body>
@@ -978,6 +1001,7 @@
   <button class="tab-btn" data-tab="buyers" title="Wallets that bought KAT on DEX or received from CEX after TGE">New KAT Buyers</button>
   <button class="tab-btn" data-tab="supply" title="KAT token circulation and supply breakdown">Supply</button>
   <button class="tab-btn" data-tab="stakers" title="Wallets with vKAT or avKAT staking positions">KAT Stakers</button>
+  <button class="tab-btn" data-tab="holders" title="How many KAT holders actually use the Katana chain">Holders vs Users</button>
 </div>
 
 <div id="tab-dumpers" class="tab-pane active">
@@ -1269,6 +1293,51 @@
     </tbody>
   </table>
 </div>
+</div>
+
+<div id="tab-holders" class="tab-pane">
+  <div class="cascade-hero">
+    <div class="cascade-pct" id="ha-hero-pct">—</div>
+    <div class="cascade-sub">of KAT holders actively use Katana</div>
+    <div class="cascade-amount" id="ha-hero-amount">—</div>
+  </div>
+
+  <div class="ha-splitbar" id="ha-splitbar"></div>
+
+  <div class="stats-grid" id="ha-stats-grid" style="margin-top:1.5rem">
+    <div class="stat-card" title="Unique wallets with KAT exposure in any form (liquid KAT, locked vKAT, avKAT incl. Morpho/LP/Spectra) — beneficial EOAs only">
+      <div class="stat-label">KAT Holders</div>
+      <div class="stat-value" id="ha-total">—</div>
+      <div class="stat-sub">all forms</div>
+    </div>
+    <div class="stat-card" title="Holders that have originated at least 2 transactions on Katana">
+      <div class="stat-label">Active Users (≥2 tx)</div>
+      <div class="stat-value green" id="ha-users">—</div>
+      <div class="stat-sub" id="ha-users-sub"></div>
+    </div>
+    <div class="stat-card" title="Holders that have originated fewer than 2 transactions on Katana">
+      <div class="stat-label">Not Users (&lt;2 tx)</div>
+      <div class="stat-value red" id="ha-nonusers">—</div>
+      <div class="stat-sub" id="ha-nonusers-sub"></div>
+    </div>
+    <div class="stat-card" title="Holders that have never originated a single transaction — KAT was airdropped or transferred to them">
+      <div class="stat-label">Never Transacted</div>
+      <div class="stat-value red" id="ha-nonce0">—</div>
+      <div class="stat-sub">0 tx ever</div>
+    </div>
+  </div>
+
+  <div class="ha-section">
+    <div class="ha-section-title">Holder activity spectrum — transactions originated on Katana</div>
+    <div class="ha-spectrum" id="ha-spectrum"></div>
+  </div>
+
+  <div class="ha-section">
+    <div class="ha-section-title">Where holders hold KAT <span class="ha-note">— sets overlap; one wallet can appear in several</span></div>
+    <div class="ha-spectrum" id="ha-components"></div>
+  </div>
+
+  <div class="ha-method" id="ha-method"></div>
 </div>
 
 <footer>

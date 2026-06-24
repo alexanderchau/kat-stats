@@ -1512,6 +1512,68 @@ async function loadSupplyData() {
   }
 }
 
+// ── HOLDERS vs USERS TAB ────────────────────────────────────────────────────
+function renderHolderActivity(d) {
+  const intf = n => (n === null || n === undefined) ? '—' : Math.round(n).toLocaleString('en-US');
+
+  document.getElementById('ha-hero-pct').textContent = Math.round(d.usersPct) + '%';
+  document.getElementById('ha-hero-amount').textContent =
+    `${intf(d.users)} of ${intf(d.totalHolders)} KAT holders · ${intf(d.nonUsers)} have done fewer than ${d.userTxMin} transactions`;
+
+  // proportional split bar
+  document.getElementById('ha-splitbar').innerHTML =
+    `<div class="seg seg-users" style="flex:${d.users}"><div class="seg-pct">${Math.round(d.usersPct)}%</div>` +
+      `<div class="seg-lbl">Active users · ${intf(d.users)}</div></div>` +
+    `<div class="seg seg-non" style="flex:${d.nonUsers}"><div class="seg-pct">${Math.round(d.nonUsersPct)}%</div>` +
+      `<div class="seg-lbl">Not users · ${intf(d.nonUsers)}</div></div>`;
+
+  // stat cards
+  const nonce0 = (d.buckets.find(b => b.label === '0') || {}).count || 0;
+  document.getElementById('ha-total').textContent       = intf(d.totalHolders);
+  document.getElementById('ha-users').textContent       = intf(d.users);
+  document.getElementById('ha-users-sub').textContent   = Math.round(d.usersPct) + '% of holders';
+  document.getElementById('ha-nonusers').textContent    = intf(d.nonUsers);
+  document.getElementById('ha-nonusers-sub').textContent= Math.round(d.nonUsersPct) + '% of holders';
+  document.getElementById('ha-nonce0').textContent      = intf(nonce0);
+
+  // activity spectrum
+  const LBL = { '0':'0 tx · never', '1':'1 tx', '2-4':'2–4 tx', '5-9':'5–9 tx', '10-49':'10–49 tx', '50+':'50+ tx' };
+  const maxB = Math.max(1, ...d.buckets.map(b => b.count));
+  document.getElementById('ha-spectrum').innerHTML = d.buckets.map(b => {
+    const cls = (b.label === '0' || b.label === '1') ? 'nonuser' : 'user';
+    const w = (b.count / maxB * 100).toFixed(1);
+    const p = (b.count / d.totalHolders * 100).toFixed(1);
+    return `<div class="ha-row"><div class="ha-rl">${LBL[b.label] || escapeHtml(b.label)}</div>` +
+      `<div class="ha-track"><div class="ha-fill ${cls}" style="width:${w}%"></div></div>` +
+      `<div class="ha-rv">${intf(b.count)}<span class="ha-pct">${p}%</span></div></div>`;
+  }).join('');
+
+  // holder composition (sets overlap)
+  const comps = (d.components || []).filter(c => c.count > 0);
+  const maxC = Math.max(1, ...comps.map(c => c.count));
+  document.getElementById('ha-components').innerHTML = comps.map(c =>
+    `<div class="ha-row"><div class="ha-rl">${escapeHtml(c.label)}</div>` +
+    `<div class="ha-track"><div class="ha-fill comp" style="width:${(c.count / maxC * 100).toFixed(1)}%"></div></div>` +
+    `<div class="ha-rv">${intf(c.count)}</div></div>`).join('');
+
+  const chain = d.chainAddresses ? intf(d.chainAddresses) : '—';
+  document.getElementById('ha-method').innerHTML =
+    `<b>KAT holder</b> = unique wallet (beneficial EOA) with KAT exposure in any form — liquid KAT, locked vKAT, or avKAT held directly or unwrapped from Morpho collateral, a Sushi/Uni LP, or Spectra PT. ` +
+    `<b>Katana user</b> = wallet that has originated ≥${d.userTxMin} transactions on Katana (account nonce ≥ ${d.userTxMin}). ` +
+    `Infrastructure contracts (treasury, voting-escrow, DEX pools, bridges, distributors) are excluded — they custody KAT on behalf of users counted elsewhere. ` +
+    `For scale, Katana has ${chain} total addresses on-chain. Snapshot at block ${intf(d.katanaBlock)}.`;
+}
+
+async function loadHolderActivity() {
+  try {
+    const resp = await fetch('holder_activity.json?' + Date.now());
+    if (!resp.ok) return;
+    renderHolderActivity(await resp.json());
+  } catch (e) {
+    console.error('Holder activity fetch failed:', e.message);
+  }
+}
+
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 async function main() {
   fetchKatPrice();
@@ -1715,6 +1777,9 @@ async function main() {
 
   // ── Supply tab (parallel — doesn't block other tabs)
   loadSupplyData();
+
+  // ── Holders vs Users tab (parallel — doesn't block other tabs)
+  loadHolderActivity();
 
   // ── Auto-refresh polling (every 5 minutes) ────────────────────────────────
   setInterval(async () => {

@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-06-24T14:36:05.002371+00:00",
+  "katanaBlock": 35568903,
+  "userTxMin": 2,
+  "totalHolders": 20673,
+  "users": 16539,
+  "nonUsers": 4134,
+  "usersPct": 80.0,
+  "nonUsersPct": 20.0,
+  "buckets": [
+    {
+      "label": "0",
+      "count": 3161
+    },
+    {
+      "label": "1",
+      "count": 973
+    },
+    {
+      "label": "2-4",
+      "count": 1856
+    },
+    {
+      "label": "5-9",
+      "count": 4882
+    },
+    {
+      "label": "10-49",
+      "count": 6008
+    },
+    {
+      "label": "50+",
+      "count": 3793
+    }
+  ],
+  "components": [
+    {
+      "label": "Liquid KAT",
+      "count": 18568
+    },
+    {
+      "label": "Staked \u00b7 vKAT (locked)",
+      "count": 2556
+    },
+    {
+      "label": "avKAT",
+      "count": 2852
+    },
+    {
+      "label": "Morpho avKAT collateral",
+      "count": 19
+    },
+    {
+      "label": "Sushi/Uni LP + Spectra",
+      "count": 26
+    }
+  ],
+  "chainAddresses": 978063
+}

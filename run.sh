@@ -17,8 +17,19 @@ fi
 # Indexer — if this fails, skip deploy entirely
 $PYTHON indexer.py
 
+# Holders vs Users tab — heavy (~10 min full pull), so refresh only ~daily
+HA="holder_activity.json"
+HA_STALE=1
+if [ -f "$HA" ]; then
+    AGE=$(( $(date +%s) - $(stat -f %m "$HA") ))
+    [ "$AGE" -lt 72000 ] && HA_STALE=0   # < 20h old → keep
+fi
+if [ "$HA_STALE" -eq 1 ]; then
+    $PYTHON holder_activity.py --refresh 2>&1 || echo "holder_activity.py failed, keeping stale $HA" >&2
+fi
+
 # Only commit data files (never state files)
-git add data.json supply_data.json snapshots.json
+git add data.json supply_data.json snapshots.json holder_activity.json
 
 CHANGES=$(git diff --cached --stat)
 if [ -z "$CHANGES" ]; then

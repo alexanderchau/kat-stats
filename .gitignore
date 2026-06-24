@@ -4,3 +4,5 @@ __pycache__/
 tests/__pycache__/
 .wrangler/
 screenshot-*.png
+.holder_cache/
+.holder_cache_check
