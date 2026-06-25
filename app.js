@@ -156,18 +156,10 @@ function setKatStatSub(valueId, subId, kat, baseSub) {
 function refreshOneKatSub(valueId) {
   const c = _katCache[valueId];
   if (!c) return;
-  const subId = KAT_USD_SUBS[valueId] || (valueId === 'supply-hero-total' ? 'supply-hero-total' : null);
+  const subId = KAT_USD_SUBS[valueId] || null;
   const el = subId ? document.getElementById(subId) : null;
   if (!el) return;
   const usd = katPriceUsd ? fmtUsd(c.kat * katPriceUsd) : '';
-  if (valueId === 'supply-hero-total') {
-    const parts = [];
-    if (c.prefix) parts.push(c.prefix);
-    if (usd) parts.push(usd);
-    if (c.baseSub) parts.push(c.baseSub);
-    el.textContent = parts.join(' · ');
-    return;
-  }
   const parts = [];
   if (usd) parts.push(usd);
   if (c.baseSub) parts.push(c.baseSub);
@@ -1389,129 +1381,6 @@ function exportStakerCSV() {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
-// ── SUPPLY TAB ───────────────────────────────────────────────────────────────
-const PROTO_COLORS = {
-  'Katana Vaults': '--blue',
-  'SushiSwap':     '--amber',
-  'Yearn':         '--violet',
-  'Charm':         '--orange',
-  'Morpho':        '--green',
-  'other':         '--dim',
-};
-const PROTO_URLS = {};
-
-function fmtM(n) {
-  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
-  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-  return n.toFixed(0);
-}
-
-function renderSupplyTab(d) {
-  // Hero
-  document.getElementById('supply-hero-pct').textContent = d.circulatingPct.toFixed(2) + '%';
-  const _heroEl = document.getElementById('supply-hero-total');
-  _heroEl.textContent = fmtM(d.totalCirculating) + ' KAT in circulation';
-  _katCache['supply-hero-total'] = { kat: d.totalCirculating, baseSub: 'in circulation', prefix: fmtM(d.totalCirculating) + ' KAT' };
-  refreshOneKatSub('supply-hero-total');
-
-  const s = d.sources;
-  const mix = d.protocolMix || {};
-  const merklTotal = s.merkl.amount;
-  const totalSupply = d.totalSupply;
-  const sorted = Object.entries(mix).sort((a, b) => b[1].frac - a[1].frac);
-
-  // Build table rows
-  const tbody = document.getElementById('supply-table-body');
-  tbody.innerHTML = '';
-  const rows = [];
-
-  // Merkl protocol sub-rows
-  if (sorted.length > 0) {
-    sorted.forEach(([name, info]) => {
-      const amt = info.frac * merklTotal;
-      const pctSupply = (amt / totalSupply * 100).toFixed(2);
-      const color = PROTO_COLORS[name] || '--dim';
-      let detail = '';
-      if (info.subs && Object.keys(info.subs).length > 0) {
-        detail = Object.entries(info.subs).sort((a,b) => b[1]-a[1]).map(([s,f]) => `${escapeHtml(s)} ${(f*100).toFixed(0)}%`).join(', ');
-      }
-      const url = PROTO_URLS[name];
-      const nameHtml = url
-        ? `<span style="color:var(${color})">■</span> <a class="ext-link" href="${url}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`
-        : `<span style="color:var(${color})">■</span> ${escapeHtml(name)}`;
-      rows.push({ nameHtml, amt, pctSupply, detail });
-    });
-  } else {
-    rows.push({
-      nameHtml: '<b>Merkl Rewards</b>',
-      amt: s.merkl.amount,
-      pctSupply: s.merkl.pct.toFixed(2),
-      detail: 'Protocol breakdown unavailable',
-    });
-  }
-
-  // Merkl total row
-  const merklRow = document.createElement('tr');
-  merklRow.style.cssText = 'border-top:2px solid var(--black);font-weight:700;';
-  merklRow.innerHTML = `<td><b>Merkl Total</b></td><td class="num">${fmtM(s.merkl.amount)}</td><td class="num">${s.merkl.pct.toFixed(2)}%</td><td></td>`;
-
-  // Fixed allocation rows (vaults + TGE sources — everything except merkl)
-  const fixedRows = Object.entries(s)
-    .filter(([k, v]) => k !== 'merkl' && v.type === 'fixed')
-    .map(([k, v]) => ({ name: v.label, amount: v.amount, pct: v.pct, desc: v.desc, subs: v.subs }));
-
-  // Render protocol rows
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.nameHtml}</td><td class="num">${fmtM(r.amt)}</td><td class="num">${r.pctSupply}%</td><td style="color:var(--dim);font-size:0.78rem">${r.detail}</td>`;
-    tbody.appendChild(tr);
-  });
-
-  tbody.appendChild(merklRow);
-
-  fixedRows.forEach((v, i) => {
-    const hasSubs = v.subs && v.subs.length > 0;
-    const tr = document.createElement('tr');
-    const detail = v.desc || 'Fixed allocation';
-    if (hasSubs) {
-      tr.className = 'supply-parent';
-      tr.dataset.group = `fixed-${i}`;
-      tr.onclick = () => {
-        tr.classList.toggle('open');
-        document.querySelectorAll(`tr.supply-child[data-group="fixed-${i}"]`).forEach(c => c.classList.toggle('visible'));
-      };
-    }
-    tr.innerHTML = `<td><b>${escapeHtml(v.name)}</b></td><td class="num">${fmtM(v.amount)}</td><td class="num">${v.pct.toFixed(2)}%</td><td style="color:var(--dim);font-size:0.78rem">${escapeHtml(detail)}</td>`;
-    tbody.appendChild(tr);
-    if (hasSubs) {
-      v.subs.forEach(sub => {
-        const sr = document.createElement('tr');
-        sr.className = 'supply-child';
-        sr.dataset.group = `fixed-${i}`;
-        sr.innerHTML = `<td>${escapeHtml(sub.name)}</td><td class="num">${fmtM(sub.amount)}</td><td class="num">${sub.pct.toFixed(2)}%</td><td></td>`;
-        tbody.appendChild(sr);
-      });
-    }
-  });
-
-  const totalRow = document.createElement('tr');
-  totalRow.style.cssText = 'border-top:2px solid var(--black);font-weight:700;background:var(--cream2);';
-  totalRow.innerHTML = `<td><b>Total Circulating</b></td><td class="num">${fmtM(d.totalCirculating)}</td><td class="num">${d.circulatingPct.toFixed(2)}%</td><td></td>`;
-  tbody.appendChild(totalRow);
-}
-
-async function loadSupplyData() {
-  try {
-    const resp = await fetch('supply_data.json?' + Date.now());
-    if (!resp.ok) return;
-    const d = await resp.json();
-    renderSupplyTab(d);
-  } catch (e) {
-    console.error('Supply data fetch failed:', e.message);
-  }
-}
-
 // ── HOLDERS vs USERS TAB ────────────────────────────────────────────────────
 function renderHolderActivity(d) {
   const intf = n => (n === null || n === undefined) ? '—' : Math.round(n).toLocaleString('en-US');
@@ -1807,9 +1676,6 @@ async function main() {
     .then(r => r.ok ? r.json() : null)
     .then(obj => { if (obj && typeof obj === 'object') { Object.assign(LABELS, obj); scheduleRender(); } })
     .catch(() => {});
-
-  // ── Supply tab (parallel — doesn't block other tabs)
-  loadSupplyData();
 
   // ── Holders vs Users tab (parallel — doesn't block other tabs)
   loadHolderActivity();

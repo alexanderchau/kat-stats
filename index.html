@@ -887,14 +887,6 @@
     .ab-add-row input:focus { outline:none; border-color:var(--black); }
     .ab-add-btn { background:var(--black); color:#fff; border:none; padding:0.25rem 0.75rem; font-family:var(--ui); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; cursor:pointer; }
     .ab-add-btn:hover { opacity:0.8; }
-    /* Expandable supply rows */
-    tr.supply-parent { cursor:pointer; }
-    tr.supply-parent td:first-child::before { content:'▸ '; color:var(--dim); }
-    tr.supply-parent.open td:first-child::before { content:'▾ '; }
-    tr.supply-child { display:none; }
-    tr.supply-child.visible { display:table-row; }
-    tr.supply-child td { padding-left:2.5rem; color:var(--dim); font-size:0.85rem; }
-    tr.supply-child td:first-child { font-weight:400; }
     /* Chart modal */
     #chart-modal .modal-box { max-width:760px; }
     #chart-modal .modal-body { padding:1.25rem 1.5rem; }
@@ -1008,7 +1000,6 @@
 <div class="tab-nav">
   <button class="tab-btn active" data-tab="dumpers" title="Wallets that claimed KAT via Merkl farming rewards">Pre-TGE Farmers</button>
   <button class="tab-btn" data-tab="buyers" title="Wallets that bought KAT on DEX or received from CEX after TGE">New KAT Buyers</button>
-  <button class="tab-btn" data-tab="supply" title="KAT token circulation and supply breakdown">Supply</button>
   <button class="tab-btn" data-tab="stakers" title="Wallets with vKAT or avKAT staking positions">KAT Stakers</button>
   <button class="tab-btn" data-tab="holders" title="How many KAT holders actually use the Katana chain">Holders vs Users</button>
 </div>
@@ -1201,29 +1192,6 @@
     </tbody>
   </table>
 </div>
-</div>
-
-<div id="tab-supply" class="tab-pane">
-  <div class="cascade-hero">
-    <div class="cascade-pct" id="supply-hero-pct">—</div>
-    <div class="cascade-sub">of 10B total supply distributed</div>
-    <div class="cascade-amount" id="supply-hero-total">—</div>
-  </div>
-  <div class="table-wrap">
-    <table id="supply-table">
-      <thead>
-        <tr>
-          <th style="text-align:left">Source</th>
-          <th class="num">KAT Emitted</th>
-          <th class="num">% of Supply</th>
-          <th style="text-align:left">Detail</th>
-        </tr>
-      </thead>
-      <tbody id="supply-table-body">
-        <tr class="loading-row"><td colspan="4">Loading supply data…</td></tr>
-      </tbody>
-    </table>
-  </div>
 </div>
 
 <div id="tab-stakers" class="tab-pane">
