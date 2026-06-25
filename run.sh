@@ -9,6 +9,13 @@ export PATH="/Users/helm/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/
 
 PYTHON="/Users/helm/.claude/venv/bin/python3"
 
+# Stay in sync with origin BEFORE doing anything. Code (index.html/app.js/*.py)
+# may be updated from another machine; this box only WRITES data. Without this,
+# a push from elsewhere leaves us behind → our push is rejected → we redeploy
+# our STALE working dir every hour, reverting the live site. Adopt origin first.
+git fetch origin main 2>&1 || echo "git fetch failed, proceeding with local" >&2
+git reset --hard origin/main 2>&1 || echo "git reset failed, proceeding with local" >&2
+
 # Supply runs FIRST — indexer reads supply_data.json for circSupply
 if ! $PYTHON supply.py --json 2>&1; then
     echo "supply.py failed, continuing with stale supply_data.json" >&2
