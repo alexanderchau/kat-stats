@@ -958,6 +958,58 @@
     .ha-fill.kat   { background:var(--green); }
     .ha-splitbar .seg-neutral { background:#8a8a8a; border-left:2px solid var(--black); }
     @media (max-width:640px){ .ha-row { grid-template-columns:96px 1fr 96px; } .ha-splitbar { margin:0; } .ha-callout,.ha-subnote{margin-left:0;margin-right:0;} }
+
+    /* ── Overview tab ──────────────────────────────────────────────────────── */
+    #tab-overview { padding-bottom: 2rem; }
+    .ov-hero { padding: 1.9rem 2rem 0.6rem; }
+    .ov-hero .ov-kicker { font-family:var(--ui); font-size:0.74rem; text-transform:uppercase; letter-spacing:0.12em; font-weight:700; color:var(--dim); }
+    .ov-hero .ov-headline { font-family:var(--ui); font-weight:800; font-size:2.05rem; line-height:1.12; margin:0.5rem 0 0.35rem; max-width:34ch; }
+    .ov-hero .ov-headline em { font-style:normal; color:var(--green); }
+    .ov-hero .ov-headline .dump { color:var(--red); }
+    .ov-hero .ov-sub { font-family:var(--ui); font-size:0.85rem; color:var(--label); line-height:1.55; max-width:66ch; }
+
+    .ov-section-title { font-family:var(--ui); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em; font-weight:700; color:var(--label); margin:2rem 2rem 1rem; }
+    .ov-section-title .ov-note { text-transform:none; letter-spacing:0; font-weight:500; color:var(--dim); font-size:0.76rem; }
+
+    /* Acquisition funnel */
+    .ov-funnel { display:flex; flex-direction:column; gap:0.55rem; margin:0 2rem; }
+    .ov-frow { display:grid; grid-template-columns: 210px 1fr; align-items:center; gap:1rem; }
+    .ov-flabel { font-family:var(--ui); font-size:0.82rem; font-weight:600; color:var(--label); }
+    .ov-flabel small { display:block; font-weight:500; color:var(--dim); font-size:0.72rem; }
+    .ov-fbar-wrap { display:flex; align-items:center; gap:0.7rem; }
+    .ov-fbar { height:34px; border:1.5px solid var(--black); display:flex; align-items:center; padding-left:0.7rem; color:var(--black); font-family:var(--mono); font-weight:700; font-size:0.9rem; min-width:2px; box-sizing:border-box; }
+    .ov-fbar.allocated { background:#EDE6D8; }
+    .ov-fbar.claimed   { background:var(--card-claimed); }
+    .ov-fbar.bought    { background:var(--card-staked); }
+    .ov-fpct { font-family:var(--mono); font-size:0.8rem; color:var(--dim); white-space:nowrap; }
+
+    /* Behaviour segmented bar */
+    .ov-segbar { display:flex; height:56px; margin:0 2rem; border:1.5px solid var(--black); overflow:hidden; }
+    .ov-seg { display:flex; flex-direction:column; justify-content:center; padding:0 0.9rem; color:#fff; font-family:var(--mono); box-sizing:border-box; overflow:hidden; }
+    .ov-seg b { font-size:1.02rem; font-weight:700; }
+    .ov-seg span { font-size:0.72rem; opacity:0.92; font-family:var(--ui); font-weight:600; white-space:nowrap; }
+    .ov-seg.stake { background:var(--green); }
+    .ov-seg.idle  { background:var(--amber); }
+    .ov-seg.dump  { background:var(--red); }
+    .ov-legend { display:flex; flex-wrap:wrap; gap:1.4rem; margin:0.9rem 2rem 0; font-family:var(--ui); font-size:0.8rem; color:var(--label); }
+    .ov-legend .dot { display:inline-block; width:11px; height:11px; margin-right:0.4rem; vertical-align:middle; border:1px solid var(--black); }
+    .ov-legend .dot.stake{background:var(--green);} .ov-legend .dot.idle{background:var(--amber);} .ov-legend .dot.dump{background:var(--red);}
+    .ov-legend b { font-family:var(--mono); }
+
+    .ov-cards { display:grid; grid-template-columns:repeat(4,1fr); margin:1.4rem 2rem 0; border:1.5px solid var(--black); }
+    .ov-cards .stat-card { border-right:1px solid var(--black); border-bottom:none; }
+    .ov-cards .stat-card:last-child { border-right:none; }
+    .ov-takeaway { font-family:var(--ui); font-size:0.9rem; line-height:1.6; color:var(--label); margin:1.5rem 2rem 0; padding:1rem 1.2rem; background:var(--cream2); border-left:3px solid var(--green); }
+    .ov-takeaway b { color:var(--black); }
+    .ov-prov { font-family:var(--ui); font-size:0.72rem; color:var(--dim); margin:1.6rem 2rem 0; line-height:1.5; border-top:1px solid var(--cream2); padding-top:0.9rem; }
+    @media (max-width:640px){
+      .ov-hero .ov-headline{font-size:1.55rem;}
+      .ov-frow{grid-template-columns:1fr; gap:0.3rem;}
+      .ov-cards{grid-template-columns:repeat(2,1fr);}
+      .ov-cards .stat-card:nth-child(2){border-right:none;}
+      .ov-cards .stat-card:nth-child(-n+2){border-bottom:1px solid var(--black);}
+      .ov-seg span{display:none;}
+    }
   </style>
 </head>
 <body>
@@ -998,13 +1050,14 @@
 <div id="error-msg" class="error-msg"></div>
 
 <div class="tab-nav">
-  <button class="tab-btn active" data-tab="dumpers" title="Wallets that claimed KAT via Merkl farming rewards">Pre-TGE Farmers</button>
+  <button class="tab-btn active" data-tab="overview" title="How the KAT holder base breaks down: farmers vs buyers, and what farmers did with their KAT">Overview</button>
+  <button class="tab-btn" data-tab="dumpers" title="Wallets that claimed KAT via Merkl farming rewards">Pre-TGE Farmers</button>
   <button class="tab-btn" data-tab="buyers" title="Wallets that bought KAT on DEX or received from CEX after TGE">New KAT Buyers</button>
   <button class="tab-btn" data-tab="stakers" title="Wallets with vKAT or avKAT staking positions">KAT Stakers</button>
   <button class="tab-btn" data-tab="holders" title="How many KAT holders actually use the Katana chain">Holders vs Users</button>
 </div>
 
-<div id="tab-dumpers" class="tab-pane active">
+<div id="tab-dumpers" class="tab-pane">
 <div id="progress-section">
   <div class="progress-track">
     <div class="progress-fill" id="progress-fill"></div>
@@ -1326,6 +1379,60 @@
   </div>
 
   <div class="ha-method" id="ha-method"></div>
+</div>
+
+<div id="tab-overview" class="tab-pane active">
+  <div class="ov-hero">
+    <div class="ov-kicker">KAT holder base — how it formed</div>
+    <div class="ov-headline">Almost everyone <em>farmed</em> KAT. Very few <span class="dump">bought</span> it — and most farmers <em>staked</em>.</div>
+    <div class="ov-sub">
+      Pre-TGE quest farmers who actually claimed KAT outnumber post-TGE market buyers by roughly <b>37&nbsp;to&nbsp;1</b>.
+      Of the farmers who claimed, a clear majority locked their KAT into staking rather than selling it.
+    </div>
+  </div>
+
+  <div class="ov-section-title">How wallets acquired KAT <span class="ov-note">— pre-TGE farming allocation vs. post-TGE buying</span></div>
+  <div class="ov-funnel">
+    <div class="ov-frow">
+      <div class="ov-flabel">Farmers allocated<small>ELIG + FOUND quest reward list</small></div>
+      <div class="ov-fbar-wrap"><div class="ov-fbar allocated" style="width:100%">122,071</div></div>
+    </div>
+    <div class="ov-frow">
+      <div class="ov-flabel">Farmers who <b>claimed</b> KAT<small>received KAT on-chain</small></div>
+      <div class="ov-fbar-wrap"><div class="ov-fbar claimed" style="width:10.7%">13,077</div><span class="ov-fpct">11% of allocation — 89% never claimed</span></div>
+    </div>
+    <div class="ov-frow">
+      <div class="ov-flabel">Post-TGE <b>buyers</b><small>bought on DEX or CEX</small></div>
+      <div class="ov-fbar-wrap"><div class="ov-fbar bought" style="width:0.6%;min-width:6px;padding:0"></div><span class="ov-fpct"><b style="color:var(--black)">352</b> &nbsp;—&nbsp; ~1 buyer for every 37 claiming farmers</span></div>
+    </div>
+  </div>
+
+  <div class="ov-section-title">What the 13,077 claiming farmers did with their KAT</div>
+  <div class="ov-segbar">
+    <div class="ov-seg stake" style="width:52.9%"><b>6,910</b><span>Staked · 52.9%</span></div>
+    <div class="ov-seg idle" style="width:30.6%"><b>4,003</b><span>Idle held · 30.6%</span></div>
+    <div class="ov-seg dump" style="width:16.5%"><b>2,164</b><span>Dumped · 16.5%</span></div>
+  </div>
+  <div class="ov-legend">
+    <span><span class="dot stake"></span><b>6,910</b> Stakers — locked vKAT / avKAT / Morpho / LP (still KAT-exposed)</span>
+    <span><span class="dot idle"></span><b>4,003</b> Idle holders — sat on liquid KAT, did nothing</span>
+    <span><span class="dot dump"></span><b>2,164</b> Dumpers — sold to a DEX or bridged out</span>
+  </div>
+
+  <div class="ov-cards">
+    <div class="stat-card"><div class="stat-label">Claiming farmers</div><div class="stat-value">13,077</div><div class="stat-sub">of 122,071 allocated</div></div>
+    <div class="stat-card"><div class="stat-label">Stake their KAT</div><div class="stat-value green">52.9%</div><div class="stat-sub">6,910 wallets</div></div>
+    <div class="stat-card"><div class="stat-label">Dump their KAT</div><div class="stat-value red">16.5%</div><div class="stat-sub">2,164 wallets — the minority</div></div>
+    <div class="stat-card"><div class="stat-label">Farmers : Buyers</div><div class="stat-value">37 : 1</div><div class="stat-sub">13,077 vs 352</div></div>
+  </div>
+
+  <div class="ov-takeaway">
+    <b>Takeaway:</b> The KAT holder base is overwhelmingly pre-TGE farmers, not market buyers — and dumping is the <b>minority</b> behaviour. Most farmers who claimed KAT staked it (vKAT vote-escrow is by far the largest sink), a large tail simply held it idle, and only ~1 in 6 sold or bridged out. See the <b>Pre-TGE Farmers</b> tab for per-wallet detail and the <b>New KAT Buyers</b> tab for the (small) buyer population.
+  </div>
+
+  <div class="ov-prov">
+    Sources: Merkl quest-reward allocation snapshot 2026-05-06; on-chain KAT / vKAT / avKAT transfer replay on Katana (chain 747474), data current to 2026-06-25. Staker / idle / dumper classification is venue-aware (locking vKAT and supplying avKAT to Morpho count as staking, not selling). Buyer count from the live buyer scan (Buyers tab).
+  </div>
 </div>
 
 <footer>
