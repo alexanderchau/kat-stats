@@ -1180,32 +1180,35 @@
 <div id="tab-buyers" class="tab-pane">
 
 <div class="stats-grid" id="buyer-stats-grid">
-  <div class="stat-card" title="Total unique wallets that bought KAT">
+  <div class="stat-card" style="cursor:pointer" onclick="showBuyerChart('total')" title="Total unique wallets that bought KAT — click for history">
     <div class="stat-label">Total Buyers</div>
     <div class="stat-value" id="bstat-total">—</div>
+    <div class="stat-sub">click for history</div>
   </div>
-  <div class="stat-card" id="bstat-pure-card" data-bfilter="pure_buyer" title="No pre-TGE airdrop — pure market buyers. Click to filter">
+  <div class="stat-card" style="cursor:pointer" onclick="showBuyerChart('pure')" title="No pre-TGE airdrop — pure market buyers. Click for history (use the Pure Buyers button below to filter the table)">
     <div class="stat-label">Pure Buyers</div>
     <div class="stat-value blue" id="bstat-pure">—</div>
     <div class="stat-sub">no airdrop</div>
   </div>
-  <div class="stat-card" id="bstat-airdrop-card" data-bfilter="airdrop_buyer" title="Also received pre-TGE farming rewards. Click to filter">
+  <div class="stat-card" style="cursor:pointer" onclick="showBuyerChart('airdrop')" title="Also received pre-TGE farming rewards. Click for history (use the Airdrop+ button below to filter the table)">
     <div class="stat-label">Airdrop + Buyers</div>
     <div class="stat-value yellow" id="bstat-airdrop">—</div>
     <div class="stat-sub">also received rewards</div>
   </div>
-  <div class="stat-card" id="bstat-staked-card" data-bfilter="staked" title="Buyers with vKAT or avKAT staking positions. Click to filter">
+  <div class="stat-card" style="cursor:pointer" onclick="showBuyerChart('staked')" title="Buyers with vKAT or avKAT staking positions. Click for history (use the Staked button below to filter the table)">
     <div class="stat-label">Staked (any)</div>
     <div class="stat-value green" id="bstat-staked">—</div>
     <div class="stat-sub" id="bstat-staked-sub"></div>
   </div>
-  <div class="stat-card" title="Buyers who locked KAT in voting escrow">
+  <div class="stat-card" style="cursor:pointer" onclick="showBuyerChart('vkat')" title="Buyers who locked KAT in voting escrow — click for history">
     <div class="stat-label">Staked vKAT</div>
     <div class="stat-value" style="color:var(--violet)" id="bstat-vkat">—</div>
+    <div class="stat-sub">click for history</div>
   </div>
-  <div class="stat-card" title="Buyers who deposited KAT in auto-compounding vault">
+  <div class="stat-card" style="cursor:pointer" onclick="showBuyerChart('avkat')" title="Buyers who deposited KAT in auto-compounding vault — click for history">
     <div class="stat-label">Staked avKAT</div>
     <div class="stat-value" style="color:var(--violet)" id="bstat-avkat">—</div>
+    <div class="stat-sub">click for history</div>
   </div>
 </div>
 

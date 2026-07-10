@@ -162,9 +162,12 @@ def main():
     inactive = sum(1 for d in address_data if d['status'] == 'inactive')
     print(f'  {total:,} airdrop addrs: {farmers} farmers, {hodlers} hodlers, {partials} partial, {inactive} inactive')
 
-    b_total  = len(buyers_data)
-    b_pure   = sum(1 for b in buyers_data if b['category'] == 'pure_buyer')
-    b_staked = sum(1 for b in buyers_data if b['staked'])
+    b_total   = len(buyers_data)
+    b_pure    = sum(1 for b in buyers_data if b['category'] == 'pure_buyer')
+    b_airdrop = b_total - b_pure
+    b_staked  = sum(1 for b in buyers_data if b['staked'])
+    b_vkat    = sum(1 for b in buyers_data if b['stakedVKAT'])
+    b_avkat   = sum(1 for b in buyers_data if b['stakedAvKAT'])
     if b_total:
         print(f'  {b_total:,} buyers: {b_pure} pure · {b_total - b_pure} airdrop+ · {b_staked} staked ({100*b_staked/b_total:.1f}%)')
     else:
@@ -255,6 +258,16 @@ def main():
         'count': s_total,
         'vkat': round(on_chain_vkat, 2),
         'avkat': round(on_chain_avkat, 2),
+        # Buyer-tab metrics (counts of wallets), nested to avoid colliding with
+        # the staker 'vkat'/'avkat' KAT-amount keys above.
+        'buyers': {
+            'total':   b_total,
+            'pure':    b_pure,
+            'airdrop': b_airdrop,
+            'staked':  b_staked,
+            'vkat':    b_vkat,
+            'avkat':   b_avkat,
+        },
     }
     cutoff    = (datetime.now(timezone.utc) - timedelta(days=90)).strftime('%Y-%m-%d')
     snapshots = {k: v for k, v in snapshots.items() if k >= cutoff}

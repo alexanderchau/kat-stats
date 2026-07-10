@@ -917,7 +917,8 @@ function showStakerGrowth(current) {
     _stakerSnapshots = snaps;
     // Also save today to localStorage as fallback
     const today = new Date().toISOString().slice(0, 10);
-    if (current.totalStaked) snaps[today] = current;
+    // Merge (don't replace) so a same-day `buyers` key from snapshots.json survives.
+    if (current.totalStaked) snaps[today] = Object.assign({}, snaps[today], current);
     try { localStorage.setItem('kat_farmer_staker_snapshots', JSON.stringify(snaps)); } catch(e) {}
     _showGrowthFromSnaps(current, snaps);
   };
@@ -1040,6 +1041,54 @@ function showStakerChart(metric) {
       const ls = JSON.parse(localStorage.getItem('kat_farmer_staker_snapshots')) || {};
       Object.keys(ls).forEach(k => { if (!fileSnaps[k]) fileSnaps[k] = ls[k]; });
     } catch(e) {}
+    _stakerSnapshots = fileSnaps;
+    render(fileSnaps);
+  });
+}
+
+// ---- Buyers history chart modal ----
+// Buyer metrics live under snaps[date].buyers.{metric} (see indexer.py). They
+// share the same snapshots.json file and chart modal as the staker metrics.
+const BUYER_METRIC_META = {
+  total:   { title: 'Total Buyers',    fmt: v => Math.round(v).toLocaleString() },
+  pure:    { title: 'Pure Buyers',     fmt: v => Math.round(v).toLocaleString() },
+  airdrop: { title: 'Airdrop + Buyers', fmt: v => Math.round(v).toLocaleString() },
+  staked:  { title: 'Staked Buyers (any)', fmt: v => Math.round(v).toLocaleString() },
+  vkat:    { title: 'Buyers Staking vKAT', fmt: v => Math.round(v).toLocaleString() },
+  avkat:   { title: 'Buyers Staking avKAT', fmt: v => Math.round(v).toLocaleString() },
+};
+function showBuyerChart(metric) {
+  const modal = document.getElementById('chart-modal');
+  const titleEl = document.getElementById('chart-modal-title');
+  const body = document.getElementById('chart-modal-body');
+  const meta = BUYER_METRIC_META[metric];
+  if (!meta) return;
+  titleEl.textContent = meta.title;
+  body.innerHTML = '<div class="chart-empty">Loading…</div>';
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const render = (snaps) => {
+    const pts = [];
+    Object.keys(snaps).sort().forEach(d => {
+      const b = snaps[d] && snaps[d].buyers;
+      if (!b) return;
+      const v = b[metric];
+      if (v === null || v === undefined || isNaN(v)) return;
+      pts.push({ date: d, value: v });
+    });
+    if (pts.length < 2) {
+      body.innerHTML = '<div class="chart-empty">Not enough history yet (need ≥ 2 daily snapshots).</div>';
+      return;
+    }
+    body.innerHTML = buildChartSVG([
+      { name: meta.title, points: pts, cls: 'c-line', dotCls: 'c-dot', area: true },
+    ], { fmt: meta.fmt })
+    + `<div class="chart-meta">${pts.length} snapshots · ${pts[0].date} → ${pts[pts.length-1].date} · latest ${meta.fmt(pts[pts.length-1].value)}</div>`;
+  };
+
+  if (_stakerSnapshots) { render(_stakerSnapshots); return; }
+  loadStakerSnapshots().then(fileSnaps => {
     _stakerSnapshots = fileSnaps;
     render(fileSnaps);
   });
@@ -1733,24 +1782,6 @@ async function main() {
       buyerStakeFilter = btn.dataset.stake;
       document.querySelectorAll('.buyer-stake-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      renderBuyersTable();
-    });
-  });
-
-  document.querySelectorAll('[data-bfilter]').forEach(card => {
-    card.addEventListener('click', () => {
-      const f = card.dataset.bfilter;
-      if (f === 'staked') {
-        buyerStakeFilter = (buyerStakeFilter === 'staked') ? '' : 'staked';
-        document.querySelectorAll('.buyer-stake-btn').forEach(b => {
-          b.classList.toggle('active', b.dataset.stake === buyerStakeFilter);
-        });
-      } else {
-        buyerCatFilter = (buyerCatFilter === f) ? '' : f;
-        document.querySelectorAll('.buyer-cat-btn').forEach(b => {
-          b.classList.toggle('active', b.dataset.cat === buyerCatFilter);
-        });
-      }
       renderBuyersTable();
     });
   });
