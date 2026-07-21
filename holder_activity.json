@@ -1,72 +1,72 @@
 {
-  "generatedAt": "2026-06-24T18:44:00.361092+00:00",
-  "katanaBlock": 35583778,
+  "generatedAt": "2026-07-21T16:51:03.695951+00:00",
+  "katanaBlock": 37909798,
   "userTxMin": 2,
-  "totalHolders": 20667,
-  "users": 16534,
-  "nonUsers": 4133,
-  "usersPct": 80.0,
-  "nonUsersPct": 20.0,
+  "totalHolders": 20735,
+  "users": 16518,
+  "nonUsers": 4217,
+  "usersPct": 79.7,
+  "nonUsersPct": 20.3,
   "buckets": [
     {
       "label": "0",
-      "count": 3161
+      "count": 3214
     },
     {
       "label": "1",
-      "count": 972
+      "count": 1003
     },
     {
       "label": "2-4",
-      "count": 1855
+      "count": 1857
     },
     {
       "label": "5-9",
-      "count": 4883
+      "count": 4884
     },
     {
       "label": "10-49",
-      "count": 6006
+      "count": 5989
     },
     {
       "label": "50+",
-      "count": 3790
+      "count": 3788
     }
   ],
   "components": [
     {
       "label": "Liquid KAT",
-      "count": 18568
+      "count": 18592
     },
     {
       "label": "Staked \u00b7 vKAT (locked)",
-      "count": 2556
+      "count": 2731
     },
     {
       "label": "avKAT (direct)",
-      "count": 2852
+      "count": 2712
     },
     {
       "label": "Morpho avKAT collateral",
-      "count": 42
+      "count": 66
     },
     {
       "label": "Sushi/Uni LP + Spectra",
-      "count": 12
+      "count": 13
     }
   ],
-  "chainAddresses": 978196,
+  "chainAddresses": 1069279,
   "katanaContext": {
     "userDef": ">=1 tx (EOA that has sent at least one transaction; Blockscout 'Total accounts')",
-    "totalAddresses": 978196,
-    "transactingUsers": 133250,
-    "holdersTransacted": 17506,
-    "usersNoKat": 115744,
+    "totalAddresses": 1069279,
+    "transactingUsers": 134148,
+    "holdersTransacted": 17521,
+    "usersNoKat": 116627,
     "holderShareOfUsers": 13.1,
-    "holderShareOfAddresses": 2.1
+    "holderShareOfAddresses": 1.9
   },
   "diagnostics": {
-    "unwrapNewEoas": 13,
+    "unwrapNewEoas": 23,
     "getCodeErrors": 0,
     "nonceErrors": 0
   }
