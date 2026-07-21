@@ -67,7 +67,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def _run_pipeline(self):
         global pipeline_running
         try:
-            subprocess.run(["/bin/bash", RUN_SH], cwd=os.path.dirname(RUN_SH), timeout=600)
+            # holder_activity.py --refresh alone is a ~10 min pull; 600s guaranteed
+            # a mid-write SIGKILL. Allow the full pipeline to finish.
+            subprocess.run(["/bin/bash", RUN_SH], cwd=os.path.dirname(RUN_SH), timeout=1800)
         except Exception as e:
             print(f"Pipeline error: {e}")
         finally:

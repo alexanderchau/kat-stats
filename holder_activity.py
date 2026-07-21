@@ -244,6 +244,10 @@ try:
 except Exception as e:
     print("counters fetch failed:", e, file=sys.stderr)
 
+if not total:
+    print("ERROR: 0 holders resolved (pull likely failed) — aborting without touching holder_activity.json", file=sys.stderr)
+    sys.exit(1)
+
 out = {
     "generatedAt": datetime.now(timezone.utc).isoformat(),
     "katanaBlock": latest_block,
@@ -268,7 +272,11 @@ out = {
 if code_errs or nonce_errs:
     print(f"WARNING: {code_errs} getCode + {nonce_errs} nonce RPC errors (excluded, not miscounted)", file=sys.stderr)
 
-json.dump(out, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "holder_activity.json"), "w"), indent=2)
+_out_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "holder_activity.json")
+_tmp_path = _out_path + ".tmp"
+with open(_tmp_path, "w") as _f:
+    json.dump(out, _f, indent=2)
+os.replace(_tmp_path, _out_path)  # atomic swap — never leave a truncated/partial file if killed mid-write
 print(json.dumps({k: v for k, v in out.items() if k not in ("buckets", "components")}, indent=2))
 print("buckets:", out["buckets"])
 print("components:", out["components"])
