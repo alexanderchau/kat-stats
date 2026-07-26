@@ -9,6 +9,26 @@ export PATH="/Users/helm/.nvm/versions/node/v22.22.0/bin:/opt/homebrew/bin:/usr/
 
 PYTHON="/Users/helm/.claude/venv/bin/python3"
 
+# ── Single-instance lock ─────────────────────────────────────────────────────
+# Two things invoke this script: the hourly launchd job and webhook.py. Their
+# locks are separate — webhook.py's pipeline_lock cannot see the launchd run —
+# so before this, a trigger landing mid-run started a SECOND run.sh and the two
+# raced on state.json / data.json (incident 2026-07-26). mkdir is atomic, so it
+# is the lock; a lock left behind by a killed run is reclaimed via its pid.
+LOCK_DIR="/Users/helm/Projects/kat-farmer/.run.lock"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    LOCK_PID=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
+    if [ -n "$LOCK_PID" ] && kill -0 "$LOCK_PID" 2>/dev/null; then
+        echo "run.sh already running (pid $LOCK_PID) — exiting without doing anything" >&2
+        exit 0
+    fi
+    echo "WARN: stale lock (pid '$LOCK_PID' not alive) — reclaiming" >&2
+    rm -rf "$LOCK_DIR"
+    mkdir "$LOCK_DIR" || { echo "FATAL: could not acquire $LOCK_DIR" >&2; exit 1; }
+fi
+echo $$ > "$LOCK_DIR/pid"
+trap 'rm -rf "$LOCK_DIR"' EXIT
+
 # Stay in sync with origin BEFORE doing anything. Code (index.html/app.js/*.py)
 # may be updated from another machine; this box only WRITES data. Without this,
 # a push from elsewhere leaves us behind → our push is rejected → we redeploy

@@ -10,11 +10,33 @@ import time
 PORT = 8766
 TOKEN = "kat-stats-refresh-2026"
 RUN_SH = "/Users/helm/Projects/kat-farmer/run.sh"
+LOCK_DIR = "/Users/helm/Projects/kat-farmer/.run.lock"
 
 # Track pipeline state
 pipeline_lock = threading.Lock()
 pipeline_running = False
 last_trigger = 0
+
+
+def run_sh_active():
+    """True if ANY run.sh is executing — including the hourly launchd run.
+
+    pipeline_running only knows about runs this process started, so on its own it
+    happily launches a second run.sh alongside the launchd one (incident
+    2026-07-26). run.sh takes .run.lock and writes its pid there; we read it.
+    """
+    try:
+        with open(os.path.join(LOCK_DIR, "pid")) as fh:
+            pid = int(fh.read().strip())
+    except (OSError, ValueError):
+        return False
+    try:
+        os.kill(pid, 0)          # signal 0 = existence check only
+        return True
+    except PermissionError:
+        return True              # exists, just not ours — still a live run
+    except OSError:
+        return False             # stale lock; run.sh will reclaim it
 
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
@@ -30,6 +52,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
             if pipeline_running:
                 self._json(409, {"status": "already_running"})
                 return
+            # The hourly launchd run is invisible to pipeline_running — refuse
+            # rather than race it. Callers poll /status, so reporting "running"
+            # here is also what keeps them waiting for the real run to land.
+            if run_sh_active():
+                self._json(409, {"status": "already_running", "source": "launchd"})
+                return
             # Rate limit: 5 min cooldown
             if time.time() - last_trigger < 300:
                 remaining = int(300 - (time.time() - last_trigger))
@@ -43,8 +71,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/status":
+            # Report the launchd run too, else a poller sees running=false while a
+            # pipeline is very much running and concludes the refresh finished.
+            launchd = run_sh_active() and not pipeline_running
             self._json(200, {
-                "running": pipeline_running,
+                "running": pipeline_running or launchd,
+                "source": "webhook" if pipeline_running else ("launchd" if launchd else None),
                 "last_trigger": int(last_trigger) if last_trigger else None
             })
             return
