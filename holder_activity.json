@@ -1,50 +1,50 @@
 {
-  "generatedAt": "2026-07-25T03:48:49.402447+00:00",
-  "katanaBlock": 38208479,
+  "generatedAt": "2026-07-26T09:40:21.844183+00:00",
+  "katanaBlock": 38315969,
   "userTxMin": 2,
-  "totalHolders": 20719,
-  "users": 16499,
-  "nonUsers": 4220,
-  "usersPct": 79.6,
-  "nonUsersPct": 20.4,
+  "totalHolders": 20709,
+  "users": 16498,
+  "nonUsers": 4211,
+  "usersPct": 79.7,
+  "nonUsersPct": 20.3,
   "buckets": [
     {
       "label": "0",
-      "count": 3219
+      "count": 3223
     },
     {
       "label": "1",
-      "count": 1001
+      "count": 988
     },
     {
       "label": "2-4",
-      "count": 1852
+      "count": 1855
     },
     {
       "label": "5-9",
-      "count": 4859
+      "count": 4853
     },
     {
       "label": "10-49",
-      "count": 5999
+      "count": 5997
     },
     {
       "label": "50+",
-      "count": 3789
+      "count": 3793
     }
   ],
   "components": [
     {
       "label": "Liquid KAT",
-      "count": 18579
+      "count": 18564
     },
     {
       "label": "Staked \u00b7 vKAT (locked)",
-      "count": 2723
+      "count": 2721
     },
     {
       "label": "avKAT (direct)",
-      "count": 2712
+      "count": 2711
     },
     {
       "label": "Morpho avKAT collateral",
@@ -55,13 +55,13 @@
       "count": 13
     }
   ],
-  "chainAddresses": 1073005,
+  "chainAddresses": 1073939,
   "katanaContext": {
     "userDef": ">=1 tx (EOA that has sent at least one transaction; Blockscout 'Total accounts')",
-    "totalAddresses": 1073005,
-    "transactingUsers": 134235,
-    "holdersTransacted": 17500,
-    "usersNoKat": 116735,
+    "totalAddresses": 1073939,
+    "transactingUsers": 134276,
+    "holdersTransacted": 17486,
+    "usersNoKat": 116790,
     "holderShareOfUsers": 13.0,
     "holderShareOfAddresses": 1.9
   },
