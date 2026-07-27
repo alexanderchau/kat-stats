@@ -674,15 +674,15 @@
     "totalStaked": 431475412.29,
     "pctCirc": 23.76,
     "count": 4404,
-    "vkat": 159102725.03,
-    "avkat": 272372687.27,
+    "vkat": 158956166.26,
+    "avkat": 272519246.04,
     "buyers": {
       "total": 366,
       "pure": 354,
       "airdrop": 12,
       "staked": 47,
-      "vkat": 32,
-      "avkat": 28
+      "vkat": 31,
+      "avkat": 29
     }
   }
 }
