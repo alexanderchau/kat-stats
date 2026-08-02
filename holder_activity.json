@@ -1,42 +1,42 @@
 {
-  "generatedAt": "2026-08-01T11:10:45.224359+00:00",
-  "katanaBlock": 38839794,
+  "generatedAt": "2026-08-02T07:54:45.480834+00:00",
+  "katanaBlock": 38914435,
   "userTxMin": 2,
-  "totalHolders": 20705,
-  "users": 16479,
-  "nonUsers": 4226,
+  "totalHolders": 20704,
+  "users": 16474,
+  "nonUsers": 4230,
   "usersPct": 79.6,
   "nonUsersPct": 20.4,
   "buckets": [
     {
       "label": "0",
-      "count": 3236
+      "count": 3239
     },
     {
       "label": "1",
-      "count": 990
+      "count": 991
     },
     {
       "label": "2-4",
-      "count": 1852
+      "count": 1850
     },
     {
       "label": "5-9",
-      "count": 4838
+      "count": 4839
     },
     {
       "label": "10-49",
-      "count": 5995
+      "count": 5990
     },
     {
       "label": "50+",
-      "count": 3794
+      "count": 3795
     }
   ],
   "components": [
     {
       "label": "Liquid KAT",
-      "count": 18560
+      "count": 18558
     },
     {
       "label": "Staked \u00b7 vKAT (locked)",
@@ -55,18 +55,18 @@
       "count": 13
     }
   ],
-  "chainAddresses": 1080577,
+  "chainAddresses": 1081183,
   "katanaContext": {
     "userDef": ">=1 tx (EOA that has sent at least one transaction; Blockscout 'Total accounts')",
-    "totalAddresses": 1080577,
-    "transactingUsers": 134438,
-    "holdersTransacted": 17469,
-    "usersNoKat": 116969,
+    "totalAddresses": 1081183,
+    "transactingUsers": 134447,
+    "holdersTransacted": 17465,
+    "usersNoKat": 116982,
     "holderShareOfUsers": 13.0,
     "holderShareOfAddresses": 1.9
   },
   "diagnostics": {
-    "unwrapNewEoas": 18,
+    "unwrapNewEoas": 19,
     "getCodeErrors": 0,
     "nonceErrors": 0
   }
