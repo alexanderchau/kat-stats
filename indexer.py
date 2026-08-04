@@ -193,16 +193,6 @@ def main():
     print(f'  {s_total:,} stakers{floor_note}: {rpc.fmtM(s_total_staked)} KAT total staked')
     print(f'  Holders (any balance): {vkat_holders:,} vKAT · {avkat_holders:,} avKAT · {total_holders:,} unique')
 
-    # Read circulating supply from supply_data.json
-    circ_supply      = 0.0
-    supply_data_path = SCRIPT_DIR / 'supply_data.json'
-    if supply_data_path.exists():
-        try:
-            sd = json.loads(supply_data_path.read_text())
-            circ_supply = sd.get('totalCirculating', 0.0)
-        except Exception:
-            pass
-
     # avKAT auto-compounds by locking its deposited KAT into the voting escrow
     # under its own contract address, so avKAT.totalAssets() is a subset of
     # VE.balanceOf(KAT). Treat VE balance as the staked total and break it down
@@ -231,7 +221,6 @@ def main():
             'vkatHolders':  vkat_holders,    # addresses holding a vKAT lock
             'avkatHolders': avkat_holders,   # addresses with avKAT balance > 0
             'stakerRows':   s_total,          # rows in the stakers table (after display floor)
-            'circSupply':   round(circ_supply, 6),
             'onChainVkat':  round(on_chain_vkat, 6),
             'onChainAvkat': round(on_chain_avkat, 6),
             'onChainTotal': round(on_chain_total, 6),
@@ -254,7 +243,6 @@ def main():
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     snapshots[today] = {
         'totalStaked': round(on_chain_total, 2),
-        'pctCirc': round(on_chain_total / circ_supply * 100, 2) if circ_supply else 0,
         'count': s_total,
         'vkat': round(on_chain_vkat, 2),
         'avkat': round(on_chain_avkat, 2),

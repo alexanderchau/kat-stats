@@ -149,6 +149,12 @@ function fmtUsd(v) {
   if (v >= 1)   return '$' + v.toFixed(2);
   return '$' + v.toFixed(4);
 }
+// Inline "($1.2M)" annotation for a KAT amount in a table cell — empty until the
+// price lands, then the table re-renders (see refreshAllKatSubs).
+function usdParen(kat) {
+  if (!katPriceUsd || !(kat > 0)) return '';
+  return ` <span class="usd-paren">(${fmtUsd(kat * katPriceUsd)})</span>`;
+}
 function setKatStatSub(valueId, subId, kat, baseSub) {
   _katCache[valueId] = { kat, baseSub: baseSub || '' };
   refreshOneKatSub(valueId);
@@ -167,6 +173,8 @@ function refreshOneKatSub(valueId) {
 }
 function refreshAllKatSubs() {
   Object.keys(_katCache).forEach(refreshOneKatSub);
+  // Stakers table shows inline USD per row — repaint it once the price is known
+  if (typeof stakerData !== 'undefined' && stakerData.length) renderStakersTable();
 }
 async function fetchKatPrice() {
   try {
@@ -834,7 +842,6 @@ let stakerMap        = {};
 let stakerFilterText = '';
 let stakerSortCol    = 'totalStaked';
 let stakerSortDir    = -1;
-let circSupply       = 0;
 let onChainVkat      = 0;
 let onChainAvkat     = 0;
 let onChainTotal     = 0;
@@ -876,14 +883,11 @@ function updateStakerStats() {
   const dispTotal = onChainTotal || totalStaked;
   const dispVkat  = onChainVkat  || totalVkat;
   const dispAvkat = onChainAvkat || totalAvkat;
-  const pctCirc   = circSupply > 0 ? (dispTotal / circSupply * 100) : 0;
   const TOTAL_SUPPLY = 1e10;
   const pctTotal  = dispTotal > 0 ? (dispTotal / TOTAL_SUPPLY * 100) : 0;
 
   document.getElementById('sstat-total-staked').textContent = fmtNum(dispTotal, 0);
   setKatStatSub('sstat-total-staked', 'sstat-total-sub', dispTotal, 'on-chain');
-  document.getElementById('sstat-pct-circ').textContent     = pctCirc > 0 ? pctCirc.toFixed(1) + '%' : '—';
-  document.getElementById('sstat-pct-circ-sub').textContent = circSupply > 0 ? `of ${fmtNum(circSupply, 0)} circ` : '';
   document.getElementById('sstat-pct-total').textContent    = pctTotal > 0 ? pctTotal.toFixed(2) + '%' : '—';
   document.getElementById('sstat-count').textContent        = (stakerCountMeta || all.length).toLocaleString();
   document.getElementById('sstat-vkat').textContent         = fmtNum(dispVkat, 0);
@@ -903,7 +907,7 @@ function updateStakerStats() {
   setKatStatSub('sstat-median-stake', 'sstat-median-stake-sub', medianStake, '');
 
   // 30d growth (loads snapshots.json, falls back to localStorage)
-  showStakerGrowth({ totalStaked: dispTotal, pctCirc, pctTotal, count: all.length, vkat: dispVkat, avkat: dispAvkat });
+  showStakerGrowth({ totalStaked: dispTotal, pctTotal, count: all.length, vkat: dispVkat, avkat: dispAvkat });
 }
 
 let _stakerSnapshots = null;
@@ -959,7 +963,6 @@ function _showGrowthFromSnaps(current, snaps) {
   const fmtInt = v => v.toFixed(0);
 
   renderGrowth('sstat-total-staked-growth', current.totalStaked, old.totalStaked, fmtK);
-  renderGrowth('sstat-pct-circ-growth', current.pctCirc, old.pctCirc, fmtPct);
   const oldPctTotal = old.totalStaked ? (old.totalStaked / 1e10 * 100) : null;
   renderGrowth('sstat-pct-total-growth', current.pctTotal, oldPctTotal, fmtPct);
   renderGrowth('sstat-count-growth', current.count, old.count, fmtInt);
@@ -970,7 +973,6 @@ function _showGrowthFromSnaps(current, snaps) {
 // ---- Stakers history chart modal ----
 const STAKER_METRIC_META = {
   totalStaked: { title: 'Total KAT Staked',  suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
-  pctCirc:     { title: '% of Circ Supply',  suffix: '%',  fmt: v => v.toFixed(2) + '%',           yPad: 0 },
   pctTotal:    { title: '% of Total Supply', suffix: '%',  fmt: v => v.toFixed(2) + '%',           yPad: 0 },
   count:       { title: '# Stakers',          suffix: '',   fmt: v => Math.round(v).toLocaleString(), yPad: 0 },
   vkat:        { title: 'vKAT Locked',        suffix: '',   fmt: v => fmtNum(v, 0),                 yPad: 0 },
@@ -1399,9 +1401,9 @@ function renderStakersTable() {
       <td class="addr-cell" onclick="editLabel(this,'${s.address}')" title="Click to label">
         ${addrDisplay(s.address)}
       </td>
-      <td class="num">${s.vkatAmount > 0 ? `<span class="num-blue">${fmtNum(s.vkatAmount)}</span>` : '—'}</td>
-      <td class="num">${s.avkatAmount > 0 ? `<span class="num-blue">${fmtNum(s.avkatAmount)}</span>` : '—'}</td>
-      <td class="num"><span class="num-blue">${fmtNum(s.totalStaked)}</span></td>
+      <td class="num">${s.vkatAmount > 0 ? `<span class="num-blue">${fmtNum(s.vkatAmount)}</span>${usdParen(s.vkatAmount)}` : '—'}</td>
+      <td class="num">${s.avkatAmount > 0 ? `<span class="num-blue">${fmtNum(s.avkatAmount)}</span>${usdParen(s.avkatAmount)}` : '—'}</td>
+      <td class="num"><span class="num-blue">${fmtNum(s.totalStaked)}</span>${usdParen(s.totalStaked)}</td>
       <td>${typeBadge}</td>
       <td>
         <div class="ext-links">
@@ -1813,7 +1815,6 @@ async function main() {
   stakerData   = data.stakers || [];
   stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
   for (const addr in results) { const d = results[addr]; const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); }
-  circSupply   = data.meta?.circSupply   || 0;
   onChainVkat  = data.meta?.onChainVkat  || 0;
   onChainAvkat = data.meta?.onChainAvkat || 0;
   onChainTotal = data.meta?.onChainTotal || 0;

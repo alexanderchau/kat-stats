@@ -43,7 +43,8 @@ if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
     echo "WARN: HEAD != origin/main after self-heal — box is on STALE CODE (check git credentials under launchd)" >&2
 fi
 
-# Supply runs FIRST — indexer reads supply_data.json for circSupply
+# supply_data.json is published for reference only — nothing reads it anymore
+# (the % of circ supply stat was removed; we don't trust the circ supply number)
 if ! $PYTHON supply.py --json 2>&1; then
     echo "supply.py failed, continuing with stale supply_data.json" >&2
 fi
