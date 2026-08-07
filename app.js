@@ -1468,13 +1468,19 @@ function renderHolderActivity(d) {
       `<div class="ha-rv">${intf(b.count)}<span class="ha-pct">${p}%</span></div></div>`;
   }).join('');
 
-  // holder composition (sets overlap)
+  // holder composition — wallet sets overlap, but the KAT amounts don't (each
+  // venue custodies a distinct pile), so the amounts column is additive.
   const comps = (d.components || []).filter(c => c.count > 0);
   const maxC = Math.max(1, ...comps.map(c => c.count));
   document.getElementById('ha-components').innerHTML = comps.map(c =>
-    `<div class="ha-row"><div class="ha-rl">${escapeHtml(c.label)}</div>` +
+    `<div class="ha-row ha-comp-row"><div class="ha-rl">${escapeHtml(c.label)}</div>` +
     `<div class="ha-track"><div class="ha-fill comp" style="width:${(c.count / maxC * 100).toFixed(1)}%"></div></div>` +
-    `<div class="ha-rv">${intf(c.count)}</div></div>`).join('');
+    `<div class="ha-rv">${intf(c.count)}<span class="ha-unit">wallets</span></div>` +
+    `<div class="ha-rv ha-amt">${fmtNum(c.kat, 0)}<span class="ha-unit">KAT</span></div></div>`).join('');
+  // omitted rather than dangling if the data file predates the KAT amounts
+  document.getElementById('ha-comp-total').innerHTML = d.componentsKatTotal
+    ? ` They add up to <b>${fmtNum(d.componentsKatTotal, 0)} KAT</b> held across all five venues.`
+    : '';
 
   // ── Katana-wide context (funnel + users-without-KAT split) ──
   const ctx = d.katanaContext;
@@ -1513,7 +1519,7 @@ function renderHolderActivity(d) {
   document.getElementById('ha-method').innerHTML =
     `<b>KAT holder</b> = unique wallet (beneficial EOA) with KAT exposure in any form — liquid KAT, locked vKAT, or avKAT held directly or unwrapped from Morpho collateral, a Sushi/Uni LP, or Spectra PT. ` +
     `<b>Active user</b> (top of page) = wallet that has originated ≥${d.userTxMin} transactions on Katana (account nonce ≥ ${d.userTxMin}); the <b>Katana-wide context</b> uses the looser ≥1-tx definition to match the chain's published account count. ` +
-    `Infrastructure contracts (treasury, voting-escrow, DEX pools, bridges, distributors) are excluded — they custody KAT on behalf of users counted elsewhere. ` +
+    `Infrastructure contracts (treasury, voting-escrow, DEX pools, bridges, distributors) are excluded — they custody KAT on behalf of users counted elsewhere; every address counted as a wallet is checked with <code>eth_getCode</code> rather than trusted from the explorer's label. ` +
     `For scale, Katana has ${chain} total addresses on-chain. Snapshot at block ${intf(d.katanaBlock)}.`;
 }
 

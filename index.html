@@ -947,6 +947,10 @@
     .ha-fill.comp { background:var(--violet); }
     .ha-rv { color:var(--text); font-weight:700; }
     .ha-rv .ha-pct { color:var(--dim); font-weight:400; font-size:0.72rem; margin-left:7px; }
+    /* composition rows carry a second value column: wallets + KAT held */
+    .ha-comp-row { grid-template-columns:140px 1fr 112px 112px; }
+    .ha-comp-row .ha-amt { color:var(--violet); }
+    .ha-rv .ha-unit { color:var(--dim); font-weight:400; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.05em; margin-left:6px; }
     .ha-method { padding:1.5rem 2rem 2.5rem; color:var(--dim); font-size:0.75rem; line-height:1.65; font-family:var(--ui); max-width:1000px; }
     .ha-method b { color:var(--label); }
     .ha-context { border-top:2px solid var(--black); margin-top:1.8rem; padding-top:0.4rem; }
@@ -958,7 +962,16 @@
     .ha-fill.user2 { background:var(--blue); }
     .ha-fill.kat   { background:var(--green); }
     .ha-splitbar .seg-neutral { background:#8a8a8a; border-left:2px solid var(--black); }
-    @media (max-width:640px){ .ha-row { grid-template-columns:96px 1fr 96px; } .ha-splitbar { margin:0; } .ha-callout,.ha-subnote{margin-left:0;margin-right:0;} }
+    .ha-spectrum + .ha-subnote { margin-top:1rem; }
+    @media (max-width:640px){
+      .ha-row { grid-template-columns:96px 1fr 96px; }
+      /* no room for two value columns beside the bar — drop them onto a second row */
+      .ha-comp-row { grid-template-columns:96px 1fr auto; row-gap:3px; font-size:0.78rem; }
+      .ha-comp-row .ha-track { grid-column:2 / span 2; }
+      .ha-comp-row .ha-rv  { grid-column:2; }
+      .ha-comp-row .ha-amt { grid-column:3; text-align:right; }
+      .ha-splitbar { margin:0; } .ha-callout,.ha-subnote{margin-left:0;margin-right:0;}
+    }
 
   </style>
 </head>
@@ -1309,8 +1322,9 @@
   </div>
 
   <div class="ha-section">
-    <div class="ha-section-title">Where holders hold KAT <span class="ha-note">— sets overlap; one wallet can appear in several</span></div>
+    <div class="ha-section-title">Where holders hold KAT <span class="ha-note">— wallet sets overlap; one wallet can appear in several</span></div>
     <div class="ha-spectrum" id="ha-components"></div>
+    <div class="ha-subnote">Bars rank by wallet count. The <b>KAT</b> column is the amount each venue actually holds — liquid balance, KAT locked inside the wallet's own vKAT NFTs, or avKAT converted to KAT at the vault's rate. Unlike the wallet counts these <b>don't</b> double-count.<span id="ha-comp-total"></span></div>
   </div>
 
   <div class="ha-section ha-context" id="ha-context-section" style="display:none">
