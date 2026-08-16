@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-15T10:03:10.850543+00:00",
-  "katanaBlock": 40045340,
+  "generatedAt": "2026-08-16T06:50:19.501058+00:00",
+  "katanaBlock": 40120171,
   "userTxMin": 2,
-  "totalHolders": 20625,
-  "users": 16598,
+  "totalHolders": 20614,
+  "users": 16587,
   "nonUsers": 4027,
   "usersPct": 80.5,
   "nonUsersPct": 19.5,
@@ -18,11 +18,11 @@
     },
     {
       "label": "2-4",
-      "count": 1849
+      "count": 1848
     },
     {
       "label": "5-9",
-      "count": 4869
+      "count": 4862
     },
     {
       "label": "10-49",
@@ -30,29 +30,29 @@
     },
     {
       "label": "50+",
-      "count": 3814
+      "count": 3811
     }
   ],
   "components": [
     {
       "label": "Liquid KAT",
-      "count": 18541,
-      "kat": 2542853493.13
+      "count": 18535,
+      "kat": 2542915853.32
     },
     {
       "label": "Staked \u00b7 vKAT (locked)",
-      "count": 2685,
-      "kat": 40230931.57
+      "count": 2684,
+      "kat": 40358111.45
     },
     {
       "label": "avKAT (direct)",
-      "count": 2631,
-      "kat": 120059878.91
+      "count": 2625,
+      "kat": 120126457.58
     },
     {
       "label": "Morpho avKAT collateral",
-      "count": 70,
-      "kat": 118615109.66
+      "count": 71,
+      "kat": 118237194.42
     },
     {
       "label": "Sushi/Uni LP + Spectra",
@@ -60,14 +60,14 @@
       "kat": 26599182.69
     }
   ],
-  "componentsKatTotal": 2848358595.96,
-  "chainAddresses": 1091258,
+  "componentsKatTotal": 2848236799.44,
+  "chainAddresses": 1092025,
   "katanaContext": {
     "userDef": ">=1 tx (EOA that has sent at least one transaction; Blockscout 'Total accounts')",
-    "totalAddresses": 1091258,
-    "transactingUsers": 134764,
-    "holdersTransacted": 17374,
-    "usersNoKat": 117390,
+    "totalAddresses": 1092025,
+    "transactingUsers": 134781,
+    "holdersTransacted": 17363,
+    "usersNoKat": 117418,
     "holderShareOfUsers": 12.9,
     "holderShareOfAddresses": 1.9
   },
@@ -75,8 +75,8 @@
     "unwrapNewEoas": 19,
     "getCodeErrors": 0,
     "nonceErrors": 0,
-    "blockscoutMislabeledContracts": 211,
-    "vkatLocksTotal": 4590,
-    "vkatLockedAllOwnersKat": 447286080.98
+    "blockscoutMislabeledContracts": 210,
+    "vkatLocksTotal": 4589,
+    "vkatLockedAllOwnersKat": 447336517.67
   }
 }
