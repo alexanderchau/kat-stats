@@ -1,16 +1,16 @@
 {
   "meta": {
-    "generatedAt": "2026-10-01T14:35:37.118415+00:00",
-    "katanaBlock": 44122523
+    "generatedAt": "2026-10-01T16:09:09.857180+00:00",
+    "katanaBlock": 44128135
   },
   "totalSupply": 10000000000,
-  "totalCirculating": 1822590767.9375792,
-  "circulatingPct": 18.22590767937579,
+  "totalCirculating": 1822590770.3249555,
+  "circulatingPct": 18.225907703249554,
   "sources": {
     "merkl": {
       "label": "Merkl Rewards",
-      "amount": 945096593.937579,
-      "pct": 9.45096593937579,
+      "amount": 945096596.3249553,
+      "pct": 9.450965963249553,
       "type": "dynamic"
     },
     "etherfi_vault": {
