@@ -145,7 +145,7 @@ def main():
 
     print('6/6 Building data.json…')
     vkat_locks    = enumerate_vkat_locks(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
-    exit_queue    = enumerate_exit_queue(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
+    exit_queue, exit_rows = enumerate_exit_queue(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
     address_data  = build_output(
         addresses, claimed_by_addr, dump_raw, cex_by_addr,
         addr_balances, dest_balances, dest_types, stake_raw=stake_raw,
@@ -238,6 +238,7 @@ def main():
         'addresses': address_data,
         'buyers':    buyers_data,
         'stakers':   stakers_data,
+        'exitQueue': exit_rows,   # one row per holder with locks in the exit queue
     }
 
     fileio.save_json(DATA_PATH, output, compact=True)

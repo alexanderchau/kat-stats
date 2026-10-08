@@ -196,9 +196,12 @@ def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):
     until withdraw() burns the NFT, so every NFT the escrow owns is a queued
     exit. Ticket words: [holder, queuedAt, feeType, cooldown, ...].
 
-    Returns {amount, positions, holders, matured, maturedAmount}, where
+    Returns ({amount, positions, holders, matured, maturedAmount}, rows), where
     `matured` = tickets past their cooldown (exit fee fully decayed) that
-    haven't been withdrawn yet. None if the RPC reads fail.
+    haven't been withdrawn yet, and rows is one entry per holder:
+    {address, amount, locks, maturedAmount, nextExit, lastExit} (unix seconds
+    when the earliest / latest of their tickets clears cooldown), sorted by
+    amount. (None, []) if the RPC reads fail.
     """
     import time
     pad = lambda v: hex(v)[2:].zfill(64)
@@ -208,7 +211,7 @@ def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):
     count_r = rpc.rpc_call(rpc_url, 'eth_call', [{'to': lock_nft, 'data': '0x70a08231' + ve_word}, 'latest'])
     if not rpc.validate_hex(queue_r) or not count_r:
         print('  ⚠ Exit queue: could not read queue address / NFT count')
-        return None
+        return None, []
     exit_queue = '0x' + queue_r[26:]
     count = int(count_r, 16)
 
@@ -247,11 +250,11 @@ def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):
     token_ids = fetch_all(get_token_id, list(range(count)))
     if None in token_ids:
         print(f'  ⚠ Exit queue: {token_ids.count(None)} of {count} token ids unreadable')
-        return None
+        return None, []
     tickets = fetch_all(get_ticket, token_ids)
     if None in tickets:
         print(f'  ⚠ Exit queue: {tickets.count(None)} of {count} positions unreadable')
-        return None
+        return None, []
 
     now = int(time.time())
     matured = [t for t in tickets if t[2] <= now]
@@ -262,7 +265,22 @@ def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):
         'matured':       len(matured),
         'maturedAmount': round(sum(t[0] for t in matured), 6),
     }
+    by_holder = {}
+    for amount, holder, exit_at in tickets:
+        r = by_holder.setdefault(holder, {'address': holder, 'amount': 0.0, 'locks': 0,
+                                          'maturedAmount': 0.0, 'nextExit': exit_at, 'lastExit': exit_at})
+        r['amount'] += amount
+        r['locks']  += 1
+        if exit_at <= now:
+            r['maturedAmount'] += amount
+        r['nextExit'] = min(r['nextExit'], exit_at)
+        r['lastExit'] = max(r['lastExit'], exit_at)
+    rows = sorted(by_holder.values(), key=lambda r: r['amount'], reverse=True)
+    for r in rows:
+        r['amount'] = round(r['amount'], 6)
+        r['maturedAmount'] = round(r['maturedAmount'], 6)
+
     print(f'  Exit queue: {rpc.fmtM(out["amount"])} KAT in {count:,} positions '
           f'({out["holders"]:,} holders), {out["matured"]:,} past cooldown '
           f'({rpc.fmtM(out["maturedAmount"])} KAT)')
-    return out
+    return out, rows

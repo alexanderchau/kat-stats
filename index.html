@@ -893,6 +893,11 @@
     /* Chart modal */
     #chart-modal .modal-box { max-width:760px; }
     #chart-modal .modal-body { padding:1.25rem 1.5rem; }
+    .exitq-head { display:flex; justify-content:space-between; align-items:center; margin:1.5rem 0 0.6rem; font-family:var(--ui); font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; }
+    #chart-modal .modal-box:has(.exitq-table) { max-width:1000px; }
+    .exitq-table { max-height:45vh; overflow-y:auto; border:2px solid var(--black); }
+    .exitq-table th.num { text-align:right; }
+    #chart-modal .exitq-table td { padding:0.35rem 0.75rem; }
     .chart-wrap { position:relative; }
     .chart-wrap svg { display:block; width:100%; height:auto; font-family:var(--mono); }
     .chart-wrap .c-axis { stroke:#c8bfab; stroke-width:1; }

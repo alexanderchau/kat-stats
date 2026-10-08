@@ -850,6 +850,7 @@ let vkatHolders      = 0;   // meta.vkatHolders — addresses holding a vKAT loc
 let avkatHolders     = 0;   // meta.avkatHolders — addresses with avKAT balance > 0
 let stakerCountMeta  = 0;   // meta.stakerCount — unique vKAT∪avKAT holders
 let exitQueueMeta    = null; // meta.exitQueue — {amount, positions, holders, matured, maturedAmount}
+let exitQueueRows    = [];   // data.exitQueue — one row per holder, sorted by amount
 
 function getStakerFilteredRows() {
   let rows = stakerData.slice();
@@ -966,8 +967,54 @@ function showExitQueueChart() {
     body.innerHTML = buildChartSVG([
       { name: 'KAT in Exit Queue', points: pts, cls: 'c-line', dotCls: 'c-dot', area: true },
     ], { fmt, yMin: 0 })
-    + `<div class="chart-meta">${pts.length} days · ${pts[0].date} → ${pts[pts.length-1].date} · latest ${fmt(pts[pts.length-1].value)} KAT</div>`;
+    + `<div class="chart-meta">${pts.length} days · ${pts[0].date} → ${pts[pts.length-1].date} · latest ${fmt(pts[pts.length-1].value)} KAT</div>`
+    + exitQueueTableHtml();
   });
+}
+// Cooldown end for a holder's tickets: "ready" once all have cleared,
+// otherwise the earliest pending date (plus the last one if they differ).
+function exitQueueCooldownCell(r) {
+  const now = Date.now() / 1000;
+  const day = t => new Date(t * 1000).toISOString().slice(0, 10);
+  if (r.lastExit <= now) return '<span class="num-green">ready</span>';
+  const first = r.nextExit <= now ? 'part ready' : day(r.nextExit);
+  return day(r.lastExit) !== day(r.nextExit) ? `${first} → ${day(r.lastExit)}` : first;
+}
+function exitQueueTableHtml() {
+  const rows = exitQueueRows;
+  if (!rows.length) return '';
+  const body = rows.map((r, i) => `<tr>
+      <td>${i + 1}</td>
+      <td class="ab-addr">${tinyAddrDisplay(r.address)}</td>
+      <td class="ab-bal">${fmtNum(r.amount, 0)}${usdParen(r.amount)}</td>
+      <td class="ab-bal">${r.locks}</td>
+      <td class="ab-bal">${r.maturedAmount > 0 ? fmtNum(r.maturedAmount, 0) : '—'}</td>
+      <td class="ab-bal">${exitQueueCooldownCell(r)}</td>
+      <td><a class="ext-link" href="https://katanascan.com/address/${r.address}" target="_blank" rel="noopener">explr</a></td>
+    </tr>`).join('');
+  return `<div class="exitq-head">
+      <span>${rows.length.toLocaleString()} wallets exiting</span>
+      <button class="btn" onclick="exportExitQueueCSV()" title="Download the exit queue as a CSV file">↓ Export CSV</button>
+    </div>
+    <div class="exitq-table"><table>
+      <thead><tr><th>#</th><th>Address</th><th class="num">KAT exiting</th><th class="num">Locks</th>
+        <th class="num" title="KAT in tickets whose 60-day cooldown has ended (exit fee fully decayed) but not yet withdrawn">Past cooldown</th>
+        <th class="num" title="When this wallet's tickets finish cooldown">Cooldown ends</th><th></th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+}
+function exportExitQueueCSV() {
+  const iso = t => new Date(t * 1000).toISOString();
+  const csvCell = v => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const header = ['Address', 'Label', 'KAT Exiting', 'Locks', 'KAT Past Cooldown', 'First Cooldown End (UTC)', 'Last Cooldown End (UTC)'];
+  const lines = exitQueueRows.map(r => [
+    r.address, csvCell(getLabel(r.address) || ''), r.amount.toFixed(6), r.locks,
+    r.maturedAmount.toFixed(6), iso(r.nextExit), iso(r.lastExit),
+  ].join(','));
+  const blob = new Blob([[header.join(','), ...lines].join('\n')], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), { href: url, download: 'kat-exit-queue.csv' }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 
 let _stakerSnapshots = null;
@@ -1888,6 +1935,7 @@ async function main() {
   avkatHolders    = data.meta?.avkatHolders || 0;
   stakerCountMeta = data.meta?.stakerCount  || 0;
   exitQueueMeta   = data.meta?.exitQueue    || null;
+  exitQueueRows   = data.exitQueue          || [];
   updateStakerStats();
   renderStakersTable();
 
