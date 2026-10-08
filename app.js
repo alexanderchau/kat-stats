@@ -929,7 +929,7 @@ function updateExitQueueStat(totalStaked) {
   const q = exitQueueMeta;
   if (!q) return;
   document.getElementById('sstat-exitq').textContent = fmtNum(q.amount, 0);
-  const pct = totalStaked > 0 ? ` · ${(q.amount / totalStaked * 100).toFixed(1)}% of staked` : '';
+  const pct = totalStaked > 0 ? ` · ${(q.amount / totalStaked * 100).toFixed(1)}% vs staked` : '';
   setKatStatSub('sstat-exitq', 'sstat-exitq-sub', q.amount, `${q.positions.toLocaleString()} locks${pct}`);
   document.getElementById('sstat-exitq-matured').textContent =
     `${fmtNum(q.maturedAmount, 0)} past cooldown`;

@@ -43,6 +43,7 @@
   "buyerMinKat": 1000,
   "stakerMinKat": 0,
   "excludeStakers": [
-    "0x60233d1c150f9c08d886906d597aa79a205b0463"
+    "0x60233d1c150f9c08d886906d597aa79a205b0463",
+    "0x4d6fc15ca6258b168225d283262743c623c13ead"
   ]
 }

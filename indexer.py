@@ -196,13 +196,19 @@ def main():
 
     # avKAT auto-compounds by locking its deposited KAT into the voting escrow
     # under its own contract address, so avKAT.totalAssets() is a subset of
-    # VE.balanceOf(KAT). Treat VE balance as the staked total and break it down
-    # into direct-vKAT (everyone who isn't avKAT) + avKAT.
+    # VE.balanceOf(KAT). The VE balance also holds KAT in the exit queue, which
+    # isn't staked any more. Staked total = VE balance - exit queue, broken down
+    # into direct-vKAT (everyone who isn't avKAT) + avKAT. The avKAT strategy
+    # never queues exits, so all queued KAT comes out of direct vKAT.
     ve_kat_total   = rpc.balance_of(KAT_BASE_ADDR, VOTING_ESCROW, KATANA_RPC)
     on_chain_avkat = rpc.total_assets(AVKAT_ADDR, KATANA_RPC)
-    on_chain_vkat  = ve_kat_total - on_chain_avkat
-    on_chain_total = ve_kat_total
-    print(f'  On-chain: vKAT(direct)={rpc.fmtM(on_chain_vkat)}, aVKAT={rpc.fmtM(on_chain_avkat)}, total={rpc.fmtM(on_chain_total)}')
+    # Fallback: the lock enumeration already sums the NFTs the escrow holds.
+    queued_kat     = (exit_queue['amount'] if exit_queue
+                      else vkat_locks.get(VOTING_ESCROW.lower(), {}).get('amount', 0.0))
+    on_chain_total = ve_kat_total - queued_kat
+    on_chain_vkat  = on_chain_total - on_chain_avkat
+    print(f'  On-chain: vKAT(direct)={rpc.fmtM(on_chain_vkat)}, aVKAT={rpc.fmtM(on_chain_avkat)}, '
+          f'total={rpc.fmtM(on_chain_total)} (excl. {rpc.fmtM(queued_kat)} in exit queue)')
 
     enumerated_vkat = sum(v['amount'] for v in vkat_locks.values())
     drift_pct = abs(enumerated_vkat - ve_kat_total) / ve_kat_total * 100 if ve_kat_total > 0 else 0
@@ -226,7 +232,7 @@ def main():
             'onChainAvkat': round(on_chain_avkat, 6),
             'onChainTotal': round(on_chain_total, 6),
             # KAT in vKAT locks queued for withdrawal (NFTs held by the escrow).
-            # Still inside onChainTotal / onChainVkat until withdraw() is called.
+            # Excluded from onChainTotal / onChainVkat and the holder counts.
             'exitQueue':    exit_queue,
         },
         'addresses': address_data,

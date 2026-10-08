@@ -60,5 +60,6 @@ SUPPLY_KAT_TOKENS = set(_cfg['supplyKatTokens'])   # set[str]
 BUYER_MIN_KAT  = _cfg['buyerMinKat']   # int — 1000
 STAKER_MIN_KAT = _cfg['stakerMinKat']  # int — 100
 
-# Protocol addresses to exclude from staker counts (e.g. avKAT vault contract)
+# Protocol addresses to exclude from staker counts: the avKAT vault strategy, and
+# the voting escrow itself (it holds Lock NFTs queued for exit)
 EXCLUDE_STAKERS = _lower_set(*_cfg.get('excludeStakers', []))

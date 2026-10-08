@@ -1217,7 +1217,7 @@
 <div id="tab-stakers" class="tab-pane">
 
 <div class="stats-grid" id="staker-stats-grid">
-  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('totalStaked')" title="Total KAT locked in the voting escrow (on-chain). avKAT deposits are a subset of this, not additive. Click for history.">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('totalStaked')" title="Total KAT locked in the voting escrow (on-chain), excluding KAT in the exit queue. avKAT deposits are a subset of this, not additive. Click for history.">
     <div class="stat-label">Total KAT Staked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-total-staked">—</div>
     <div class="stat-sub" id="sstat-total-sub">on-chain</div>
@@ -1241,7 +1241,7 @@
     <div class="stat-sub" id="sstat-median-stake-sub">KAT</div>
     <div class="stat-growth" id="sstat-median-stake-growth"></div>
   </div>
-  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('vkat')" title="KAT locked directly by vKAT stakers (excludes avKAT vault's share of the voting escrow). Click for history.">
+  <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('vkat')" title="KAT locked directly by vKAT stakers (excludes avKAT vault's share of the voting escrow and KAT in the exit queue). Click for history.">
     <div class="stat-label">vKAT Locked</div>
     <div class="stat-value" style="color:var(--violet)" id="sstat-vkat">—</div>
     <div class="stat-sub" id="sstat-vkat-sub"></div>
@@ -1257,7 +1257,7 @@
     <div class="stat-label">vKAT / avKAT Split</div>
     <div class="stat-value" id="sstat-split">—</div>
   </div>
-  <div class="stat-card" style="cursor:pointer" onclick="showExitQueueChart()" title="KAT in vKAT locks queued for withdrawal: the lock NFT sits in the voting escrow until the holder calls withdraw(). Still counted in Total KAT Staked and vKAT Locked. Click for history.">
+  <div class="stat-card" style="cursor:pointer" onclick="showExitQueueChart()" title="KAT in vKAT locks queued for withdrawal: the lock NFT sits in the voting escrow until the holder calls withdraw(). Excluded from Total KAT Staked, vKAT Locked and the staker counts. Click for history.">
     <div class="stat-label">Exit Queue</div>
     <div class="stat-value" style="color:var(--red)" id="sstat-exitq">—</div>
     <div class="stat-sub" id="sstat-exitq-sub"></div>
