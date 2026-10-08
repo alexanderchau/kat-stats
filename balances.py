@@ -238,11 +238,11 @@ def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):
         # The public RPC rate-limits bursts; retry stragglers serially.
         with ThreadPoolExecutor(max_workers=8) as ex:
             out = list(ex.map(fn, items))
-        for _ in range(3):
+        for attempt in range(8):
             missing = [i for i, v in enumerate(out) if v is None]
             if not missing:
                 break
-            time.sleep(2)
+            time.sleep(min(2 ** attempt, 30))   # back off; the box sees long 429 storms
             for i in missing:
                 out[i] = fn(items[i])
         return out
