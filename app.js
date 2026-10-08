@@ -140,6 +140,7 @@ const KAT_USD_SUBS = {
   'sstat-vkat':           'sstat-vkat-sub',
   'sstat-avkat':          'sstat-avkat-sub',
   'sstat-median-stake':   'sstat-median-stake-sub',
+  'sstat-exitq':          'sstat-exitq-sub',
 };
 function fmtUsd(v) {
   if (!(v > 0)) return '';
@@ -848,6 +849,7 @@ let onChainTotal     = 0;
 let vkatHolders      = 0;   // meta.vkatHolders — addresses holding a vKAT lock
 let avkatHolders     = 0;   // meta.avkatHolders — addresses with avKAT balance > 0
 let stakerCountMeta  = 0;   // meta.stakerCount — unique vKAT∪avKAT holders
+let exitQueueMeta    = null; // meta.exitQueue — {amount, positions, holders, matured, maturedAmount}
 
 function getStakerFilteredRows() {
   let rows = stakerData.slice();
@@ -906,8 +908,66 @@ function updateStakerStats() {
   document.getElementById('sstat-median-stake').textContent = medianStake > 0 ? fmtNum(medianStake, 0) : '—';
   setKatStatSub('sstat-median-stake', 'sstat-median-stake-sub', medianStake, '');
 
+  updateExitQueueStat(dispTotal);
+
   // 30d growth (loads snapshots.json, falls back to localStorage)
   showStakerGrowth({ totalStaked: dispTotal, pctTotal, count: all.length, vkat: dispVkat, avkat: dispAvkat });
+}
+
+// ---- Exit queue ----
+// History lives in exit_queue_history.json ({date: KAT}), backfilled from
+// on-chain events and appended by each indexer run. Not pruned to 90 days.
+let _exitQueueHistory = null;
+function loadExitQueueHistory() {
+  if (_exitQueueHistory) return Promise.resolve(_exitQueueHistory);
+  return fetch('exit_queue_history.json?' + Date.now())
+    .then(r => r.ok ? r.json() : {})
+    .catch(() => ({}))
+    .then(h => (_exitQueueHistory = h));
+}
+function updateExitQueueStat(totalStaked) {
+  const q = exitQueueMeta;
+  if (!q) return;
+  document.getElementById('sstat-exitq').textContent = fmtNum(q.amount, 0);
+  const pct = totalStaked > 0 ? ` · ${(q.amount / totalStaked * 100).toFixed(1)}% of staked` : '';
+  setKatStatSub('sstat-exitq', 'sstat-exitq-sub', q.amount, `${q.positions.toLocaleString()} locks${pct}`);
+  document.getElementById('sstat-exitq-matured').textContent =
+    `${fmtNum(q.maturedAmount, 0)} past cooldown`;
+  loadExitQueueHistory().then(h => {
+    const dates = Object.keys(h).sort();
+    if (dates.length < 2) return;
+    const target = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    let best = null;
+    for (const d of dates) { if (d <= target) best = d; else break; }
+    if (!best || !h[best]) return;
+    const prev = h[best], delta = q.amount - prev;
+    const pct = delta / prev * 100, sign = delta > 0 ? '+' : '';
+    const days = Math.round((Date.now() - new Date(best).getTime()) / 86400000);
+    const el = document.getElementById('sstat-exitq-growth');
+    // More KAT queued to leave is bad news, so growth reads red.
+    el.className = 'stat-growth ' + (delta > 0 ? 'down' : delta < 0 ? 'up' : 'flat');
+    const fmtK = v => Math.abs(v) >= 1e6 ? (v/1e6).toFixed(1)+'M' : Math.abs(v) >= 1e3 ? (v/1e3).toFixed(1)+'K' : v.toFixed(0);
+    el.textContent = `${delta > 0 ? '↑' : delta < 0 ? '↓' : '→'} ${sign}${fmtK(delta)} (${sign}${pct.toFixed(1)}%) · ${days}d`;
+  });
+}
+function showExitQueueChart() {
+  const modal = document.getElementById('chart-modal');
+  const body  = document.getElementById('chart-modal-body');
+  document.getElementById('chart-modal-title').textContent = 'KAT in Exit Queue';
+  body.innerHTML = '<div class="chart-empty">Loading…</div>';
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadExitQueueHistory().then(h => {
+    const pts = Object.keys(h).sort()
+      .filter(d => typeof h[d] === 'number')
+      .map(d => ({ date: d, value: h[d] }));
+    if (pts.length < 2) { body.innerHTML = '<div class="chart-empty">Not enough history yet.</div>'; return; }
+    const fmt = v => fmtNum(v, 0);
+    body.innerHTML = buildChartSVG([
+      { name: 'KAT in Exit Queue', points: pts, cls: 'c-line', dotCls: 'c-dot', area: true },
+    ], { fmt, yMin: 0 })
+    + `<div class="chart-meta">${pts.length} days · ${pts[0].date} → ${pts[pts.length-1].date} · latest ${fmt(pts[pts.length-1].value)} KAT</div>`;
+  });
 }
 
 let _stakerSnapshots = null;
@@ -1827,6 +1887,7 @@ async function main() {
   vkatHolders     = data.meta?.vkatHolders  || 0;
   avkatHolders    = data.meta?.avkatHolders || 0;
   stakerCountMeta = data.meta?.stakerCount  || 0;
+  exitQueueMeta   = data.meta?.exitQueue    || null;
   updateStakerStats();
   renderStakersTable();
 

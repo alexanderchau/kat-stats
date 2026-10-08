@@ -29,7 +29,7 @@ import fileio
 from scanners import (
     scan_claimed, scan_transfers, scan_avkat_holders, scan_cex,
 )
-from balances import get_fresh_balances, get_eth_balances, enumerate_vkat_locks
+from balances import get_fresh_balances, get_eth_balances, enumerate_vkat_locks, enumerate_exit_queue
 from builders import build_output, build_buyers_output, build_stakers_output
 
 SCRIPT_DIR = Path(__file__).parent
@@ -145,6 +145,7 @@ def main():
 
     print('6/6 Building data.json…')
     vkat_locks    = enumerate_vkat_locks(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
+    exit_queue    = enumerate_exit_queue(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
     address_data  = build_output(
         addresses, claimed_by_addr, dump_raw, cex_by_addr,
         addr_balances, dest_balances, dest_types, stake_raw=stake_raw,
@@ -224,6 +225,9 @@ def main():
             'onChainVkat':  round(on_chain_vkat, 6),
             'onChainAvkat': round(on_chain_avkat, 6),
             'onChainTotal': round(on_chain_total, 6),
+            # KAT in vKAT locks queued for withdrawal (NFTs held by the escrow).
+            # Still inside onChainTotal / onChainVkat until withdraw() is called.
+            'exitQueue':    exit_queue,
         },
         'addresses': address_data,
         'buyers':    buyers_data,
@@ -261,6 +265,18 @@ def main():
     snapshots = {k: v for k, v in snapshots.items() if k >= cutoff}
     fileio.save_json(snap_path, snapshots, compact=False)
     print(f'  Saved {snap_path.name} ({len(snapshots)} snapshots)')
+
+    # Exit-queue history is kept in full (not pruned to 90 days like snapshots);
+    # backfill_exit_queue.py seeded it from on-chain events.
+    if exit_queue:
+        eq_path = SCRIPT_DIR / 'exit_queue_history.json'
+        try:
+            eq_hist = json.loads(eq_path.read_text()) if eq_path.exists() else {}
+        except Exception:
+            eq_hist = {}
+        eq_hist[today] = round(exit_queue['amount'], 2)
+        fileio.save_json(eq_path, dict(sorted(eq_hist.items())), compact=False)
+        print(f'  Saved {eq_path.name} ({len(eq_hist)} days)')
 
     print('Done.')
 

@@ -114,7 +114,9 @@
       border-bottom: 2px solid var(--black);
     }
     #tab-dumpers .stats-grid { grid-template-columns: repeat(6, 1fr); }
-    #tab-stakers .stats-grid { grid-template-columns: repeat(7, 1fr); }
+    #tab-stakers .stats-grid { grid-template-columns: repeat(4, 1fr); }
+    #tab-stakers .stat-card:nth-child(4n) { border-right: none; }
+    #tab-stakers .stat-card:nth-child(-n+4) { border-bottom: 2px solid var(--black); }
     @media (max-width: 960px) {
       .stats-grid { grid-template-columns: repeat(3, 1fr); }
     }
@@ -1254,6 +1256,13 @@
   <div class="stat-card" style="cursor:pointer" onclick="showStakerChart('split')" title="Ratio of vKAT (voting escrow) to avKAT (auto-compounding) — click for history">
     <div class="stat-label">vKAT / avKAT Split</div>
     <div class="stat-value" id="sstat-split">—</div>
+  </div>
+  <div class="stat-card" style="cursor:pointer" onclick="showExitQueueChart()" title="KAT in vKAT locks queued for withdrawal: the lock NFT sits in the voting escrow until the holder calls withdraw(). Still counted in Total KAT Staked and vKAT Locked. Click for history.">
+    <div class="stat-label">Exit Queue</div>
+    <div class="stat-value" style="color:var(--red)" id="sstat-exitq">—</div>
+    <div class="stat-sub" id="sstat-exitq-sub"></div>
+    <div class="stat-sub" id="sstat-exitq-matured"></div>
+    <div class="stat-growth" id="sstat-exitq-growth"></div>
   </div>
 </div>
 

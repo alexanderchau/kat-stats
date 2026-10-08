@@ -186,3 +186,83 @@ def enumerate_vkat_locks(rpc_url, lock_nft, voting_escrow, kat_decimals):
     total_locked = sum(v['amount'] for v in owner_locks.values())
     print(f'  vKAT: {len(owner_locks):,} owners, {rpc.fmtM(total_locked)} KAT locked')
     return owner_locks
+
+
+def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):
+    """Sum the KAT sitting in the vKAT exit queue.
+
+    beginWithdrawal() transfers the Lock NFT to the voting escrow itself and
+    files a ticket with the escrow's ExitQueue. The KAT stays in the escrow
+    until withdraw() burns the NFT, so every NFT the escrow owns is a queued
+    exit. Ticket words: [holder, queuedAt, feeType, cooldown, ...].
+
+    Returns {amount, positions, holders, matured, maturedAmount}, where
+    `matured` = tickets past their cooldown (exit fee fully decayed) that
+    haven't been withdrawn yet. None if the RPC reads fail.
+    """
+    import time
+    pad = lambda v: hex(v)[2:].zfill(64)
+    ve_word = voting_escrow.lower()[2:].zfill(64)
+
+    queue_r = rpc.rpc_call(rpc_url, 'eth_call', [{'to': voting_escrow, 'data': '0xe10d29ee'}, 'latest'])
+    count_r = rpc.rpc_call(rpc_url, 'eth_call', [{'to': lock_nft, 'data': '0x70a08231' + ve_word}, 'latest'])
+    if not rpc.validate_hex(queue_r) or not count_r:
+        print('  ⚠ Exit queue: could not read queue address / NFT count')
+        return None
+    exit_queue = '0x' + queue_r[26:]
+    count = int(count_r, 16)
+
+    def get_token_id(idx):
+        r = rpc.rpc_call(rpc_url, 'eth_call',
+                         [{'to': lock_nft, 'data': '0x2f745c59' + ve_word + pad(idx)}, 'latest'])
+        return int(r, 16) if r else None
+
+    def get_ticket(token_id):
+        lock_r = rpc.rpc_call(rpc_url, 'eth_call',
+                              [{'to': voting_escrow, 'data': '0xb45a3c0e' + pad(token_id)}, 'latest'])
+        tick_r = rpc.rpc_call(rpc_url, 'eth_call',
+                              [{'to': exit_queue, 'data': '0xddf0b009' + pad(token_id)}, 'latest'])
+        if not lock_r or len(lock_r) < 66 or not tick_r or len(tick_r) < 2 + 64 * 4:
+            return None
+        amount    = int(lock_r[2:66], 16) / (10 ** kat_decimals)
+        words     = [tick_r[2 + 64 * i: 2 + 64 * (i + 1)] for i in range(4)]
+        holder    = '0x' + words[0][24:]
+        queued_at = int(words[1], 16)
+        cooldown  = int(words[3], 16)
+        return amount, holder, queued_at + cooldown
+
+    def fetch_all(fn, items):
+        # The public RPC rate-limits bursts; retry stragglers serially.
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            out = list(ex.map(fn, items))
+        for _ in range(3):
+            missing = [i for i, v in enumerate(out) if v is None]
+            if not missing:
+                break
+            time.sleep(2)
+            for i in missing:
+                out[i] = fn(items[i])
+        return out
+
+    token_ids = fetch_all(get_token_id, list(range(count)))
+    if None in token_ids:
+        print(f'  ⚠ Exit queue: {token_ids.count(None)} of {count} token ids unreadable')
+        return None
+    tickets = fetch_all(get_ticket, token_ids)
+    if None in tickets:
+        print(f'  ⚠ Exit queue: {tickets.count(None)} of {count} positions unreadable')
+        return None
+
+    now = int(time.time())
+    matured = [t for t in tickets if t[2] <= now]
+    out = {
+        'amount':        round(sum(t[0] for t in tickets), 6),
+        'positions':     count,
+        'holders':       len({t[1] for t in tickets}),
+        'matured':       len(matured),
+        'maturedAmount': round(sum(t[0] for t in matured), 6),
+    }
+    print(f'  Exit queue: {rpc.fmtM(out["amount"])} KAT in {count:,} positions '
+          f'({out["holders"]:,} holders), {out["matured"]:,} past cooldown '
+          f'({rpc.fmtM(out["maturedAmount"])} KAT)')
+    return out

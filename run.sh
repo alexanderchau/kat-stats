@@ -77,7 +77,7 @@ else
     [ -f "$HA.last-good" ] && cp -f "$HA.last-good" "$HA" && echo "restored $HA from .last-good" >&2
 fi
 
-for f in data.json supply_data.json snapshots.json holder_activity.json; do
+for f in data.json supply_data.json snapshots.json holder_activity.json exit_queue_history.json; do
     if ! valid_json "$f"; then
         echo "FATAL: $f is not valid JSON — aborting before commit/deploy (refusing to publish broken data)" >&2
         exit 1
@@ -85,7 +85,7 @@ for f in data.json supply_data.json snapshots.json holder_activity.json; do
 done
 
 # Only commit data files (never state files)
-git add data.json supply_data.json snapshots.json holder_activity.json
+git add data.json supply_data.json snapshots.json holder_activity.json exit_queue_history.json
 
 CHANGES=$(git diff --cached --stat)
 if [ -z "$CHANGES" ]; then
