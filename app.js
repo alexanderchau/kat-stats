@@ -51,6 +51,7 @@ async function triggerPipeline() {
                   buyerAddrs = new Set(buyerData.map(b => b.address));
                   stakerData = nd.stakers || [];
                   stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
+                  applyStakerMeta(nd);
                   for (const d of nd.addresses) { ingestAddress(d); }
                   lastGeneratedAt = ts;
                   updateStats(); updateBuyerStats(); updateStakerStats();
@@ -851,6 +852,19 @@ let avkatHolders     = 0;   // meta.avkatHolders — addresses with avKAT balanc
 let stakerCountMeta  = 0;   // meta.stakerCount — unique vKAT∪avKAT holders
 let exitQueueMeta    = null; // meta.exitQueue — {amount, positions, holders, matured, maturedAmount}
 let exitQueueRows    = [];   // data.exitQueue — one row per holder, sorted by amount
+
+// Staker-tab globals that come from data.json meta. Called on first load and on
+// every auto-refresh, so the header cards never lag the table.
+function applyStakerMeta(data) {
+  onChainVkat     = data.meta?.onChainVkat  || 0;
+  onChainAvkat    = data.meta?.onChainAvkat || 0;
+  onChainTotal    = data.meta?.onChainTotal || 0;
+  vkatHolders     = data.meta?.vkatHolders  || 0;
+  avkatHolders    = data.meta?.avkatHolders || 0;
+  stakerCountMeta = data.meta?.stakerCount  || 0;
+  exitQueueMeta   = data.meta?.exitQueue    || null;
+  exitQueueRows   = data.exitQueue          || [];
+}
 
 function getStakerFilteredRows() {
   let rows = stakerData.slice();
@@ -1861,6 +1875,7 @@ async function main() {
         buyerAddrs = new Set(buyerData.map(b => b.address));
         stakerData = newData.stakers || [];
         stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
+        applyStakerMeta(newData);
         for (const d of newData.addresses) { ingestAddress(d); }
         lastGeneratedAt = newTs;
         updateStats();
@@ -1928,14 +1943,7 @@ async function main() {
   stakerData   = data.stakers || [];
   stakerMap = {}; for (const s of stakerData) stakerMap[s.address] = s;
   for (const addr in results) { const d = results[addr]; const sk = stakerMap[d.address]; d.staked = sk ? (sk.vkatAmount || 0) + (sk.avkatAmount || 0) : (d.avkat || 0); }
-  onChainVkat  = data.meta?.onChainVkat  || 0;
-  onChainAvkat = data.meta?.onChainAvkat || 0;
-  onChainTotal = data.meta?.onChainTotal || 0;
-  vkatHolders     = data.meta?.vkatHolders  || 0;
-  avkatHolders    = data.meta?.avkatHolders || 0;
-  stakerCountMeta = data.meta?.stakerCount  || 0;
-  exitQueueMeta   = data.meta?.exitQueue    || null;
-  exitQueueRows   = data.exitQueue          || [];
+  applyStakerMeta(data);
   updateStakerStats();
   renderStakersTable();
 

@@ -97,4 +97,9 @@ git commit -m "auto: $(date +%Y-%m-%d\ %H:%M)"
 git push origin main 2>&1 || echo "Push failed, will retry next run" >&2
 
 # Deploy to Cloudflare Pages (direct upload — git push does NOT trigger auto-deploy)
+# Version the script URL: index.html is no-store, app.js is not, so a browser can
+# otherwise run a cached old app.js against new HTML (dead buttons, blank cards).
+# The edit is uncommitted and wiped by the next run's reset --hard.
+APPV=$(shasum app.js | cut -c1-10)
+sed -i '' "s/app\.js?v=[A-Za-z0-9]*/app.js?v=$APPV/" index.html
 npx wrangler pages deploy . --project-name=kat-stats --branch=main --commit-dirty=true 2>&1 || echo "CF Pages deploy failed, will retry next run" >&2
