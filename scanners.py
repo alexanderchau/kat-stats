@@ -195,19 +195,25 @@ def scan_avkat_holders(state, stake_raw, rpc_url, avkat_addr, transfer_topic,
 
     if scan_from > latest:
         print(f'  aVKAT holders: cache current at block {latest:,}')
-        return avkat_holders, latest
+        return avkat_holders, scan_from - 1   # never move the cursor back (latest=0 on RPC failure)
 
     chunks = [(f, min(f + log_chunk - 1, latest)) for f in range(scan_from, latest + 1, log_chunk)]
     print(f'  aVKAT holders: {len(chunks)} chunks ({scan_from:,} → {latest:,})…')
 
     new_found = 0
     for i, (frm, to) in enumerate(chunks, 1):
-        logs = rpc.eth_get_logs(rpc_url, {
+        # rpc_call, not eth_get_logs: a failed chunk must stop the scan (and the
+        # cursor) rather than read as "no transfers" and lose holders for good.
+        logs = rpc.rpc_call(rpc_url, 'eth_getLogs', [{
             'fromBlock': hex(frm),
             'toBlock':   hex(to),
             'address':   avkat_addr,
             'topics':    [transfer_topic],
-        })
+        }], retries=6)
+        if not isinstance(logs, list):
+            print(f'\n  ⚠ aVKAT holders: getLogs failed at {frm:,}; resuming from there next run')
+            latest = frm - 1
+            break
         for log in logs:
             topics = log.get('topics', [])
             if len(topics) < 3:

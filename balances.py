@@ -2,7 +2,6 @@
 KAT Farmer — balance fetching and vKAT lock enumeration.
 All functions receive config values as parameters (no globals).
 """
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import rpc
 
@@ -16,6 +15,7 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs, rpc_url, kat_tokens,
       addr_balances: {addr: {kat, avkat}}
       dest_balances: {dest: total_kat}
       dest_types:    {dest: 'Wallet'|'LP Pool'|'Staking'|'Bridge'|...}
+      unresolved:    set of addresses whose balance reads never succeeded
     """
     all_dest_tokens = list(kat_tokens) + [avkat_addr]
     all_dests = set()
@@ -25,49 +25,38 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs, rpc_url, kat_tokens,
     extra = set(extra_addrs or []) - set(addresses)
     all_fetch = list(addresses) + list(extra)
 
-    total_tasks = len(all_fetch) + len(all_dests)
-    print(f'  Balances: {len(all_fetch):,} addresses + {len(all_dests):,} destinations = {total_tasks:,} tasks…')
+    all_dests = list(all_dests)
+    print(f'  Balances: {len(all_fetch):,} addresses + {len(all_dests):,} destinations (multicall)…')
 
+    kat_tokens = list(kat_tokens)
+    addr_tokens = kat_tokens + [avkat_addr]
+    calls = [rpc.balance_of_call(t, a) for a in all_fetch for t in addr_tokens]
+    calls += [rpc.balance_of_call(t, d) for d in all_dests for t in all_dest_tokens]
+    res = rpc.multicall(rpc_url, calls)
+    vals = [rpc.decode_uint(r, 18) for r in res]
+
+    # A failed read leaves the address in `unresolved`, never at 0. Its
+    # balances fall back to 0 for display only; the holder-count gate in
+    # indexer.py refuses to publish counts while anything is unresolved.
     addr_balances = {}
     dest_balances = {}
-    done_count    = 0
-    lock          = threading.Lock()
-
-    def fetch_addr(addr):
-        kat   = sum(rpc.balance_of(t, addr, rpc_url) for t in kat_tokens)
-        avkat = rpc.balance_of(avkat_addr, addr, rpc_url)
-        return addr, kat, avkat
-
-    def fetch_dest(dest):
-        total = sum(rpc.balance_of(t, dest, rpc_url) for t in all_dest_tokens)
-        return dest, total
-
-    with ThreadPoolExecutor(max_workers=16) as ex:
-        addr_futs = {ex.submit(fetch_addr, a): a for a in all_fetch}
-        dest_futs = {ex.submit(fetch_dest, d): d for d in all_dests}
-        all_futs  = list(addr_futs.keys()) + list(dest_futs.keys())
-
-        for fut in as_completed(all_futs):
-            with lock:
-                done_count += 1
-                n = done_count
-            if n % 100 == 0 or n == total_tasks:
-                print(f'    {n}/{total_tasks} balance fetches done…', end='\r')
-
-    print()
-    for fut, addr in addr_futs.items():
-        try:
-            _, kat, avkat = fut.result()
-        except Exception:
-            kat, avkat = 0.0, 0.0
-        addr_balances[addr] = {'kat': kat, 'avkat': avkat}
-
-    for fut, dest in dest_futs.items():
-        try:
-            _, total = fut.result()
-        except Exception:
-            total = 0.0
-        dest_balances[dest] = total
+    unresolved    = set()
+    i = 0
+    for addr in all_fetch:
+        row = vals[i:i + len(addr_tokens)]
+        i += len(addr_tokens)
+        if None in row:
+            unresolved.add(addr)
+        row = [v or 0.0 for v in row]
+        addr_balances[addr] = {'kat': sum(row[:-1]), 'avkat': row[-1]}
+    for dest in all_dests:
+        row = vals[i:i + len(all_dest_tokens)]
+        i += len(all_dest_tokens)
+        if None in row:
+            unresolved.add(dest)
+        dest_balances[dest] = sum(v or 0.0 for v in row)
+    if unresolved:
+        print(f'  ⚠ Balances: {len(unresolved):,} addresses unresolved (RPC failures)')
 
     # Classify each destination address
     print(f'  Classifying {len(all_dests):,} destination addresses…')
@@ -103,89 +92,81 @@ def get_fresh_balances(addresses, dump_raw, extra_addrs, rpc_url, kat_tokens,
 
     contracts = sum(1 for v in dest_types.values() if v != 'Wallet')
     print(f'  Classified: {contracts} contracts, {len(dest_types) - contracts} wallets')
-    return addr_balances, dest_balances, dest_types
+    return addr_balances, dest_balances, dest_types, unresolved
 
 
 def get_eth_balances(bridged_addrs, eth_rpc, kat_eth_addr):
     """Fetch KAT balance on ETH mainnet for addresses that bridged tokens.
 
-    Returns: {addr: float} — ETH-side KAT balance for each address.
+    Returns: {addr: float} — ETH-side KAT balance for each address that read OK.
     """
     if not bridged_addrs:
         return {}
     print(f'  ETH balances: fetching {len(bridged_addrs):,} bridged addresses…')
-    eth_balances = {}
-    done_count = 0
-    lock = threading.Lock()
-
-    def fetch(addr):
-        return addr, rpc.balance_of(kat_eth_addr, addr, eth_rpc)
-
-    with ThreadPoolExecutor(max_workers=16) as ex:
-        futs = {ex.submit(fetch, a): a for a in bridged_addrs}
-        for fut in as_completed(futs):
-            with lock:
-                done_count += 1
-                n = done_count
-            if n % 50 == 0 or n == len(bridged_addrs):
-                print(f'    {n}/{len(bridged_addrs)} ETH balance fetches done…', end='\r')
-            try:
-                addr, bal = fut.result()
-                eth_balances[addr] = bal
-            except Exception:
-                eth_balances[futs[fut]] = 0.0
-    print()
+    bridged_addrs = list(bridged_addrs)
+    res = rpc.multicall(eth_rpc, [rpc.balance_of_call(kat_eth_addr, a) for a in bridged_addrs])
+    # Unresolved addresses are left out (builders read them as unknown → 0)
+    # rather than recorded as a confirmed zero.
+    eth_balances = {a: v for a, v in zip(bridged_addrs, (rpc.decode_uint(r, 18) for r in res))
+                    if v is not None}
     total = sum(eth_balances.values())
     print(f'  ETH balances: {rpc.fmtM(total)} KAT held on ETH across {len(bridged_addrs)} addresses')
     return eth_balances
 
 
 def enumerate_vkat_locks(rpc_url, lock_nft, voting_escrow, kat_decimals):
-    """Enumerate all vKAT Lock NFTs → {owner: {amount, endTime}}."""
+    """Enumerate all vKAT Lock NFTs.
+
+    Returns (owner_locks, unresolved): owner_locks is {owner: {amount, endTime}},
+    unresolved the number of NFTs whose reads never succeeded. Callers must not
+    publish holder counts while unresolved > 0 (see integrity.py).
+    """
     r = rpc.rpc_call(rpc_url, 'eth_call', [{'to': lock_nft, 'data': '0x18160ddd'}, 'latest'])
-    total = int(r, 16) if r else 0
+    if r is None:
+        print('  ⚠ vKAT: could not read Lock NFT totalSupply')
+        return {}, 1
+    total = int(r, 16) if len(r) > 2 else 0
     if total == 0:
-        return {}
-    print(f'  vKAT: enumerating {total:,} Lock NFTs…')
+        return {}, 0
+    print(f'  vKAT: enumerating {total:,} Lock NFTs (multicall)…')
 
-    def get_token_id(idx):
-        data = '0x4f6ccce7' + hex(idx)[2:].zfill(64)
-        r = rpc.rpc_call(rpc_url, 'eth_call', [{'to': lock_nft, 'data': data}, 'latest'])
-        return int(r, 16) if r else None
+    pad = rpc._word
+    id_res = rpc.multicall(rpc_url, [(lock_nft, '0x4f6ccce7' + pad(i)) for i in range(total)])
+    unresolved = sum(1 for x in id_res if x is None)
+    # A revert means the index fell off the end (a lock was burned mid-scan).
+    token_ids = [rpc.decode_uint(x) for x in id_res if x is not None and x[0]]
 
-    with ThreadPoolExecutor(max_workers=16) as ex:
-        token_ids = list(ex.map(get_token_id, range(total)))
-    token_ids = [t for t in token_ids if t is not None]
-
-    def get_lock_info(token_id):
-        tid_hex  = hex(token_id)[2:].zfill(64)
-        owner_r  = rpc.rpc_call(rpc_url, 'eth_call',
-                                [{'to': lock_nft, 'data': '0x6352211e' + tid_hex}, 'latest'])
-        owner = None
-        if rpc.validate_hex(owner_r):
-            owner = '0x' + owner_r[26:].lower()
-        lock_r   = rpc.rpc_call(rpc_url, 'eth_call',
-                                [{'to': voting_escrow, 'data': '0xb45a3c0e' + tid_hex}, 'latest'])
-        amount, end_time = 0.0, 0
-        if lock_r and len(lock_r) >= 130:
-            amount   = int(lock_r[2:66], 16) / (10 ** kat_decimals)
-            end_time = int(lock_r[66:130], 16)
-        return owner, amount, end_time
-
-    with ThreadPoolExecutor(max_workers=16) as ex:
-        results = list(ex.map(get_lock_info, token_ids))
+    calls = []
+    for tid in token_ids:
+        calls.append((lock_nft, '0x6352211e' + pad(tid)))        # ownerOf
+        calls.append((voting_escrow, '0xb45a3c0e' + pad(tid)))   # locked
+    res = rpc.multicall(rpc_url, calls)
 
     owner_locks = {}
-    for owner, amount, end_time in results:
-        if owner and amount > 0:
-            if owner not in owner_locks:
-                owner_locks[owner] = {'amount': 0.0, 'endTime': 0}
-            owner_locks[owner]['amount']  += amount
-            owner_locks[owner]['endTime']  = max(owner_locks[owner]['endTime'], end_time)
+    for k in range(len(token_ids)):
+        owner_r, lock_r = res[2 * k], res[2 * k + 1]
+        if owner_r is None or lock_r is None:
+            unresolved += 1
+            continue
+        if not owner_r[0] or not lock_r[0]:
+            continue   # burned between enumeration and read
+        owner = '0x' + owner_r[1][26:66].lower()
+        data = lock_r[1]
+        if len(data) < 130:
+            continue
+        amount   = int(data[2:66], 16) / (10 ** kat_decimals)
+        end_time = int(data[66:130], 16)
+        if amount > 0:
+            o = owner_locks.setdefault(owner, {'amount': 0.0, 'endTime': 0})
+            o['amount'] += amount
+            o['endTime'] = max(o['endTime'], end_time)
 
     total_locked = sum(v['amount'] for v in owner_locks.values())
-    print(f'  vKAT: {len(owner_locks):,} owners, {rpc.fmtM(total_locked)} KAT locked')
-    return owner_locks
+    msg = f'  vKAT: {len(owner_locks):,} owners, {rpc.fmtM(total_locked)} KAT locked'
+    if unresolved:
+        msg += f' — ⚠ {unresolved:,} of {total:,} locks UNRESOLVED'
+    print(msg)
+    return owner_locks, unresolved
 
 
 def enumerate_exit_queue(rpc_url, lock_nft, voting_escrow, kat_decimals):

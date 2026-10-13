@@ -17,8 +17,17 @@ def _next_id():
         return _seq
 
 # ── Core RPC call ──────────────────────────────────────────────────────────
+def _is_rate_limit(e):
+    msg = str(e)
+    return '429' in msg or '-32017' in msg or 'Rate Limit' in msg or 'rate limit' in msg
+
+
 def rpc_call(url, method, params, retries=3, timeout=30):
-    """Thread-safe JSON-RPC call. Returns result or None on failure."""
+    """Thread-safe JSON-RPC call. Returns result or None on failure.
+
+    None always means "could not read", never a value. Callers that turn a read
+    into a number must keep the two apart (see balance_of(strict=True)).
+    """
     for attempt in range(retries):
         try:
             body = json.dumps({
@@ -37,10 +46,99 @@ def rpc_call(url, method, params, retries=3, timeout=30):
                 return data.get('result')
         except Exception as e:
             if attempt < retries - 1:
-                time.sleep(0.5 * (attempt + 1))
+                # The public Katana RPC allows ~7 calls/s; a 429 needs real backoff.
+                time.sleep(min(2 ** attempt, 30) if _is_rate_limit(e) else 0.5 * (attempt + 1))
             else:
                 print(f'  ⚠ {method} failed after {retries} attempts: {e}')
                 return None
+
+# ── Multicall3 ─────────────────────────────────────────────────────────────
+# Same address on Katana and ETH mainnet. One eth_call carries a few hundred
+# reads, so a full holder enumeration costs ~100 RPC calls instead of ~15,000,
+# which is what kept tripping the public RPC's rate limit.
+MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11'
+
+
+def _word(n):
+    return hex(n)[2:].zfill(64)
+
+
+def encode_aggregate3(calls):
+    """ABI-encode aggregate3((address,bool,bytes)[]) with allowFailure=true."""
+    tuples = []
+    for target, data in calls:
+        raw = data[2:] if data.startswith('0x') else data
+        nbytes = len(raw) // 2
+        padded = raw + '0' * ((-len(raw)) % 64)
+        tuples.append(target.lower()[2:].zfill(64) + _word(1) + _word(0x60) + _word(nbytes) + padded)
+    offsets, pos = [], 32 * len(tuples)
+    for t in tuples:
+        offsets.append(_word(pos))
+        pos += len(t) // 2
+    return '0x82ad56cb' + _word(0x20) + _word(len(calls)) + ''.join(offsets) + ''.join(tuples)
+
+
+def decode_aggregate3(result):
+    """Decode aggregate3's (bool success, bytes returnData)[] → [(ok, '0x…')]."""
+    b = bytes.fromhex(result[2:])
+    word = lambda off: int.from_bytes(b[off:off + 32], 'big')
+    arr = word(0)
+    n = word(arr)
+    out = []
+    for i in range(n):
+        t = arr + 32 + word(arr + 32 + 32 * i)
+        ok = word(t) == 1
+        d = t + word(t + 32)
+        ln = word(d)
+        out.append((ok, '0x' + b[d + 32:d + 32 + ln].hex()))
+    return out
+
+
+def multicall(url, calls, chunk=250, attempts=8, block='latest'):
+    """Run [(target, calldata)] through Multicall3.
+
+    Returns one entry per call:
+      (True, returndata)  the call succeeded
+      (False, returndata) the call reverted on-chain (a real answer)
+      None                the RPC never answered: unresolved, NOT zero
+    Chunks that fail are retried with exponential backoff before giving up.
+    """
+    out = [None] * len(calls)
+    pending = list(range(0, len(calls), chunk))
+    for attempt in range(attempts):
+        failed = []
+        for start in pending:
+            part = calls[start:start + chunk]
+            r = rpc_call(url, 'eth_call', [{'to': MULTICALL3, 'data': encode_aggregate3(part)}, block])
+            try:
+                decoded = decode_aggregate3(r) if r and len(r) > 2 else None
+            except Exception:
+                decoded = None
+            if decoded is None or len(decoded) != len(part):
+                failed.append(start)
+                continue
+            out[start:start + len(part)] = decoded
+        pending = failed
+        if not pending:
+            break
+        time.sleep(min(2 ** attempt, 30))
+    if pending:
+        missing = sum(len(calls[s:s + chunk]) for s in pending)
+        print(f'  ⚠ multicall: {missing:,} of {len(calls):,} reads unresolved after {attempts} attempts')
+    return out
+
+
+def decode_uint(res, decimals=None):
+    """Turn a multicall entry into an int (or float if decimals given).
+
+    None stays None (unresolved). A revert or empty return reads as 0, because
+    the chain answered: e.g. balanceOf on an address with no code.
+    """
+    if res is None:
+        return None
+    ok, data = res
+    val = int(data[2:66], 16) if ok and len(data) >= 66 else 0
+    return val / (10 ** decimals) if decimals is not None else val
 
 # ── Chain helpers ──────────────────────────────────────────────────────────
 def get_block_number(url):
@@ -67,16 +165,23 @@ def from_wei(hex_val, decimals=18):
     except Exception:
         return 0.0
 
-def balance_of(token, wallet, url):
-    """ERC-20 balanceOf(wallet) → float."""
-    padded = wallet.replace('0x', '').lower().zfill(64)
-    data   = '0x70a08231' + padded
-    r = rpc_call(url, 'eth_call', [{'to': token, 'data': data}, 'latest'])
+def balance_of_call(token, wallet):
+    """(target, calldata) for ERC-20 balanceOf(wallet), for multicall()."""
+    return token, '0x70a08231' + wallet.replace('0x', '').lower().zfill(64)
+
+def balance_of(token, wallet, url, strict=False):
+    """ERC-20 balanceOf(wallet) → float. With strict=True a failed read is None."""
+    target, data = balance_of_call(token, wallet)
+    r = rpc_call(url, 'eth_call', [{'to': target, 'data': data}, 'latest'])
+    if r is None and strict:
+        return None
     return from_wei(r) if r else 0.0
 
-def total_assets(vault, url):
-    """Call totalAssets() on an ERC-4626 vault → float."""
+def total_assets(vault, url, strict=False):
+    """Call totalAssets() on an ERC-4626 vault → float. strict: None on failure."""
     r = rpc_call(url, 'eth_call', [{'to': vault, 'data': '0x01e1d114'}, 'latest'])
+    if r is None and strict:
+        return None
     return from_wei(r) if r else 0.0
 
 def is_contract(addr, url):

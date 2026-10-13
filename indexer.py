@@ -31,6 +31,7 @@ from scanners import (
 )
 from balances import get_fresh_balances, get_eth_balances, enumerate_vkat_locks, enumerate_exit_queue
 from builders import build_output, build_buyers_output, build_stakers_output
+from integrity import holder_count_problems, merge_snapshot
 
 SCRIPT_DIR = Path(__file__).parent
 STATE_PATH = SCRIPT_DIR / 'state.json'
@@ -109,12 +110,12 @@ def main():
     print()
 
     print('3/6 Scanning aVKAT holders (share token transfers)…')
-    avkat_holders, _ = scan_avkat_holders(
+    avkat_holders, avkat_block = scan_avkat_holders(
         state, stake_raw, KATANA_RPC,
         AVKAT_ADDR, TRANSFER_TOPIC, ZERO_ADDR, DEPLOY_BLOCK, LOG_CHUNK,
     )
     state['avkatHolders']     = list(avkat_holders)
-    state['avkatHolderBlock'] = latest_katana
+    state['avkatHolderBlock'] = avkat_block
     print()
 
     print('4/6 Scanning ETH mainnet CEX transfers…')
@@ -130,7 +131,7 @@ def main():
 
     extra_addrs = set(buy_raw.keys()) | set(stake_raw.keys())
     print('5/6 Fetching fresh balances…')
-    addr_balances, dest_balances, dest_types = get_fresh_balances(
+    addr_balances, dest_balances, dest_types, unresolved_addrs = get_fresh_balances(
         addresses, dump_raw, extra_addrs, KATANA_RPC,
         KAT_TOKENS, AVKAT_ADDR, KAT_POOL_ADDRS, STAKE_DESTS,
         BRIDGE_DESTS, DISTRIBUTOR_ADDR,
@@ -144,7 +145,7 @@ def main():
     print()
 
     print('6/6 Building data.json…')
-    vkat_locks    = enumerate_vkat_locks(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
+    vkat_locks, unresolved_locks = enumerate_vkat_locks(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
     exit_queue, exit_rows = enumerate_exit_queue(KATANA_RPC, LOCK_NFT, VOTING_ESCROW, KAT_DECIMALS)
     address_data  = build_output(
         addresses, claimed_by_addr, dump_raw, cex_by_addr,
@@ -200,22 +201,57 @@ def main():
     # isn't staked any more. Staked total = VE balance - exit queue, broken down
     # into direct-vKAT (everyone who isn't avKAT) + avKAT. The avKAT strategy
     # never queues exits, so all queued KAT comes out of direct vKAT.
-    ve_kat_total   = rpc.balance_of(KAT_BASE_ADDR, VOTING_ESCROW, KATANA_RPC)
-    on_chain_avkat = rpc.total_assets(AVKAT_ADDR, KATANA_RPC)
+    ve_kat_total   = rpc.balance_of(KAT_BASE_ADDR, VOTING_ESCROW, KATANA_RPC, strict=True)
+    on_chain_avkat = rpc.total_assets(AVKAT_ADDR, KATANA_RPC, strict=True)
+    totals_ok      = ve_kat_total is not None and on_chain_avkat is not None
     # Fallback: the lock enumeration already sums the NFTs the escrow holds.
     queued_kat     = (exit_queue['amount'] if exit_queue
                       else vkat_locks.get(VOTING_ESCROW.lower(), {}).get('amount', 0.0))
-    on_chain_total = ve_kat_total - queued_kat
-    on_chain_vkat  = on_chain_total - on_chain_avkat
-    print(f'  On-chain: vKAT(direct)={rpc.fmtM(on_chain_vkat)}, aVKAT={rpc.fmtM(on_chain_avkat)}, '
-          f'total={rpc.fmtM(on_chain_total)} (excl. {rpc.fmtM(queued_kat)} in exit queue)')
-
-    enumerated_vkat = sum(v['amount'] for v in vkat_locks.values())
-    drift_pct = abs(enumerated_vkat - ve_kat_total) / ve_kat_total * 100 if ve_kat_total > 0 else 0
-    if drift_pct > 0.1:
-        print(f'  ⚠ vKAT drift: enumerated={rpc.fmtM(enumerated_vkat)} vs VE balance={rpc.fmtM(ve_kat_total)} ({drift_pct:.2f}%)')
+    on_chain_total = (ve_kat_total or 0.0) - queued_kat
+    on_chain_vkat  = on_chain_total - (on_chain_avkat or 0.0)
+    if totals_ok:
+        print(f'  On-chain: vKAT(direct)={rpc.fmtM(on_chain_vkat)}, aVKAT={rpc.fmtM(on_chain_avkat)}, '
+              f'total={rpc.fmtM(on_chain_total)} (excl. {rpc.fmtM(queued_kat)} in exit queue)')
     else:
-        print(f'  ✓ vKAT cross-check OK: enumerated={rpc.fmtM(enumerated_vkat)} ≈ VE balance={rpc.fmtM(ve_kat_total)}')
+        print('  ⚠ On-chain totals unreadable (VE balance or avKAT totalAssets) — keeping previous')
+
+    # ── Integrity gate ────────────────────────────────────────────────────────
+    # Every locked KAT sits in the escrow, so the enumerated locks must add up
+    # to its balance. If they don't, or any read failed, the holder counts are
+    # an undercount: keep the last good ones instead of publishing a fake drop.
+    enumerated_vkat = sum(v['amount'] for v in vkat_locks.values())
+    problems = holder_count_problems(enumerated_vkat, ve_kat_total,
+                                     unresolved_locks + len(unresolved_addrs))
+    counts_ok = not problems
+    prev_meta = (fileio.load_json(DATA_PATH, {}) or {}).get('meta', {})
+    prev_data = None
+    if counts_ok:
+        print(f'  ✓ Holder-count gate OK: enumerated={rpc.fmtM(enumerated_vkat)} ≈ VE balance={rpc.fmtM(ve_kat_total)}')
+    else:
+        print('  ' + '!' * 70)
+        print('  ⛔ HOLDER COUNTS NOT PUBLISHED: ' + '; '.join(problems))
+        print(f'     would have been {vkat_holders:,} vKAT / {avkat_holders:,} avKAT / {total_holders:,} unique;'
+              f' keeping previous {prev_meta.get("stakerCount", "?")} from {prev_meta.get("holderCountsAt") or prev_meta.get("generatedAt", "?")}')
+        print('  ' + '!' * 70)
+        prev_data = fileio.load_json(DATA_PATH, {}) or {}
+
+    count_meta = {
+        'stakerCount':  total_holders,   # unique vKAT∪avKAT holders (all balances)
+        'vkatHolders':  vkat_holders,    # addresses holding a vKAT lock
+        'avkatHolders': avkat_holders,   # addresses with avKAT balance > 0
+        'stakerRows':   s_total,         # rows in the stakers table (after display floor)
+        'holderCountsAt': datetime.now(timezone.utc).isoformat(),
+    }
+    if not counts_ok and prev_meta.get('stakerCount'):
+        count_meta = {k: prev_meta.get(k) for k in count_meta}
+        stakers_data = prev_data.get('stakers', stakers_data)
+    total_meta = {
+        'onChainVkat':  round(on_chain_vkat, 6),
+        'onChainAvkat': round(on_chain_avkat or 0.0, 6),
+        'onChainTotal': round(on_chain_total, 6),
+    }
+    if not totals_ok and prev_meta.get('onChainTotal'):
+        total_meta = {k: prev_meta.get(k) for k in total_meta}
 
     output = {
         'meta': {
@@ -224,13 +260,9 @@ def main():
             'ethBlock':     latest_eth,
             'addressCount': total,
             'buyerCount':   b_total,
-            'stakerCount':  total_holders,   # unique vKAT∪avKAT holders (all balances)
-            'vkatHolders':  vkat_holders,    # addresses holding a vKAT lock
-            'avkatHolders': avkat_holders,   # addresses with avKAT balance > 0
-            'stakerRows':   s_total,          # rows in the stakers table (after display floor)
-            'onChainVkat':  round(on_chain_vkat, 6),
-            'onChainAvkat': round(on_chain_avkat, 6),
-            'onChainTotal': round(on_chain_total, 6),
+            **count_meta,
+            'holderCountsOk': counts_ok,
+            **total_meta,
             # KAT in vKAT locks queued for withdrawal (NFTs held by the escrow).
             # Excluded from onChainTotal / onChainVkat and the holder counts.
             'exitQueue':    exit_queue,
@@ -252,14 +284,17 @@ def main():
     except Exception:
         snapshots = {}
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    snapshots[today] = {
-        'totalStaked': round(on_chain_total, 2),
-        'count': s_total,
-        'vkat': round(on_chain_vkat, 2),
-        'avkat': round(on_chain_avkat, 2),
+    merge_snapshot(
+        snapshots, today,
+        totals={
+            'totalStaked': round(on_chain_total, 2),
+            'vkat': round(on_chain_vkat, 2),
+            'avkat': round(on_chain_avkat or 0.0, 2),
+        },
+        count=s_total,
         # Buyer-tab metrics (counts of wallets), nested to avoid colliding with
         # the staker 'vkat'/'avkat' KAT-amount keys above.
-        'buyers': {
+        buyers={
             'total':   b_total,
             'pure':    b_pure,
             'airdrop': b_airdrop,
@@ -267,7 +302,8 @@ def main():
             'vkat':    b_vkat,
             'avkat':   b_avkat,
         },
-    }
+        counts_ok=counts_ok, totals_ok=totals_ok,
+    )
     cutoff    = (datetime.now(timezone.utc) - timedelta(days=90)).strftime('%Y-%m-%d')
     snapshots = {k: v for k, v in snapshots.items() if k >= cutoff}
     fileio.save_json(snap_path, snapshots, compact=False)
