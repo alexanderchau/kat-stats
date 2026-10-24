@@ -1,19 +1,4 @@
 {
-  "2026-07-25": {
-    "totalStaked": 423907570.15,
-    "pctCirc": 23.76,
-    "count": 4410,
-    "vkat": 152141902.78,
-    "avkat": 271765667.36,
-    "buyers": {
-      "total": 364,
-      "pure": 352,
-      "airdrop": 12,
-      "staked": 47,
-      "vkat": 33,
-      "avkat": 27
-    }
-  },
   "2026-07-26": {
     "totalStaked": 423874902.85,
     "pctCirc": 23.76,
@@ -1242,6 +1227,20 @@
   "2026-10-23": {
     "totalStaked": 429612281.9,
     "vkat": 148099698.2,
+    "avkat": 281512583.7,
+    "buyers": {
+      "total": 421,
+      "pure": 408,
+      "airdrop": 13,
+      "staked": 52,
+      "vkat": 39,
+      "avkat": 31
+    },
+    "count": 4213
+  },
+  "2026-10-24": {
+    "totalStaked": 429612690.85,
+    "vkat": 148100107.16,
     "avkat": 281512583.7,
     "buyers": {
       "total": 421,
