@@ -1243,13 +1243,13 @@
     "vkat": 148100402.26,
     "avkat": 281512583.7,
     "buyers": {
-      "total": 421,
-      "pure": 408,
+      "total": 422,
+      "pure": 409,
       "airdrop": 13,
       "staked": 52,
       "vkat": 39,
       "avkat": 31
     },
-    "count": 4213
+    "count": 4214
   }
 }
