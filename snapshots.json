@@ -1234,13 +1234,13 @@
     "vkat": 148599056.45,
     "avkat": 312074258.06,
     "buyers": {
-      "total": 449,
-      "pure": 436,
+      "total": 450,
+      "pure": 437,
       "airdrop": 13,
-      "staked": 54,
+      "staked": 53,
       "vkat": 37,
-      "avkat": 35
+      "avkat": 34
     },
-    "count": 4204
+    "count": 4206
   }
 }
