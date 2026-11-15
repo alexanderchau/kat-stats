@@ -1230,17 +1230,17 @@
     "count": 4203
   },
   "2026-11-15": {
-    "totalStaked": 461314395.69,
+    "totalStaked": 461383561.27,
     "vkat": 148600786.94,
-    "avkat": 312713608.75,
+    "avkat": 312782774.33,
     "buyers": {
-      "total": 450,
-      "pure": 437,
+      "total": 451,
+      "pure": 438,
       "airdrop": 13,
       "staked": 54,
       "vkat": 38,
       "avkat": 34
     },
-    "count": 4204
+    "count": 4205
   }
 }
